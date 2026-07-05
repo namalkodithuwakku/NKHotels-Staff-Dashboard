@@ -1,65 +1,185 @@
-import Image from "next/image";
+"use client";
+
+import { useMemo, useState } from "react";
+import Sidebar from "./components/Sidebar";
+import Stats from "./components/Stats";
+import Timeline from "./components/Timeline";
+import AIPanel from "./components/AIPanel";
+import LiveClock from "./components/LiveClock";
+import Login from "./components/Login";
+import { useTasks } from "./hooks/useTasks";
+import { useAuth } from "./hooks/useAuth";
+import { useShift } from "./hooks/useShift";
+
+function statusMatch(status: string, filter: string) {
+  const s = status.toLowerCase();
+  if (filter === "all") return true;
+  if (filter === "pending") return s.includes("pending");
+  if (filter === "progress") return s.includes("progress");
+  if (filter === "done") return s.includes("done") || s.includes("completed");
+  return true;
+}
+
+function getTaskTimeValue(createdTime?: string) {
+  if (!createdTime) return 0;
+
+  const direct = new Date(createdTime).getTime();
+  if (!Number.isNaN(direct)) return direct;
+
+  const match = createdTime.match(
+    /(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/
+  );
+
+  if (!match) return 0;
+
+  const [, dd, mm, yyyy, hh, min] = match;
+
+  return new Date(
+    Number(yyyy),
+    Number(mm) - 1,
+    Number(dd),
+    Number(hh),
+    Number(min)
+  ).getTime();
+}
 
 export default function Home() {
+  const { staff, ready, login, logout } = useAuth();
+  const { tasks, loading, error, reload } = useTasks(staff?.name);
+  const { shift } = useShift(staff?.name);
+
+  const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
+
+  const canWork = shift?.canWork === true;
+  const shiftStatus = shift?.status || "Checking";
+  const nextShift = shift?.nextShift || "";
+
+  const filteredTasks = useMemo(() => {
+    return tasks
+      .filter((task) => {
+        const text = [
+          task.id,
+          task.status,
+          task.type,
+          task.source,
+          task.property,
+          task.bookingId,
+          task.subject,
+          task.notes,
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        const searchOk = text.includes(search.toLowerCase());
+        const statusOk =
+          filter === "urgent"
+            ? (task.priority || "").toLowerCase() === "high"
+            : statusMatch(task.status || "", filter);
+
+        return searchOk && statusOk;
+      })
+      .sort((a, b) => getTaskTimeValue(b.createdTime) - getTaskTimeValue(a.createdTime));
+  }, [tasks, filter, search]);
+
+  if (!ready) return null;
+  if (!staff) return <Login onLogin={login} />;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main className="os">
+      <Sidebar staff={staff} onLogout={logout} shiftActive={canWork} />
+
+      <section className="main">
+        <header className="hero polished-hero">
+          <div>
+            <p>Good Day, {staff.name}</p>
+            <h1>{canWork ? "Today’s tasks are live." : "View your work status."}</h1>
+            <span className="sub">
+              {canWork
+                ? `You are on shift · ${shift?.shift || ""}`
+                : nextShift
+                ? `Current status: ${shiftStatus} · Next shift: ${nextShift}`
+                : `Current status: ${shiftStatus}`}
+            </span>
+          </div>
+
+          <div className="top-actions">
+            <LiveClock />
+            <div className={canWork ? "live-pill" : "live-pill ended"}>
+              <span></span>
+              {canWork ? "Shift ON" : shiftStatus}
+            </div>
+          </div>
+        </header>
+
+        <Stats tasks={tasks} />
+
+        <section className="workspace">
+          <div className="queue">
+            <div className="section-head">
+              <div>
+                <h2>Task Timeline</h2>
+                <p>
+                  {loading
+                    ? "Loading..."
+                    : `${filteredTasks.length} of ${tasks.length} tasks shown`}
+                </p>
+              </div>
+
+              <button className="ghost" onClick={reload}>
+                Refresh
+              </button>
+            </div>
+
+            <div className="premium-toolbar compact-toolbar">
+              <div className="premium-tabs">
+                {[
+                  ["all", "All"],
+                  ["urgent", "Urgent"],
+                  ["pending", "Pending"],
+                  ["progress", "Active"],
+                  ["done", "Done"],
+                ].map(([key, label]) => (
+                  <button
+                    key={key}
+                    className={filter === key ? "premium-tab active" : "premium-tab"}
+                    onClick={() => setFilter(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="premium-search-wrap compact-search">
+                <span>Search</span>
+                <input
+                  className="premium-search"
+                  placeholder="Property, booking ID..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {error && <div className="brief-item red">{error}</div>}
+
+            {!loading && filteredTasks.length === 0 && (
+              <div className="brief-item blue">No matching tasks found.</div>
+            )}
+
+            <div className="timeline-scroll">
+              <Timeline
+                tasks={filteredTasks}
+                staffName={staff.name}
+                onChanged={reload}
+                canWork={canWork}
+              />
+            </div>
+          </div>
+
+          <AIPanel tasks={filteredTasks} shiftActive={canWork} shift={shift} />
+        </section>
+      </section>
+    </main>
   );
 }

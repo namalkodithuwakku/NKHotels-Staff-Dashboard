@@ -1,0 +1,22 @@
+export type Task = {
+  id: string;
+  status: string;
+  intent?: string;
+  type: string;
+  source: string;
+  property: string;
+  bookingId?: string;
+  event?: string;
+  priority?: string;
+  guest?: string;
+  assignedTo?: string;
+  assignedPhone?: string;
+  shift?: string;
+  createdTime?: string;
+  sentTime?: string;
+  startedTime?: string;
+  doneTime?: string;
+  completedBy?: string;
+  subject?: string;
+  notes?: string;
+};
