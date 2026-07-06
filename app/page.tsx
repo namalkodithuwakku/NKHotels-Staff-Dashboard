@@ -45,13 +45,15 @@ function getTaskTimeValue(createdTime?: string) {
 
 export default function Home() {
   const { staff, ready, login, logout } = useAuth();
-  const { tasks, loading, error, reload } = useTasks(staff?.name);
+
   const { shift } = useShift(staff?.name);
+  const canWork = shift?.canWork === true;
+
+  const { tasks, loading, error, reload } = useTasks(staff?.name, canWork);
 
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
 
-  const canWork = shift?.canWork === true;
   const shiftStatus = shift?.status || "Checking";
   const nextShift = shift?.nextShift || "";
 
@@ -79,7 +81,10 @@ export default function Home() {
 
         return searchOk && statusOk;
       })
-      .sort((a, b) => getTaskTimeValue(b.createdTime) - getTaskTimeValue(a.createdTime));
+      .sort(
+        (a, b) =>
+          getTaskTimeValue(b.createdTime) - getTaskTimeValue(a.createdTime)
+      );
   }, [tasks, filter, search]);
 
   if (!ready) return null;

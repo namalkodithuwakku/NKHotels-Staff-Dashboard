@@ -923,3 +923,15 @@ button:disabled {
 .premium-search {
   font-size: 12px;
 }
+.logo-image-box {
+  background: #ffffff !important;
+  padding: 5px;
+  border-radius: 14px;
+}
+
+.logo-image-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}

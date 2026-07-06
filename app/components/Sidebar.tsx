@@ -1,6 +1,13 @@
 import { StaffSession } from "../hooks/useAuth";
 
-const navItems = ["Work Queue", "Booking Calendar", "Properties", "Clients", "Reports", "Settings"];
+const navItems = [
+  "Work Queue",
+  "Booking Calendar",
+  "Properties",
+  "Clients",
+  "Reports",
+  "Settings",
+];
 
 export default function Sidebar({
   staff,
@@ -14,7 +21,32 @@ export default function Sidebar({
   return (
     <aside className="sidebar">
       <div className="brand">
-        <div className="logo">NK</div>
+        <div
+          className="logo"
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 14,
+            background: "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+            flexShrink: 0,
+          }}
+        >
+          <img
+            src="/icons/N%20K%20Hotel%20OS%20Logo.png"
+            alt="NK Hotel OS"
+            style={{
+              width: "88%",
+              height: "88%",
+              objectFit: "contain",
+              display: "block",
+            }}
+          />
+        </div>
+
         <div>
           <strong>NK Hotel OS</strong>
           <span>Operations Workspace</span>

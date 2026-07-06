@@ -6,10 +6,13 @@ type ShiftStats = {
   completed?: number;
   pending?: number;
   completionRate?: number;
-  avgResponseMin?: number;
-  fastestResponseMin?: number;
-  slowestResponseMin?: number;
-  unanswered?: number;
+
+  graceAllowanceMin?: number;
+  graceUsedMin?: number;
+  overdueTasks?: number;
+  avgOverdueMin?: number;
+  maxOverdueMin?: number;
+  onTimeRate?: number;
 };
 
 type ShiftInfo = {
@@ -80,10 +83,12 @@ export default function AIPanel({
         <div className="perf"><span>Pending</span><strong>{pending.length}</strong></div>
         <div className="perf"><span>In Progress</span><strong>{active.length}</strong></div>
 
-        <div className="perf"><span>Avg Response</span><strong>{stats.avgResponseMin || 0} min</strong></div>
-        <div className="perf"><span>Fastest Response</span><strong>{stats.fastestResponseMin || 0} min</strong></div>
-        <div className="perf"><span>Slowest Response</span><strong>{stats.slowestResponseMin || 0} min</strong></div>
-        <div className="perf"><span>Waiting Response</span><strong>{stats.unanswered || 0}</strong></div>
+        <div className="perf"><span>Grace Allowance</span><strong>{stats.graceAllowanceMin || 0} min</strong></div>
+        <div className="perf"><span>Grace Used</span><strong>{stats.graceUsedMin || 0} min</strong></div>
+        <div className="perf"><span>On-Time Rate</span><strong>{stats.onTimeRate || 0}%</strong></div>
+        <div className="perf"><span>Overdue Tasks</span><strong>{stats.overdueTasks || 0}</strong></div>
+        <div className="perf"><span>Avg Overdue</span><strong>{stats.avgOverdueMin || 0} min</strong></div>
+        <div className="perf"><span>Max Overdue</span><strong>{stats.maxOverdueMin || 0} min</strong></div>
       </div>
     </aside>
   );

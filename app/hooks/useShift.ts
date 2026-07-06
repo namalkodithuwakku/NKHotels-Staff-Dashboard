@@ -11,13 +11,22 @@ export type ShiftInfo = {
   scheduledStart: string;
   scheduledEnd: string;
   nextShift: string;
+
   stats?: {
     assigned: number;
     started: number;
     completed: number;
     pending: number;
     completionRate: number;
-    avgResponseMin: number;
+
+    graceAllowanceMin: number;
+    graceUsedMin: number;
+
+    overdueTasks: number;
+    avgOverdueMin: number;
+    maxOverdueMin: number;
+
+    onTimeRate: number;
   };
 };
 
@@ -26,18 +35,28 @@ export function useShift(staffName?: string) {
   const [loading, setLoading] = useState(true);
 
   async function loadShift() {
-    if (!staffName) return;
+    if (!staffName) {
+      setLoading(false);
+      return;
+    }
 
     try {
-      const res = await fetch(`/api/shift?staff=${encodeURIComponent(staffName)}`, {
-        cache: "no-store",
-      });
+      const res = await fetch(
+        `/api/shift?staff=${encodeURIComponent(staffName)}`,
+        {
+          cache: "no-store",
+        }
+      );
 
       const data = await res.json();
 
       if (data.success) {
         setShift(data.shift);
+      } else {
+        console.error("Shift API:", data.error);
       }
+    } catch (err) {
+      console.error("Shift load failed", err);
     } finally {
       setLoading(false);
     }
@@ -45,9 +64,15 @@ export function useShift(staffName?: string) {
 
   useEffect(() => {
     loadShift();
+
     const timer = setInterval(loadShift, 60000);
+
     return () => clearInterval(timer);
   }, [staffName]);
 
-  return { shift, loading, reload: loadShift };
+  return {
+    shift,
+    loading,
+    reload: loadShift,
+  };
 }

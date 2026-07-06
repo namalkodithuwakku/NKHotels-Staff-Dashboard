@@ -39,7 +39,13 @@ export default function Login({ onLogin }: { onLogin: (staff: StaffSession) => v
   return (
     <main className="login-page">
       <form className="login-card" onSubmit={handleLogin}>
-        <div className="login-logo">NK</div>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+          <img
+            src="/icons/N%20K%20Hotel%20OS%20Logo.png"
+            alt="NK Hotel OS"
+            style={{ width: 160, height: "auto", objectFit: "contain" }}
+          />
+        </div>
 
         <h1>NK Hotel OS</h1>
         <p>Staff Operations Login</p>

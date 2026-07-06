@@ -13,11 +13,27 @@ export async function GET(request: Request) {
       { cache: "no-store" }
     );
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    const text = await response.text();
+
+    try {
+      const data = JSON.parse(text);
+      return NextResponse.json(data);
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Google Apps Script returned non-JSON for shift",
+          preview: text.slice(0, 500),
+        },
+        { status: 500 }
+      );
+    }
   } catch (err: any) {
     return NextResponse.json(
-      { success: false, error: err.message || "Failed to load shift" },
+      {
+        success: false,
+        error: err.message || "Failed to load shift",
+      },
       { status: 500 }
     );
   }

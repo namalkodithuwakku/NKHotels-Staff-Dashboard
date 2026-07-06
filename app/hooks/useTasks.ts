@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { fetchTasks } from "../lib/api";
 import { Task } from "../types/tasks";
 
-export function useTasks(staffName?: string) {
+export function useTasks(staffName?: string, canWork?: boolean) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -13,15 +13,10 @@ export function useTasks(staffName?: string) {
     try {
       const data = await fetchTasks();
 
-      const filtered = staffName
-        ? data.filter(
-            (t) =>
-              (t.assignedTo || "").toLowerCase().trim() ===
-              staffName.toLowerCase().trim()
-          )
-        : data;
+      // Everyone sees all tasks returned by API.
+      // Action permission is controlled by canWork in Timeline.
+      setTasks(data);
 
-      setTasks(filtered);
       setError("");
     } catch (err: any) {
       setError(err.message || "Failed to load tasks");
@@ -32,9 +27,11 @@ export function useTasks(staffName?: string) {
 
   useEffect(() => {
     loadTasks();
+
     const timer = setInterval(loadTasks, 20000);
+
     return () => clearInterval(timer);
-  }, [staffName]);
+  }, [staffName, canWork]);
 
   return { tasks, loading, error, reload: loadTasks };
 }
