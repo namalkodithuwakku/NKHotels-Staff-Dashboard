@@ -1,3 +1,5 @@
+import ExecutiveActions from "./ExecutiveActions";
+import PropertyHealth from "./PropertyHealth";
 import TeamOperations from "./TeamOperations";
 import { Task } from "../../types/tasks";
 
@@ -16,9 +18,11 @@ type Props = {
 
 export default function CEOBrief({ tasks }: Props) {
   const urgent = tasks.filter(isUrgent);
-  const pending = tasks.filter(
-    (task) => (task.status || "").toLowerCase() === "pending"
+
+  const pending = tasks.filter((task) =>
+    (task.status || "").toLowerCase().includes("pending")
   );
+
   const completed = tasks.filter(isDone);
 
   const topTask = urgent[0] || pending[0];
@@ -28,7 +32,7 @@ export default function CEOBrief({ tasks }: Props) {
       ? `${urgent.length} urgent task${urgent.length > 1 ? "s" : ""} need attention.`
       : pending.length > 0
       ? `${pending.length} pending task${pending.length > 1 ? "s" : ""} remaining.`
-      : "Company operations are under control.";
+      : "Company operations are running normally.";
 
   const recommendation = topTask
     ? `Check ${topTask.property || "the selected property"} first.`
@@ -36,65 +40,37 @@ export default function CEOBrief({ tasks }: Props) {
 
   return (
     <aside className="right">
-<TeamOperations tasks={tasks} />
       <div className="glass-card ai ai-strong">
         <span className="assistant-badge">AI CEO Brief</span>
 
-        <h3>Today’s Operations</h3>
+        <h3>Today's Operations</h3>
 
         <p className="big">{statusText}</p>
 
         <div className="brief-grid">
-          <div className="brief-item red">{urgent.length} urgent</div>
-          <div className="brief-item blue">{pending.length} pending</div>
-          <div className="brief-item green">{completed.length} completed</div>
+          <div className="brief-item red">
+            {urgent.length} Urgent
+          </div>
+
+          <div className="brief-item blue">
+            {pending.length} Pending
+          </div>
+
+          <div className="brief-item green">
+            {completed.length} Completed
+          </div>
         </div>
 
-        <div className="ai-note">{recommendation}</div>
-      </div>
-
-      <div className="glass-card">
-        <h3>Company Snapshot</h3>
-
-        <div className="perf">
-          <span>Total Visible Tasks</span>
-          <strong>{tasks.length}</strong>
-        </div>
-
-        <div className="perf">
-          <span>Urgent</span>
-          <strong>{urgent.length}</strong>
-        </div>
-
-        <div className="perf">
-          <span>Pending</span>
-          <strong>{pending.length}</strong>
-        </div>
-
-        <div className="perf">
-          <span>Completed</span>
-          <strong>{completed.length}</strong>
+        <div className="ai-note">
+          {recommendation}
         </div>
       </div>
 
-      <div className="glass-card">
-        <h3>Coming Next</h3>
+      <ExecutiveActions tasks={tasks} />
 
-        <div className="perf">
-          <span>Staff Performance</span>
-          <strong>Soon</strong>
-        </div>
+      <PropertyHealth tasks={tasks} />
 
-        <div className="perf">
-          <span>Property Health</span>
-          <strong>Soon</strong>
-        </div>
-
-        <div className="perf">
-          <span>Weekly Report</span>
-          <strong>Soon</strong>
-        </div>
-      </div>
+      <TeamOperations tasks={tasks} />
     </aside>
   );
 }
