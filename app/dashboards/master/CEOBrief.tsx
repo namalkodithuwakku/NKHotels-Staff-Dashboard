@@ -1,3 +1,4 @@
+import TeamOperations from "./TeamOperations";
 import { Task } from "../../types/tasks";
 
 function isDone(task: Task) {
@@ -35,6 +36,7 @@ export default function CEOBrief({ tasks }: Props) {
 
   return (
     <aside className="right">
+<TeamOperations tasks={tasks} />
       <div className="glass-card ai ai-strong">
         <span className="assistant-badge">AI CEO Brief</span>
 

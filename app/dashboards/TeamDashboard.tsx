@@ -113,7 +113,7 @@ export default function TeamDashboard({
         <header className="hero polished-hero">
           <div>
             <p>N K Hotel OS</p>
-            <h1>Operations Dashboard</h1>
+            <h1>OPERATIONS DASHBOARD</h1>
             <span className="sub">
               {canWork
                 ? `Good Day, ${staff.name} · ${shift?.shift || "Active Shift"} • Running Normally`
