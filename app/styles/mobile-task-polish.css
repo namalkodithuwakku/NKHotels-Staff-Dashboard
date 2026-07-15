@@ -1,0 +1,454 @@
+/* ==========================================================================
+   N K HOTEL OS — MOBILE TASK CARD POLISH
+   Append this entire file to the END of app/styles/mobile.css.
+   Desktop remains unchanged.
+   ========================================================================== */
+
+.desktop-task-card-layout {
+  display: block;
+}
+
+.mobile-task-card-layout,
+.mobile-email-toggle-content {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Reuse the proven desktop task structure at mobile width. */
+  .mobile-super-app .desktop-task-card-layout {
+    display: block !important;
+  }
+
+  .mobile-super-app .mobile-task-card-layout {
+    display: none !important;
+  }
+
+  .mobile-super-app .task:not(.amber) .task-content {
+    padding: 12px 13px !important;
+  }
+
+  .mobile-super-app .desktop-task-card {
+    gap: 9px;
+    padding: 0;
+  }
+
+  .mobile-super-app .desktop-task-top-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 38%);
+    gap: 8px;
+  }
+
+  .mobile-super-app .desktop-task-title-group {
+    gap: 6px;
+  }
+
+  .mobile-super-app .desktop-task-type {
+    display: block;
+    font-size: 15px;
+    line-height: 1.3;
+    white-space: nowrap;
+    word-break: normal;
+    overflow-wrap: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-super-app .desktop-urgent-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .mobile-super-app .desktop-task-property {
+    font-size: 13px;
+    line-height: 1.3;
+    white-space: nowrap;
+    word-break: normal;
+    overflow-wrap: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-super-app .desktop-task-second-row {
+    grid-template-columns: minmax(0, 1fr) minmax(76px, 40%);
+    gap: 10px;
+    font-size: 12px;
+  }
+
+  .mobile-super-app .desktop-task-subject {
+    padding: 7px 8px;
+    border-color: var(--mobile-line);
+    border-radius: 10px;
+    color: var(--mobile-text-soft);
+    background: color-mix(in srgb, var(--mobile-surface-soft) 72%, transparent);
+    font-size: 13px;
+    line-height: 1.42;
+    -webkit-line-clamp: 2;
+  }
+
+  .mobile-super-app .desktop-task-action-row {
+    gap: 7px;
+    padding-top: 8px;
+    border-top-color: var(--mobile-line);
+  }
+
+  .mobile-super-app .desktop-task-action-row button {
+    min-width: 68px;
+    min-height: 33px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
+
+  .mobile-super-app .desktop-task-action-row .completed-chip {
+    min-height: 31px;
+    padding: 6px 10px;
+    font-size: 10px;
+  }
+
+  /* Give the mobile card a safe internal text zone. */
+  .mobile-super-app .task-content {
+    min-width: 0;
+    padding: 0 !important;
+  }
+
+  .mobile-super-app .task {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    margin-top: 13px;
+    overflow: visible;
+    border-radius: 18px;
+  }
+
+  .mobile-super-app .time-block {
+    position: absolute;
+    top: -12px;
+    left: 5px;
+    z-index: 3;
+    display: block;
+    width: auto;
+    min-width: 0;
+    padding: 0;
+    color: var(--mobile-muted);
+    font-size: 8px;
+    font-weight: 850;
+    line-height: 1;
+    text-align: left;
+  }
+
+  .mobile-super-app .time-block i {
+    display: none;
+  }
+
+  .mobile-super-app .timeline::before {
+    display: none;
+  }
+
+  /* Row 1: title + compact status/id */
+  .mobile-task-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .mobile-task-heading {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: flex-start;
+    gap: 7px;
+    min-width: 0;
+    padding-top: 2px;
+  }
+
+  .mobile-task-heading .status-dot {
+    flex: 0 0 auto;
+    margin-top: 4px;
+  }
+
+  .mobile-task-heading strong {
+    min-width: 0;
+    color: inherit;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 850;
+    line-height: 1.35;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-task-header-side {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .mobile-task-header-side .task-id {
+    margin: 0;
+    font-size: 9px;
+  }
+
+  /* Row 2 and 3: exactly two short items horizontally. */
+  .mobile-task-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+    min-width: 0;
+    padding: 11px 12px;
+    border: 1px solid var(--mobile-line);
+    border-radius: 14px;
+    background: var(--mobile-surface-soft);
+  }
+
+  .mobile-task-info-item {
+    min-width: 0;
+    padding-right: 3px;
+  }
+
+  .mobile-task-info-item > span {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--mobile-muted);
+    font-size: 8.5px;
+    font-weight: 850;
+    letter-spacing: 0.055em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .mobile-task-info-item > strong {
+    display: block;
+    min-width: 0;
+    color: var(--mobile-text);
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 720;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Row 4: one-line subject panel. */
+  .mobile-task-subject {
+    width: 100%;
+    min-width: 0;
+    padding: 9px 11px;
+    border: 1px solid var(--mobile-line);
+    border-radius: 12px;
+    color: var(--mobile-text-soft);
+    background: var(--mobile-surface-soft);
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 650;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Row 5: actions always below details. */
+  .mobile-task-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--mobile-line);
+  }
+
+  .mobile-task-actions button {
+    width: auto;
+    min-width: 76px;
+    min-height: 36px;
+    margin: 0;
+    padding: 7px 11px;
+    border-radius: 11px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 820;
+    touch-action: manipulation;
+  }
+
+  .mobile-task-actions button.more {
+    min-width: 40px;
+    margin-left: auto;
+  }
+
+  .mobile-task-actions .completed-chip {
+    width: auto;
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-left: auto;
+    padding: 6px 11px;
+    border-radius: 999px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  /* AI Email mobile structure:
+     From/To → full-width Summary → buttons → Lucide email toggle. */
+  .mobile-super-app .ai-email-card {
+    width: 100%;
+    min-width: 0;
+    padding: 11px;
+  }
+
+  .mobile-super-app .ai-email-card .task-title strong {
+    font-size: 15px;
+  }
+
+  .mobile-super-app .ai-email-card .status-badge,
+  .mobile-super-app .ai-email-card .task-id {
+    font-size: 10px;
+  }
+
+  .mobile-super-app .task.amber [style*="repeat(2, minmax(0, 1fr))"] > div > span:first-child {
+    margin-bottom: 2px !important;
+    font-size: 6.5px !important;
+    letter-spacing: 0.045em !important;
+  }
+
+  .mobile-super-app .task.amber [style*="repeat(2, minmax(0, 1fr))"] > div > span:last-child {
+    font-size: 8px !important;
+    font-weight: 650 !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Stable selectors for browsers that rewrite inline style attributes. */
+  .mobile-super-app .ai-email-address-label {
+    margin-bottom: 2px !important;
+    font-size: 6px !important;
+    line-height: 1.1 !important;
+    letter-spacing: 0.035em !important;
+  }
+
+  .mobile-super-app .ai-email-address-value {
+    font-size: 7px !important;
+    font-weight: 620 !important;
+    line-height: 1.2 !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .mobile-super-app .ai-email-summary-row {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 9px !important;
+  }
+
+  .mobile-super-app .ai-email-summary-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 9px 10px !important;
+  }
+
+  .mobile-super-app .ai-email-summary-card > span {
+    margin-bottom: 3px !important;
+    font-size: 9px !important;
+  }
+
+  .mobile-super-app .ai-email-summary-card p {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    writing-mode: horizontal-tb !important;
+    text-orientation: mixed !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: anywhere !important;
+    font-family: inherit !important;
+    font-size: 13px !important;
+    line-height: 1.42 !important;
+  }
+
+  .mobile-super-app .ai-email-action-row button {
+    min-height: 32px;
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .mobile-super-app .ai-email-expand-button {
+    width: 32px;
+    min-width: 32px;
+    padding: 0 !important;
+  }
+
+  .mobile-super-app .ai-email-body,
+  .mobile-super-app .ai-email-body p {
+    font-size: 12px !important;
+    line-height: 1.45 !important;
+  }
+
+  .mobile-super-app .ai-email-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .mobile-super-app .ai-email-actions button {
+    width: 100% !important;
+    min-height: 36px !important;
+    margin: 0 !important;
+    padding: 7px 10px !important;
+    border-radius: 11px !important;
+    font-size: 11px !important;
+  }
+
+  /* Desktop keeps arrows. Mobile gets Lucide MailOpen / MailX and labels. */
+  .mobile-super-app .desktop-email-toggle-icon {
+    display: none;
+  }
+
+  .mobile-super-app .mobile-email-toggle-content {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  }
+
+  .mobile-super-app .ai-email-toggle-button {
+    min-width: 116px;
+    min-height: 36px;
+    padding: 7px 11px;
+    border-radius: 11px;
+    font-family: inherit;
+    font-size: 10.5px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  /* The view-only/task banners keep comfortable distance from borders. */
+  .mobile-super-app .view-only-banner,
+  .mobile-super-app .brief-item {
+    margin: 0 3px 10px;
+    padding: 14px 16px !important;
+    border-radius: 16px;
+    font-family: inherit;
+    font-size: 11px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 390px) {
+  .mobile-task-card-layout,
+  .mobile-super-app .ai-email-card {
+    padding: 12px;
+  }
+
+  .mobile-task-info-grid {
+    gap: 9px 10px;
+    padding: 10px;
+  }
+
+  .mobile-task-actions button {
+    min-width: 68px;
+  }
+}

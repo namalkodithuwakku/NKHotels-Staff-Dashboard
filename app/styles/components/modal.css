@@ -1,0 +1,136 @@
+/* ==========================================================
+   Modal Overlay
+========================================================== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+
+  display: grid;
+  place-items: center;
+
+  padding: 24px;
+
+  background: var(--overlay);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  z-index: 9999;
+
+  animation: softFadeIn .18s ease;
+}
+
+/* ==========================================================
+   Modal
+========================================================== */
+
+.modal {
+  width: min(560px, 100%);
+
+  background: var(--surface);
+
+  border: 1px solid var(--border);
+
+  border-radius: var(--radius-2xl);
+
+  box-shadow: var(--shadow-lg);
+
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+
+  overflow: hidden;
+
+  animation: softFadeIn .2s ease;
+}
+
+/* ==========================================================
+   Header
+========================================================== */
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 20px 24px;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  margin: 0;
+
+  font-size: 20px;
+  font-weight: 800;
+
+  color: var(--text);
+}
+
+.modal-subtitle {
+  margin-top: 4px;
+
+  font-size: 13px;
+
+  color: var(--muted);
+}
+
+/* ==========================================================
+   Body
+========================================================== */
+
+.modal-body {
+  padding: 24px;
+
+  display: grid;
+  gap: 18px;
+}
+
+/* ==========================================================
+   Footer
+========================================================== */
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+
+  padding: 20px 24px;
+
+  border-top: 1px solid var(--border);
+}
+
+/* ==========================================================
+   Grid
+========================================================== */
+
+.modal-grid {
+  display: grid;
+  gap: 14px;
+}
+
+/* ==========================================================
+   Two Columns
+========================================================== */
+
+.modal-grid.two {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* ==========================================================
+   Mobile
+========================================================== */
+
+@media (max-width: 700px) {
+
+  .modal {
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-grid.two {
+    grid-template-columns: 1fr;
+  }
+
+}

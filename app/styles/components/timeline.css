@@ -1,0 +1,609 @@
+/* ==========================================================
+   Timeline
+========================================================== */
+
+.timeline {
+  position: relative;
+  display: grid;
+  gap: 10px;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 75px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--blue-soft), var(--purple-soft));
+}
+
+/* ==========================================================
+   Task Row
+========================================================== */
+
+.task {
+  position: relative;
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 18px;
+  min-height: 96px;
+}
+
+.time-block {
+  position: relative;
+  padding-top: 17px;
+  color: var(--muted);
+  font-weight: 900;
+  font-size: 13px;
+  text-align: right;
+}
+
+.time-block i {
+  position: absolute;
+  right: -26px;
+  top: 19px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--surface-solid);
+  border: 3px solid var(--blue);
+  z-index: 2;
+}
+
+.task.green .time-block i {
+  border-color: var(--green);
+}
+
+.task.red .time-block i {
+  border-color: var(--red);
+}
+
+.task.amber .time-block i {
+  border-color: var(--amber);
+}
+
+.task.blue .time-block i {
+  border-color: var(--blue);
+}
+
+.task.purple .time-block i {
+  border-color: var(--purple);
+}
+
+/* ==========================================================
+   Task Content
+========================================================== */
+
+.task-content {
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.task-content:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.task-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.task-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.task-title strong {
+  font-size: 15px;
+  color: var(--text);
+}
+
+.task-title em {
+  font-style: normal;
+}
+
+.task-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 220px));
+  gap: 3px 20px;
+
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+.task-meta span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ==========================================================
+   Task Actions
+========================================================== */
+
+.task-actions {
+  min-width: 178px;
+  display: grid;
+  justify-items: end;
+  gap: 12px;
+}
+
+.task-id {
+  color: var(--muted-2);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.task-actions div {
+  display: flex;
+  gap: 7px;
+}
+
+/* ==========================================================
+   Completed State
+========================================================== */
+
+.task-completed .task-content {
+  background: var(--green-soft);
+  border-color: rgba(22, 163, 74, 0.25);
+  animation: completedPulse .65s ease;
+}
+
+.task-completed .task-title strong {
+  color: var(--green-strong);
+}
+
+/* ==========================================================
+   View Only
+========================================================== */
+
+.view-only-banner {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  border: 1px solid rgba(249, 115, 22, 0.28);
+
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.task-view-only .task-content {
+  opacity: .88;
+}
+/* ==========================================================
+   Desktop Task Card — Clean Operations Layout
+========================================================== */
+
+.desktop-task-card-layout {
+  display: block;
+  width: 100%;
+}
+.mobile-task-card-layout{
+    display:none;
+}
+
+.desktop-task-card {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  padding: 4px 2px;
+}
+
+.desktop-task-top-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, auto);
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+
+.desktop-task-title-group {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.desktop-task-type {
+  min-width: 0;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 850;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.desktop-urgent-icon {
+  flex: 0 0 auto;
+  color: var(--red);
+}
+
+.desktop-task-property {
+  min-width: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.35;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.desktop-task-second-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, auto);
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.desktop-task-second-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desktop-task-second-row span:last-child {
+  text-align: right;
+}
+
+.desktop-task-subject {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text-soft);
+  background: rgba(255, 255, 255, 0.025);
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.5;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.desktop-task-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 11px;
+  border-top: 1px solid var(--border);
+}
+
+.desktop-task-action-row button {
+  min-width: 82px;
+  min-height: 36px;
+  padding: 7px 14px;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.desktop-task-action-row .completed-chip {
+  width: auto;
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: 999px;
+}
+
+/* Mobile layout remains controlled separately. */
+@media (max-width: 768px) {
+  .desktop-task-card-layout {
+    display: none !important;
+  }
+}
+
+/* ==========================================================
+   Premium Status Glass — Light Mode
+========================================================== */
+
+.task-status-urgent .task-content,
+.task-status-pending .task-content {
+  background:
+    linear-gradient(135deg, rgba(255, 241, 244, 0.94), rgba(255, 250, 251, 0.86));
+  border-color: rgba(244, 63, 94, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 12px 30px rgba(244, 63, 94, 0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.task-status-progress .task-content {
+  background:
+    linear-gradient(135deg, rgba(235, 246, 255, 0.95), rgba(247, 251, 255, 0.86));
+  border-color: rgba(59, 130, 246, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 12px 30px rgba(59, 130, 246, 0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.task-status-completed .task-content {
+  background:
+    linear-gradient(135deg, rgba(236, 253, 245, 0.95), rgba(247, 255, 250, 0.87));
+  border-color: rgba(34, 197, 94, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 12px 30px rgba(34, 197, 94, 0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.task-status-ai_email .task-content {
+  background:
+    linear-gradient(135deg, rgba(255, 247, 225, 0.96), rgba(255, 252, 242, 0.88));
+  border-color: rgba(245, 158, 11, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 12px 30px rgba(245, 158, 11, 0.09);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+/* Start — premium blue glass */
+.desktop-task-action-row button:not(.complete),
+.mobile-task-actions button:not(.complete):not(.more) {
+  color: #1d4ed8;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background:
+    linear-gradient(135deg, rgba(219, 234, 254, 0.9), rgba(239, 246, 255, 0.72));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 7px 20px rgba(59, 130, 246, 0.11);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Done — restrained light-green glass */
+.desktop-task-action-row button.complete,
+.mobile-task-actions button.complete {
+  color: #15803d;
+  border: 1px solid rgba(34, 197, 94, 0.27);
+  background:
+    linear-gradient(135deg, rgba(220, 252, 231, 0.92), rgba(240, 253, 244, 0.76));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 7px 20px rgba(34, 197, 94, 0.1);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.desktop-task-action-row button:hover:not(:disabled),
+.mobile-task-actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: saturate(1.06);
+}
+
+.desktop-task-action-row button:disabled,
+.mobile-task-actions button:disabled {
+  opacity: 0.52;
+  box-shadow: none;
+}
+
+/* ==========================================================
+   Premium Status Glass — Dark Mode
+========================================================== */
+
+[data-theme="dark"] .task-status-urgent .task-content,
+[data-theme="dark"] .task-status-pending .task-content {
+  background:
+    linear-gradient(135deg, rgba(88, 20, 40, 0.46), rgba(48, 22, 31, 0.36));
+  border-color: rgba(251, 113, 133, 0.27);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 14px 34px rgba(244, 63, 94, 0.09);
+}
+
+[data-theme="dark"] .task-status-progress .task-content {
+  background:
+    linear-gradient(135deg, rgba(20, 58, 92, 0.5), rgba(18, 38, 62, 0.4));
+  border-color: rgba(96, 165, 250, 0.27);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 14px 34px rgba(59, 130, 246, 0.09);
+}
+
+[data-theme="dark"] .task-status-completed .task-content {
+  background:
+    linear-gradient(135deg, rgba(19, 74, 50, 0.48), rgba(17, 47, 36, 0.38));
+  border-color: rgba(74, 222, 128, 0.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 14px 34px rgba(34, 197, 94, 0.08);
+}
+
+[data-theme="dark"] .task-status-ai_email .task-content {
+  background:
+    linear-gradient(135deg, rgba(91, 58, 15, 0.48), rgba(55, 39, 20, 0.38));
+  border-color: rgba(251, 191, 36, 0.27);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 14px 34px rgba(245, 158, 11, 0.09);
+}
+
+[data-theme="dark"] .desktop-task-action-row button:not(.complete),
+[data-theme="dark"] .mobile-task-actions button:not(.complete):not(.more) {
+  color: #bfdbfe;
+  border-color: rgba(96, 165, 250, 0.29);
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(30, 64, 175, 0.13));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 22px rgba(0, 0, 0, 0.16);
+}
+
+[data-theme="dark"] .desktop-task-action-row button.complete,
+[data-theme="dark"] .mobile-task-actions button.complete {
+  color: #bbf7d0;
+  border-color: rgba(74, 222, 128, 0.28);
+  background:
+    linear-gradient(135deg, rgba(34, 197, 94, 0.22), rgba(21, 128, 61, 0.13));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 22px rgba(0, 0, 0, 0.16);
+}
+
+/* ==========================================================
+   AI Email Controls and Compact Body
+========================================================== */
+
+.ai-email-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ai-email-action-row button {
+  min-height: 36px;
+  padding: 8px 14px;
+  border-radius: 11px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform var(--transition-fast),
+    filter var(--transition-fast),
+    box-shadow var(--transition-fast);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.ai-email-action-row button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: saturate(1.06);
+}
+
+.ai-email-action-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  box-shadow: none;
+}
+
+.ai-email-approve-button {
+  color: #8a4300;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  background:
+    linear-gradient(135deg, rgba(255, 217, 145, 0.94), rgba(255, 238, 199, 0.84));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 7px 20px rgba(245, 158, 11, 0.15);
+}
+
+.ai-email-ignore-button {
+  color: #8a4b08;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  background:
+    linear-gradient(135deg, rgba(255, 231, 180, 0.84), rgba(255, 247, 225, 0.76));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 7px 20px rgba(245, 158, 11, 0.11);
+}
+
+.ai-email-expand-button {
+  width: 36px;
+  min-width: 36px;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #8a4300;
+  border: 1px solid rgba(245, 158, 11, 0.36);
+  background:
+    linear-gradient(135deg, rgba(255, 220, 154, 0.88), rgba(255, 243, 214, 0.78));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 7px 20px rgba(245, 158, 11, 0.13);
+}
+
+.ai-email-body {
+  color: var(--text-soft);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 158, 11, 0.34) transparent;
+}
+
+.ai-email-body p {
+  overflow-wrap: anywhere;
+}
+
+[data-theme="dark"] .ai-email-approve-button {
+  color: #fde3a7;
+  border-color: rgba(251, 191, 36, 0.29);
+  background:
+    linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(146, 64, 14, 0.13));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 22px rgba(0, 0, 0, 0.16);
+}
+
+[data-theme="dark"] .ai-email-ignore-button {
+  color: #f8d994;
+  border-color: rgba(251, 191, 36, 0.25);
+  background:
+    linear-gradient(135deg, rgba(217, 119, 6, 0.18), rgba(120, 53, 15, 0.12));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 8px 22px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] .ai-email-expand-button {
+  color: #fde3a7;
+  border-color: rgba(251, 191, 36, 0.27);
+  background:
+    linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(120, 53, 15, 0.12));
+}
+
+@media (max-width: 768px) {
+  .ai-email-action-row {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .ai-email-action-row button {
+    min-height: 34px;
+    padding: 7px 12px;
+  }
+
+  .ai-email-expand-button {
+    width: 34px;
+    min-width: 34px;
+  }
+
+  .ai-email-body {
+    max-height: 230px !important;
+    padding: 9px 10px !important;
+  }
+}

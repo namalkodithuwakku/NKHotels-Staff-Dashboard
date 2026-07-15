@@ -1,13 +1,5 @@
 import { StaffSession } from "../hooks/useAuth";
-
-const navItems = [
-  "Work Queue",
-  "Booking Calendar",
-  "Properties",
-  "Clients",
-  "Reports",
-  "Settings",
-];
+import { getNavigation } from "../config/navigation";
 
 export default function Sidebar({
   staff,
@@ -18,53 +10,50 @@ export default function Sidebar({
   onLogout: () => void;
   shiftActive: boolean;
 }) {
+  const navItems = getNavigation(staff.access);
+
   return (
     <aside className="sidebar">
       <div className="brand">
-        <div
-          className="logo"
-          style={{
-            width: 52,
-            height: 52,
-            borderRadius: 14,
-            background: "#fff",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            overflow: "hidden",
-            flexShrink: 0,
-          }}
-        >
+        <div className="logo">
           <img
-            src="/icons/N%20K%20Hotel%20OS%20Logo.png"
+            src="/icons/Favicon.png"
             alt="NK Hotel OS"
-            style={{
-              width: "88%",
-              height: "88%",
-              objectFit: "contain",
-              display: "block",
-            }}
+            style={{ width: "100%", height: "100%", objectFit: "contain" }}
           />
         </div>
 
         <div>
           <strong>NK Hotel OS</strong>
-          <span>Operations Workspace</span>
+          <span>
+            {staff.access === "Master"
+              ? "Command Center"
+              : "Operations Workspace"}
+          </span>
         </div>
       </div>
 
       <nav>
         {navItems.map((item, index) => (
-          <a key={item} className={index === 0 ? "active" : ""}>
+          <a
+            key={item.label}
+            href={item.href}
+            className={index === 0 ? "active" : ""}
+          >
             <span className="nav-dot"></span>
-            {item}
+            {item.label}
           </a>
         ))}
       </nav>
 
       <div className="side-card">
-        <span>Shift Status</span>
-        <strong>{shiftActive ? "Online" : "Ended"}</strong>
+        <div className="team-online">
+          <span className={shiftActive ? "online-dot" : "online-dot muted"} />
+          <strong>
+            {staff.access === "Master" ? "Master Online" : "Team Online"}
+          </strong>
+        </div>
+
         <p>{staff.name}</p>
       </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Login from "./components/Login";
+import MobileLogin from "./components/mobile/MobileLogin";
 import { useAuth } from "./hooks/useAuth";
 
 import TeamDashboard from "./dashboards/TeamDashboard";
@@ -13,7 +14,17 @@ export default function Home() {
   if (!ready) return null;
 
   if (!staff) {
-    return <Login onLogin={login} />;
+    return (
+      <>
+        <div className="desktop-login-wrap">
+          <Login onLogin={login} />
+        </div>
+
+        <div className="mobile-login-wrap">
+          <MobileLogin onLogin={login} />
+        </div>
+      </>
+    );
   }
 
   const access = String(staff.access || "")

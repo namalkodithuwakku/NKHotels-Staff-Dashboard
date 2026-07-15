@@ -1,31 +1,37 @@
-import { Task } from "../types/tasks";
+type StatsData = {
+  total: number;
+  urgent: number;
+  pending: number;
+  active: number;
+  completed: number;
+};
 
-function isDone(t: Task) {
-  return (t.status || "").toLowerCase().includes("done") ||
-    (t.status || "").toLowerCase().includes("completed");
-}
-
-export default function Stats({ tasks }: { tasks: Task[] }) {
-  const urgent = tasks.filter(
-    (t) => (t.priority || "").toLowerCase() === "high" && !isDone(t)
-  ).length;
-
-  const pending = tasks.filter(
-    (t) => (t.status || "").toLowerCase() === "pending"
-  ).length;
-
-  const active = tasks.filter((t) =>
-    (t.status || "").toLowerCase().includes("progress")
-  ).length;
-
-  const done = tasks.filter(isDone).length;
-
+export default function Stats({
+  stats,
+}: {
+  stats: StatsData;
+}) {
   return (
     <section className="metrics">
-      <div className="metric urgent"><span>Urgent</span><strong>{urgent}</strong></div>
-      <div className="metric new"><span>Pending</span><strong>{pending}</strong></div>
-      <div className="metric active"><span>Active</span><strong>{active}</strong></div>
-      <div className="metric done"><span>Done</span><strong>{done}</strong></div>
+      <div className="metric urgent">
+        <span>Urgent</span>
+        <strong>{stats.urgent}</strong>
+      </div>
+
+      <div className="metric new">
+        <span>Pending</span>
+        <strong>{stats.pending}</strong>
+      </div>
+
+      <div className="metric active">
+        <span>Active</span>
+        <strong>{stats.active}</strong>
+      </div>
+
+      <div className="metric done">
+        <span>Done</span>
+        <strong>{stats.completed}</strong>
+      </div>
     </section>
   );
 }

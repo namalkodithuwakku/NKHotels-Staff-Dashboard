@@ -1,0 +1,65 @@
+/* ==========================================================
+   MASTER DASHBOARD
+========================================================== */
+
+/* Executive Layout */
+
+.master-dashboard {
+    display: grid;
+    gap: 24px;
+}
+
+/* Dashboard Sections */
+
+.master-section {
+    display: grid;
+    gap: 18px;
+}
+
+/* CEO Header */
+
+.ceo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Executive Cards */
+
+.executive-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+}
+
+/* KPI Area */
+
+.master-kpis {
+    display: grid;
+    grid-template-columns: repeat(4,1fr);
+    gap: 16px;
+}
+
+/* Executive Actions */
+
+.executive-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Property Health */
+
+.property-health {
+    display: grid;
+    gap: 14px;
+}
+
+/* Team Operations */
+
+.team-operations {
+    display: grid;
+    gap: 14px;
+}
