@@ -7,7 +7,7 @@ import {
 import { Task } from "../types/tasks";
 
 import {
-  approveAIEmail,
+  startEmailTask,
   ignoreAIEmail,
   updateTaskStatus,
 } from "../lib/api";
@@ -16,6 +16,7 @@ type TimelineItem = Task & {
   time?: string;
   color?: string;
 
+  aiTitle?: string;
   summary?: string;
   action?: string;
   category?: string;
@@ -285,6 +286,16 @@ export default function Timeline({
   ) {
     if (!canWork || !taskId) return;
 
+    let completionNote = "";
+    if (status === "Done") {
+      const note = window.prompt(
+        "Completion note (optional)\n\nAdd a short result for the client, or leave blank for a general completion message.",
+        ""
+      );
+      if (note === null) return;
+      completionNote = note.trim();
+    }
+
     try {
       setUpdatingId(taskId);
 
@@ -295,11 +306,25 @@ export default function Timeline({
         ]);
       }
 
-      await updateTaskStatus(
-        taskId,
-        status,
-        staffName
-      );
+      if (status === "Done") {
+        const params = new URLSearchParams({ taskId, status, staffName, completionNote });
+        const response = await fetch(`/api/tasks/update?${params.toString()}`, {
+          method: "GET",
+          cache: "no-store",
+        });
+        const text = await response.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error("Task update returned invalid JSON.");
+        }
+        if (!response.ok || data?.success === false) {
+          throw new Error(data?.error || "Failed to complete task");
+        }
+      } else {
+        await updateTaskStatus(taskId, status, staffName);
+      }
 
       window.setTimeout(() => {
         void onChanged();
@@ -321,7 +346,7 @@ export default function Timeline({
     }
   }
 
-  async function handleCreateTask(
+  async function handleStartEmailTask(
     emailId: string
   ) {
     if (!canWork || !emailId) return;
@@ -329,7 +354,7 @@ export default function Timeline({
     try {
       setUpdatingId(emailId);
 
-      await approveAIEmail({
+      await startEmailTask({
         emailId,
         staffName,
       });
@@ -338,7 +363,7 @@ export default function Timeline({
     } catch (error: any) {
       alert(
         error?.message ||
-          "Failed to create task"
+          "Failed to start email task"
       );
     } finally {
       setUpdatingId("");
@@ -445,301 +470,173 @@ export default function Timeline({
 
             <div className="task-content">
               {isAIEmail ? (
-                <div
-                  className="ai-email-card"
-                  style={{
-                    width: "100%",
-                    minWidth: 0,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent:
-                        "space-between",
-                      gap: 12,
-                      marginBottom: 14,
-                    }}
-                  >
-                    <div
-                      className="task-title"
-                      style={{
-                        margin: 0,
-                      }}
-                    >
+                <div className="ai-email-card">
+                  <div className="ai-email-header">
+                    <div className="ai-email-heading">
                       <span
                         className="status-dot amber"
+                        aria-hidden="true"
                       />
 
-                      <strong>
-                        {task.taskType ||
-                          "AI Email"}
-                      </strong>
+                      <div className="ai-email-heading-copy">
+                        <strong>
+                          {task.aiTitle ||
+                            task.category ||
+                            task.taskType ||
+                            task.subject ||
+                            "Email Notification"}
+                        </strong>
 
-                      <em className="status-badge amber">
-                        AI Email
-                      </em>
+                        <span>
+                          Operations Inbox
+                        </span>
+                      </div>
                     </div>
 
-                    <span className="task-id">
-                      #{shortId(itemId)}
-                    </span>
+                    <em className="status-badge amber">
+                      AI Summary
+                    </em>
                   </div>
 
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "repeat(2, minmax(0, 1fr))",
-                      gap: 12,
-                      marginBottom: 14,
-                    }}
-                  >
-                    <div
-                      style={{
-                        minWidth: 0,
-                      }}
-                    >
-                      <span
-                        className="ai-email-address-label"
-                        style={{
-                          display: "block",
-                          fontSize: 11,
-                          fontWeight: 800,
-                          opacity: 0.62,
-                          marginBottom: 4,
-                          textTransform:
-                            "uppercase",
-                          letterSpacing:
-                            "0.06em",
-                        }}
-                      >
-                        Email From
+                  <div className="ai-email-address-grid">
+                    <div className="ai-email-address-item">
+                      <span className="ai-email-address-label">
+                        From
                       </span>
 
-                      <span
+                      <strong
                         className="ai-email-address-value"
-                        style={{
-                          display: "block",
-                          fontSize: 13,
-                          fontWeight: 700,
-                          overflowWrap:
-                            "anywhere",
-                        }}
+                        title={cleanEmailAddress(
+                          task.from
+                        )}
                       >
                         {cleanEmailAddress(
                           task.from
                         )}
-                      </span>
+                      </strong>
                     </div>
 
-                    <div
-                      style={{
-                        minWidth: 0,
-                      }}
-                    >
-                      <span
-                        className="ai-email-address-label"
-                        style={{
-                          display: "block",
-                          fontSize: 11,
-                          fontWeight: 800,
-                          opacity: 0.62,
-                          marginBottom: 4,
-                          textTransform:
-                            "uppercase",
-                          letterSpacing:
-                            "0.06em",
-                        }}
-                      >
-                        Email To
+                    <div className="ai-email-address-item">
+                      <span className="ai-email-address-label">
+                        To
                       </span>
 
-                      <span
+                      <strong
                         className="ai-email-address-value"
-                        style={{
-                          display: "block",
-                          fontSize: 13,
-                          fontWeight: 700,
-                          overflowWrap:
-                            "anywhere",
-                        }}
+                        title={cleanEmailAddress(
+                          task.to
+                        )}
                       >
                         {cleanEmailAddress(
                           task.to
                         )}
-                      </span>
+                      </strong>
                     </div>
                   </div>
 
                   <div className="ai-email-summary-row">
-                    <div
-                      className="ai-email-summary-card"
-                      style={{
-                        minWidth: 0,
-                        padding: "12px 14px",
-                        borderRadius: 14,
-                        background:
-                          "rgba(255, 166, 0, 0.08)",
-                        border:
-                          "1px solid rgba(255, 166, 0, 0.18)",
-                      }}
-                    >
-                      <span
-                        style={{
-                          display: "block",
-                          fontSize: 11,
-                          fontWeight: 800,
-                          opacity: 0.65,
-                          marginBottom: 5,
-                          textTransform:
-                            "uppercase",
-                          letterSpacing:
-                            "0.06em",
-                        }}
-                      >
-                        AI Summary
+                    <div className="ai-email-summary-card">
+                      <span className="ai-email-section-label">
+                        Summary
                       </span>
 
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: 14,
-                          lineHeight: 1.55,
-                          fontWeight: 650,
-                          overflowWrap:
-                            "anywhere",
-                        }}
-                      >
+                      <p>
                         {task.summary ||
                           "Review this email."}
                       </p>
                     </div>
+                  </div>
 
-                    <div className="ai-email-action-row">
-                      <button
-                        type="button"
-                        className="ai-email-approve-button"
-                        disabled={
-                          !canWork ||
-                          isUpdating
-                        }
-                        onClick={() =>
-                          handleCreateTask(
-                            itemId
-                          )
-                        }
-                      >
-                        {isUpdating
-                          ? "..."
-                          : "Approve"}
-                      </button>
-
-                      <button
-                        type="button"
-                        className="ai-email-ignore-button"
-                        disabled={
-                          !canWork ||
-                          isUpdating
-                        }
-                        onClick={() =>
-                          handleIgnoreAIEmail(
-                            itemId
-                          )
-                        }
-                      >
-                        {isUpdating
-                          ? "..."
-                          : "Ignore"}
-                      </button>
-
-                      <button
-                        type="button"
-                        className="ai-email-expand-button"
-                        aria-label={
+                  <div className="ai-email-action-row">
+                    <button
+                      type="button"
+                      className="ai-email-expand-button"
+                      aria-label={
+                        isExpanded
+                          ? "Close original email"
+                          : "Preview original email"
+                      }
+                      title={
+                        isExpanded
+                          ? "Close original email"
+                          : "Preview original email"
+                      }
+                      onClick={() =>
+                        setExpandedId(
                           isExpanded
-                            ? "Close email"
-                            : "Open email"
-                        }
-                        title={
-                          isExpanded
-                            ? "Close email"
-                            : "Open email"
-                        }
-                        onClick={() =>
-                          setExpandedId(
-                            isExpanded
-                              ? ""
-                              : itemId
-                          )
-                        }
-                      >
-                        {isExpanded ? (
-                          <MailX
-                            size={17}
-                            strokeWidth={2.1}
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <MailOpen
-                            size={17}
-                            strokeWidth={2.1}
-                            aria-hidden="true"
-                          />
-                        )}
-                      </button>
-                    </div>
+                            ? ""
+                            : itemId
+                        )
+                      }
+                    >
+                      {isExpanded ? (
+                        <MailX
+                          size={17}
+                          strokeWidth={2.1}
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <MailOpen
+                          size={17}
+                          strokeWidth={2.1}
+                          aria-hidden="true"
+                        />
+                      )}
+
+                      <span>
+                        {isExpanded
+                          ? "Close Email"
+                          : "View Email"}
+                      </span>
+                    </button>
+
+                    <div className="ai-email-action-spacer" />
+
+                    <button
+                      type="button"
+                      className="ai-email-ignore-button"
+                      disabled={
+                        !canWork ||
+                        isUpdating
+                      }
+                      onClick={() =>
+                        handleIgnoreAIEmail(
+                          itemId
+                        )
+                      }
+                    >
+                      {isUpdating
+                        ? "..."
+                        : "Ignore"}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="ai-email-approve-button"
+                      disabled={
+                        !canWork ||
+                        isUpdating
+                      }
+                      onClick={() =>
+                        handleStartEmailTask(
+                          itemId
+                        )
+                      }
+                    >
+                      {isUpdating
+                        ? "..."
+                        : "Start"}
+                    </button>
                   </div>
 
                   {isExpanded && (
-                    <div
-                      className="ai-email-expanded"
-                      style={{
-                        marginTop: 10,
-                        paddingTop: 10,
-                        borderTop:
-                          "1px solid rgba(255, 166, 0, 0.2)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          marginBottom: 10,
-                        }}
-                      >
-                        <span
-                          style={{
-                            display:
-                              "block",
-                            fontSize: 11,
-                            fontWeight: 800,
-                            opacity: 0.65,
-                            marginBottom: 5,
-                            textTransform:
-                              "uppercase",
-                            letterSpacing:
-                              "0.06em",
-                          }}
-                        >
-                          Email Body
+                    <div className="ai-email-expanded">
+                      <div className="ai-email-expanded-section">
+                        <span className="ai-email-section-label">
+                          Original Email
                         </span>
 
-                        <div
-                          className="ai-email-body"
-                          style={{
-                            maxHeight: 260,
-                            overflowY: "auto",
-                            padding:
-                              "10px 12px",
-                            borderRadius: 13,
-                            background:
-                              "rgba(255,255,255,0.045)",
-                            border:
-                              "1px solid rgba(255,255,255,0.08)",
-                            overflowWrap:
-                              "anywhere",
-                          }}
-                        >
+                        <div className="ai-email-body">
                           {splitEmailParagraphs(
                             task.body
                           ).map(
@@ -749,18 +646,6 @@ export default function Timeline({
                             ) => (
                               <p
                                 key={`${itemId}-paragraph-${paragraphIndex}`}
-                                style={{
-                                  margin:
-                                    paragraphIndex ===
-                                    0
-                                      ? 0
-                                      : "7px 0 0",
-                                  whiteSpace:
-                                    "pre-wrap",
-                                  lineHeight:
-                                    1.45,
-                                  fontSize: 13,
-                                }}
                               >
                                 {paragraph}
                               </p>
@@ -769,100 +654,44 @@ export default function Timeline({
                         </div>
                       </div>
 
-                      <div>
-                        <span
-                          style={{
-                            display:
-                              "block",
-                            fontSize: 11,
-                            fontWeight: 800,
-                            opacity: 0.65,
-                            marginBottom: 8,
-                            textTransform:
-                              "uppercase",
-                            letterSpacing:
-                              "0.06em",
-                          }}
-                        >
+                      <div className="ai-email-expanded-section">
+                        <span className="ai-email-section-label">
                           Attachments
                         </span>
 
                         {attachments.length >
                         0 ? (
-                          <div
-                            style={{
-                              display:
-                                "flex",
-                              flexWrap:
-                                "wrap",
-                              gap: 8,
-                            }}
-                          >
+                          <div className="ai-email-attachments">
                             {attachments.map(
                               (
                                 attachment,
                                 attachmentIndex
                               ) => (
                                 <span
+                                  className="ai-email-attachment"
                                   key={`${itemId}-attachment-${attachmentIndex}`}
-                                  style={{
-                                    display:
-                                      "inline-flex",
-                                    alignItems:
-                                      "center",
-                                    gap: 6,
-                                    padding:
-                                      "7px 10px",
-                                    borderRadius:
-                                      999,
-                                    fontSize:
-                                      12,
-                                    fontWeight:
-                                      750,
-                                    background:
-                                      "rgba(255, 166, 0, 0.09)",
-                                    border:
-                                      "1px solid rgba(255, 166, 0, 0.18)",
-                                  }}
                                 >
-                                  📎{" "}
-                                  {attachment}
+                                  📎 {attachment}
                                 </span>
                               )
                             )}
                           </div>
                         ) : (
-                          <span
-                            style={{
-                              fontSize: 13,
-                              opacity: 0.65,
-                            }}
-                          >
+                          <span className="ai-email-empty-text">
                             No attachments
                           </span>
                         )}
                       </div>
 
                       {task.gmailLink && (
-                        <div
-                          style={{
-                            marginTop: 16,
-                          }}
+                        <a
+                          className="ai-email-gmail-link"
+                          href={task.gmailLink}
+                          target="_blank"
+                          rel="noreferrer"
                         >
-                          <a
-                            href={
-                              task.gmailLink
-                            }
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 800,
-                            }}
-                          >
-                            Open in Gmail →
-                          </a>
-                        </div>
+                          Open in Gmail →
+                        </a>
                       )}
                     </div>
                   )}

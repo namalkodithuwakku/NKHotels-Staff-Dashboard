@@ -139,13 +139,13 @@ export async function ignoreAIEmail(input: {
   return data;
 }
 
-export async function approveAIEmail(input: {
+export async function startEmailTask(input: {
   emailId: string;
   staffName: string;
   staffPhone?: string;
   shift?: string;
 }) {
-  const response = await fetch("/api/email-reader/approve", {
+  const response = await fetch("/api/email-reader/start", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -161,11 +161,15 @@ export async function approveAIEmail(input: {
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error("Approve AI email API returned invalid JSON.");
+    throw new Error(
+      "Start email task API returned invalid JSON."
+    );
   }
 
   if (!data.success) {
-    throw new Error(data.error || "Failed to approve AI email");
+    throw new Error(
+      data.error || "Failed to start email task"
+    );
   }
 
   return data;

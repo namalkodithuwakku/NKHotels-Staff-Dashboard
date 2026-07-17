@@ -11,6 +11,31 @@ function secretsMatch(received: string | null) {
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
+async function getActiveShiftAssignee() {
+  if (!GOOGLE_WEBAPP_URL) return { staffName: "", shift: "" };
+
+  const params = new URLSearchParams({
+    action: "getStaffShift",
+    staff: "WhatsApp AI",
+  });
+
+  try {
+    const response = await fetch(`${GOOGLE_WEBAPP_URL}?${params.toString()}`, {
+      method: "GET",
+      cache: "no-store",
+      redirect: "follow",
+    });
+    const data = await response.json();
+    return {
+      staffName: String(data?.shift?.activeStaffName || "").trim(),
+      shift: String(data?.shift?.activeStaffShift || "").trim(),
+    };
+  } catch (error) {
+    console.error("Unable to read active shift assignee", error);
+    return { staffName: "", shift: "" };
+  }
+}
+
 export async function POST(request: NextRequest) {
   if (!secretsMatch(request.headers.get("x-nkh-inbox-secret"))) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
@@ -33,6 +58,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const assignee = await getActiveShiftAssignee();
+    if (!assignee.staffName) {
+      return NextResponse.json(
+        { success: false, error: "No active shift staff member found" },
+        { status: 409 },
+      );
+    }
+
     const params = new URLSearchParams({
       action: "createTask",
       taskType: String(body.taskType || "Other"),
@@ -41,9 +74,9 @@ export async function POST(request: NextRequest) {
       note,
       subject,
       priority: String(body.priority || "Normal"),
-      staffName: "",
+      staffName: assignee.staffName,
       staffPhone: "",
-      shift: "",
+      shift: assignee.shift,
     });
 
     const response = await fetch(`${GOOGLE_WEBAPP_URL}?${params.toString()}`, {
