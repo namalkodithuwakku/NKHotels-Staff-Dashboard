@@ -37,3 +37,7 @@ export function canManageProperties(session: ServerSession | null) {
   // manage properties until role records and permissions move to Supabase.
   return session !== null;
 }
+
+export function isMasterSession(session: ServerSession | null) {
+  return String(session?.access || "").trim().toLowerCase() === "master";
+}
