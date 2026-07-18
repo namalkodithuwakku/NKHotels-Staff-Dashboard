@@ -14,15 +14,22 @@ import EmailInbox from "../components/inbox/EmailInbox";
 import WhatsAppInbox from "../components/whatsapp/WhatsAppInbox";
 import ScheduledTasks from "../components/scheduled/ScheduledTasks";
 import TaskCreatorModal from "../components/tasks/TaskCreatorModal";
+import PropertiesWorkspace from "../components/properties/PropertiesWorkspace";
+import ComingSoonWorkspace from "../components/shared/ComingSoonWorkspace";
 
-export type WorkspaceView = "home" | "tasks" | "email" | "whatsapp" | "scheduled";
+export type WorkspaceView = "home" | "tasks" | "email" | "whatsapp" | "sms" | "scheduled" | "properties" | "roster" | "calendar" | "faq";
 
 const nav: Array<{ key: WorkspaceView; label: string; short: string }> = [
   { key: "home", label: "Home", short: "Home" },
   { key: "tasks", label: "Shift Tasks", short: "Tasks" },
   { key: "email", label: "Email Inbox", short: "Email" },
   { key: "whatsapp", label: "WhatsApp Inbox", short: "WhatsApp" },
+  { key: "sms", label: "SMS Inbox", short: "SMS" },
   { key: "scheduled", label: "Scheduled Tasks", short: "Scheduled" },
+  { key: "properties", label: "Properties", short: "Properties" },
+  { key: "roster", label: "Roster", short: "Roster" },
+  { key: "calendar", label: "Calendars", short: "Calendar" },
+  { key: "faq", label: "Hotel FAQ", short: "FAQ" },
 ];
 
 export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession; onLogout: () => void }) {
@@ -34,7 +41,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
     shiftActive: canWork,
   });
   const canUseTasks = superMode.canUseTasks;
-  const { last24Tasks, stats, loading, error, reload } = useTasks(
+  const { last24Tasks, loading, error, reload } = useTasks(
     staff.name,
     canUseTasks,
     false,
@@ -132,11 +139,16 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
           {view === "email" && <EmailInbox items={emails} staff={staff} shift={shift} canUseTasks={canUseTasks} error={emailError} onRefresh={refreshAll} />}
           {view === "whatsapp" && <WhatsAppInbox onCreate={() => setCreatorOpen(true)} />}
           {view === "scheduled" && <ScheduledTasks onCreate={() => setCreatorOpen(true)} />}
+          {view === "properties" && <PropertiesWorkspace />}
+          {view === "sms" && <ComingSoonWorkspace title="SMS Inbox" description="Property-linked SMS conversations and task creation will appear here." />}
+          {view === "roster" && <ComingSoonWorkspace title="Roster" description="Build shifts, assign team members and review coverage by property." />}
+          {view === "calendar" && <ComingSoonWorkspace title="Calendars" description="Operational events, reminders and property schedules will appear here." />}
+          {view === "faq" && <ComingSoonWorkspace title="Hotel FAQ" description="Search approved answers across every active property profile." />}
         </div>
       </section>
 
       <nav className="staff-mobile-nav" aria-label="Mobile workspace">
-        {nav.map(item => <button key={item.key} className={view === item.key ? "active" : ""} onClick={() => setView(item.key)}><span className={`nav-mark nav-${item.key}`} /><small>{item.short}</small></button>)}
+        {nav.filter(item => ["home", "tasks", "email", "whatsapp", "scheduled"].includes(item.key)).map(item => <button key={item.key} className={view === item.key ? "active" : ""} onClick={() => setView(item.key)}><span className={`nav-mark nav-${item.key}`} /><small>{item.short}</small></button>)}
       </nav>
 
       <button className="staff-fab" onClick={() => setCreatorOpen(true)} aria-label="Create task">＋</button>
