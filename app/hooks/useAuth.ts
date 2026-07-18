@@ -35,6 +35,7 @@ export function useAuth() {
   }
 
   function logout() {
+    void fetch("/api/logout", { method: "POST" });
     localStorage.removeItem(STORAGE_KEY);
     setStaff(null);
   }

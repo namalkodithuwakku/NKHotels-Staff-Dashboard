@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createServerSession, SESSION_COOKIE } from "../../lib/serverSession";
 
 const GOOGLE_WEBAPP_URL =
   "https://script.google.com/macros/s/AKfycbztfBp0WNIPPX3EI1lrIete8-D3epZ35u5f-UUNLgbLkD71JP6J4-uxbgHIGCw5qX7H/exec";
@@ -29,12 +30,22 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json(data);
-  } catch (err: any) {
+    const result = NextResponse.json(data);
+    if (data?.success && data?.staff) {
+      result.cookies.set(SESSION_COOKIE, createServerSession(data.staff), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60,
+      });
+    }
+    return result;
+  } catch (err: unknown) {
     return NextResponse.json(
       {
         success: false,
-        error: err.message || "Login failed",
+        error: err instanceof Error ? err.message : "Login failed",
       },
       { status: 500 }
     );

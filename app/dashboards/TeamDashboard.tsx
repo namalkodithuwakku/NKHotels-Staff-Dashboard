@@ -139,7 +139,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
           {view === "email" && <EmailInbox items={emails} staff={staff} shift={shift} canUseTasks={canUseTasks} error={emailError} onRefresh={refreshAll} />}
           {view === "whatsapp" && <WhatsAppInbox onCreate={() => setCreatorOpen(true)} />}
           {view === "scheduled" && <ScheduledTasks onCreate={() => setCreatorOpen(true)} />}
-          {view === "properties" && <PropertiesWorkspace />}
+          {view === "properties" && <PropertiesWorkspace access={staff.access} />}
           {view === "sms" && <ComingSoonWorkspace title="SMS Inbox" description="Property-linked SMS conversations and task creation will appear here." />}
           {view === "roster" && <ComingSoonWorkspace title="Roster" description="Build shifts, assign team members and review coverage by property." />}
           {view === "calendar" && <ComingSoonWorkspace title="Calendars" description="Operational events, reminders and property schedules will appear here." />}
