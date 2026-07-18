@@ -16,6 +16,7 @@ import ScheduledTasks from "../components/scheduled/ScheduledTasks";
 import TaskCreatorModal from "../components/tasks/TaskCreatorModal";
 import PropertiesWorkspace from "../components/properties/PropertiesWorkspace";
 import ComingSoonWorkspace from "../components/shared/ComingSoonWorkspace";
+import RosterWorkspace from "../components/roster/RosterWorkspace";
 
 export type WorkspaceView = "home" | "tasks" | "email" | "whatsapp" | "sms" | "scheduled" | "properties" | "roster" | "calendar" | "faq";
 
@@ -141,7 +142,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
           {view === "scheduled" && <ScheduledTasks onCreate={() => setCreatorOpen(true)} />}
           {view === "properties" && <PropertiesWorkspace access={staff.access} />}
           {view === "sms" && <ComingSoonWorkspace title="SMS Inbox" description="Property-linked SMS conversations and task creation will appear here." />}
-          {view === "roster" && <ComingSoonWorkspace title="Roster" description="Build shifts, assign team members and review coverage by property." />}
+          {view === "roster" && <RosterWorkspace />}
           {view === "calendar" && <ComingSoonWorkspace title="Calendars" description="Operational events, reminders and property schedules will appear here." />}
           {view === "faq" && <ComingSoonWorkspace title="Hotel FAQ" description="Search approved answers across every active property profile." />}
         </div>
