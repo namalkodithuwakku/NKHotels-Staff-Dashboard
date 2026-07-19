@@ -53,15 +53,17 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
   const [view, setView] = useState<WorkspaceView>("home");
   const [emails, setEmails] = useState<any[]>([]);
   const [emailError, setEmailError] = useState("");
+  const [emailLoading, setEmailLoading] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
 
   async function loadEmails() {
     try {
+      setEmailLoading(true);
       setEmailError("");
       setEmails(await fetchEmailReaderItems());
     } catch (err: any) {
       setEmailError(err?.message || "Unable to load the email inbox.");
-    }
+    } finally { setEmailLoading(false); }
   }
 
   async function refreshAll() {
@@ -69,10 +71,11 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
   }
 
   useEffect(() => {
+    if (!["home", "email"].includes(view)) return;
     void loadEmails();
-    const timer = window.setInterval(loadEmails, 20000);
+    const timer = window.setInterval(loadEmails, 60000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [view]);
 
   const counts = useMemo(() => {
     let urgent = 0, pending = 0, active = 0, done = 0;
@@ -137,7 +140,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
         <div className="staff-content">
           {view === "home" && <StaffHome staffName={staff.name} shift={shift} counts={counts} tasks={last24Tasks} emails={emails} onOpen={setView} />}
           {view === "tasks" && <ShiftTasks tasks={last24Tasks} staffName={staff.name} canUseTasks={canUseTasks} loading={loading} error={error} onCreate={() => setCreatorOpen(true)} onRefresh={refreshAll} />}
-          {view === "email" && <EmailInbox items={emails} staff={staff} shift={shift} canUseTasks={canUseTasks} error={emailError} onRefresh={refreshAll} />}
+          {view === "email" && <EmailInbox items={emails} staff={staff} shift={shift} canUseTasks={canUseTasks} loading={emailLoading} error={emailError} onRefresh={loadEmails} onTaskCreated={refreshAll} />}
           {view === "whatsapp" && <WhatsAppInbox onCreate={() => setCreatorOpen(true)} />}
           {view === "scheduled" && <ScheduledTasks onCreate={() => setCreatorOpen(true)} />}
           {view === "properties" && <PropertiesWorkspace access={staff.access} />}
