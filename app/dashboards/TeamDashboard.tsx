@@ -141,7 +141,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
           {view === "home" && <StaffHome staffName={staff.name} shift={shift} counts={counts} tasks={last24Tasks} emails={emails} onOpen={setView} />}
           {view === "tasks" && <ShiftTasks tasks={last24Tasks} staffName={staff.name} canUseTasks={canUseTasks} loading={loading} error={error} onCreate={() => setCreatorOpen(true)} onRefresh={refreshAll} />}
           {view === "email" && <EmailInbox items={emails} staff={staff} shift={shift} canUseTasks={canUseTasks} loading={emailLoading} error={emailError} onRefresh={loadEmails} onTaskCreated={refreshAll} />}
-          {view === "whatsapp" && <WhatsAppInbox onCreate={() => setCreatorOpen(true)} />}
+          {view === "whatsapp" && <WhatsAppInbox staff={staff} onCreate={() => setCreatorOpen(true)} />}
           {view === "scheduled" && <ScheduledTasks onCreate={() => setCreatorOpen(true)} />}
           {view === "properties" && <PropertiesWorkspace access={staff.access} />}
           {view === "sms" && <ComingSoonWorkspace title="SMS Inbox" description="Property-linked SMS conversations and task creation will appear here." />}
