@@ -59,11 +59,7 @@ export default function MobileLogin({
         className="mobile-login-card"
         onSubmit={handleLogin}
       >
-        <img
-          className="mobile-login-logo"
-          src="/icons/N%20K%20Hotel%20OS%20Logo.png"
-          alt="N K Hotel OS"
-        />
+        <div className="mobile-login-logo login-wordmark" aria-label="N K Hotel OS"><b>N K</b><span>Hotel <em>OS</em></span></div>
 
         <span className="mobile-login-kicker">
           STAFF OPERATIONS

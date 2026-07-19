@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ArrowRight, KeyRound, UserRound } from "lucide-react";
 import { StaffSession } from "../hooks/useAuth";
 
 export default function Login({ onLogin }: { onLogin: (staff: StaffSession) => void }) {
@@ -39,39 +40,21 @@ export default function Login({ onLogin }: { onLogin: (staff: StaffSession) => v
   return (
     <main className="login-page">
       <form className="login-card" onSubmit={handleLogin}>
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
-          <img
-            src="/icons/N%20K%20Hotel%20OS%20Logo.png"
-            alt="NK Hotel OS"
-            style={{ width: 160, height: "auto", objectFit: "contain" }}
-          />
+        <div className="login-brand-panel">
+          <div className="login-wordmark" aria-label="N K Hotel OS"><b>N K</b><span>Hotel <em>OS</em></span></div>
+          <span>OPERATIONS WORKSPACE</span>
+          <h1>Welcome back</h1>
+          <p>Sign in to manage N K Hotels operations.</p>
         </div>
-
-        <h1>NK Hotel OS</h1>
-        <p>Staff Operations Login</p>
-
-        <label>Staff Name</label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Enter your name"
-          autoComplete="username"
-        />
-
-        <label>PIN</label>
-        <input
-          value={pin}
-          onChange={(e) => setPin(e.target.value)}
-          placeholder="Enter your PIN"
-          type="password"
-          autoComplete="current-password"
-        />
-
-        {error && <div className="login-error">{error}</div>}
-
-        <button type="submit" disabled={loading}>
-          {loading ? "Signing in..." : "Sign In"}
-        </button>
+        <div className="login-form-body">
+          <label htmlFor="staff-name">Staff Name</label>
+          <div className="login-field"><UserRound size={18}/><input id="staff-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name" autoComplete="username" /></div>
+          <label htmlFor="staff-pin">PIN</label>
+          <div className="login-field"><KeyRound size={18}/><input id="staff-pin" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="Enter your PIN" type="password" inputMode="numeric" autoComplete="current-password" /></div>
+          {error && <div className="login-error">{error}</div>}
+          <button type="submit" disabled={loading}><span>{loading ? "Signing in..." : "Sign In"}</span>{!loading && <ArrowRight size={18}/>}</button>
+          <small className="login-version">N K Hotel OS · Staff Dashboard</small>
+        </div>
       </form>
     </main>
   );
