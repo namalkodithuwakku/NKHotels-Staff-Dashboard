@@ -2,6 +2,7 @@ import {
   NextRequest,
   NextResponse,
 } from "next/server";
+import { syncGoogleTasksToSupabase } from "../../../lib/googleTaskSync";
 
 const GOOGLE_WEBAPP_URL =
   process.env.GOOGLE_WEBAPP_URL;
@@ -91,7 +92,8 @@ export async function POST(
       );
     }
 
-    return NextResponse.json(data, {
+    const taskSync = data.success ? await syncGoogleTasksToSupabase() : undefined;
+    return NextResponse.json({ ...data, taskSync }, {
       status:
         data.success
           ? 200
