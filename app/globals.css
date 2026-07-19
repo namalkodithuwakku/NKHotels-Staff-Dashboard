@@ -37,5 +37,7 @@
 @import "./styles/mobilelogin.css";
 @import "./styles/components/super-mode.css";
 @import "./styles/components/confirm-dialog.css";
+@import "./styles/components/email-task-notice.css";
 @import "./styles/staff-workspace.css";
 @import "./styles/whatsapp-workspace.css";
+@import "./styles/components/home-premium.css";

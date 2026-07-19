@@ -142,8 +142,21 @@ export async function ignoreAIEmail(input: {
 export async function startEmailTask(input: {
   emailId: string;
   staffName: string;
-  staffPhone?: string;
   shift?: string;
+  property?: string;
+  taskType?: string;
+  category?: string;
+  priority?: string;
+  aiTitle?: string;
+  subject?: string;
+  summary?: string;
+  action?: string;
+  event?: string;
+  bookingId?: string;
+  gmailLink?: string;
+  from?: string;
+  to?: string;
+  time?: string;
 }) {
   const response = await fetch("/api/email-reader/start", {
     method: "POST",
@@ -162,13 +175,13 @@ export async function startEmailTask(input: {
     data = JSON.parse(text);
   } catch {
     throw new Error(
-      "Start email task API returned invalid JSON."
+      "Create email task API returned invalid JSON."
     );
   }
 
   if (!data.success) {
     throw new Error(
-      data.error || "Failed to start email task"
+      data.error || "Failed to create email task"
     );
   }
 
@@ -329,4 +342,3 @@ export async function endSuperSession(input: {
     "Failed to end Super"
   );
 }
-

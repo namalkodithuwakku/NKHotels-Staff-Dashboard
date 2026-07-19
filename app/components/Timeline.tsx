@@ -347,6 +347,7 @@ export default function Timeline({
   }
 
   async function handleStartEmailTask(
+    task: TimelineItem,
     emailId: string
   ) {
     if (!canWork || !emailId) return;
@@ -357,13 +358,27 @@ export default function Timeline({
       await startEmailTask({
         emailId,
         staffName,
+        property: task.property,
+        taskType: task.taskType,
+        category: task.category,
+        priority: task.priority,
+        aiTitle: task.aiTitle,
+        subject: task.subject,
+        summary: task.summary,
+        action: task.action,
+        event: task.event,
+        bookingId: task.bookingId,
+        gmailLink: task.gmailLink,
+        from: task.from,
+        to: task.to,
+        time: task.time,
       });
 
       await onChanged();
     } catch (error: any) {
       alert(
         error?.message ||
-          "Failed to start email task"
+          "Failed to create email task"
       );
     } finally {
       setUpdatingId("");
@@ -619,13 +634,14 @@ export default function Timeline({
                       }
                       onClick={() =>
                         handleStartEmailTask(
+                          task,
                           itemId
                         )
                       }
                     >
                       {isUpdating
                         ? "..."
-                        : "Start"}
+                        : "Create Task"}
                     </button>
                   </div>
 
