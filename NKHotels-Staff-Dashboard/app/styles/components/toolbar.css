@@ -1,0 +1,131 @@
+/* ==========================================================
+   Toolbar
+========================================================== */
+
+.premium-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 16px;
+
+  margin-bottom: 18px;
+
+  padding: 10px;
+
+  border-radius: var(--radius-lg);
+
+  background: var(--surface);
+  border: 1px solid var(--border);
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  box-shadow: var(--shadow-xs);
+}
+
+/* ==========================================================
+   Compact Toolbar
+========================================================== */
+
+.compact-toolbar {
+  padding: 10px 12px;
+}
+
+/* ==========================================================
+   Tabs
+========================================================== */
+
+.premium-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ==========================================================
+   Individual Tab
+========================================================== */
+
+.premium-tab {
+  border: 0;
+
+  padding: 9px 13px;
+
+  border-radius: var(--radius-pill);
+
+  background: transparent;
+
+  color: var(--muted);
+
+  font-size: 12px;
+  font-weight: 900;
+
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.premium-tab:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.premium-tab.active {
+  background: var(--text);
+  color: var(--surface-solid);
+
+  box-shadow: var(--shadow-sm);
+}
+
+.premium-tab.active:hover {
+  transform: translateY(-1px);
+}
+
+/* ==========================================================
+   Search Area
+========================================================== */
+
+.compact-search {
+  display: flex;
+  align-items: center;
+}
+
+/* ==========================================================
+   Future Filters
+========================================================== */
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ==========================================================
+   Mobile
+========================================================== */
+
+@media (max-width: 760px) {
+
+  .premium-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .premium-tabs {
+    justify-content: flex-start;
+  }
+
+  .compact-search {
+    width: 100%;
+  }
+
+}

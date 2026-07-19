@@ -1,0 +1,25 @@
+body {
+  margin: 0;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.18), transparent 28%),
+    radial-gradient(circle at 90% 5%, rgba(139, 92, 246, 0.14), transparent 26%),
+    linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 100%);
+}
+
+html[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 15% 8%, rgba(37, 99, 235, .13), transparent 30%),
+    radial-gradient(circle at 92% 16%, rgba(124, 58, 237, .13), transparent 28%),
+    linear-gradient(180deg, #f8fbff 0%, #eef3fb 100%);
+}
+
+.os {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 248px 1fr;
+}
+
+.main {
+  padding: 26px 30px;
+}

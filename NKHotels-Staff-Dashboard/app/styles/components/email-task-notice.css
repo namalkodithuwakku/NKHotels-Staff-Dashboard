@@ -1,0 +1,56 @@
+.email-task-success {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 280px;
+  padding: 13px 16px;
+  border: 1px solid #b9dfc6;
+  border-radius: 12px;
+  background: #f0fbf4;
+  color: #246f3f;
+  box-shadow: 0 14px 38px rgba(32, 37, 43, 0.18);
+  animation: email-task-notice-in 0.2s ease-out;
+}
+
+.email-task-success > span {
+  width: 29px;
+  height: 29px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #38a260;
+  color: #fff;
+  font-weight: 900;
+}
+
+.email-task-success div {
+  display: grid;
+  gap: 2px;
+}
+
+.email-task-success strong {
+  font-size: 13px;
+}
+
+.email-task-success small {
+  font-size: 11px;
+  color: #5b7464;
+}
+
+@keyframes email-task-notice-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 900px) {
+  .email-task-success {
+    left: 13px;
+    right: 13px;
+    bottom: 76px;
+    min-width: 0;
+  }
+}

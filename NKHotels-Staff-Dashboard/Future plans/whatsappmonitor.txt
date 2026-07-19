@@ -1,0 +1,13 @@
+4. WhatsApp Monitor Engine
+
+Future AI engine.
+
+Responsibilities
+
+Login to WhatsApp Web
+Monitor selected groups
+Read new messages
+Ignore normal chat
+Send work messages to AI
+Create Hotel OS tasks
+Save message history
