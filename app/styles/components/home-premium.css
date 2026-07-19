@@ -3,6 +3,16 @@
   margin: 0 auto;
 }
 
+.staff-os .staff-rail .staff-brand,
+.staff-os .staff-rail .staff-brand > span,
+.staff-os .staff-rail .staff-brand strong {
+  color: #fff;
+}
+
+.staff-os .staff-rail .staff-brand em {
+  color: #e98a15;
+}
+
 .staff-os .premium-shift-hero {
   position: relative;
   min-height: 150px;
