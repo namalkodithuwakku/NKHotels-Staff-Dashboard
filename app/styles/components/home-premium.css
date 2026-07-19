@@ -6,7 +6,7 @@
 .staff-os .staff-rail .staff-brand,
 .staff-os .staff-rail .staff-brand > span,
 .staff-os .staff-rail .staff-brand strong {
-  color: #fff;
+  color: #fff !important;
 }
 
 .staff-os .staff-rail .staff-brand em {

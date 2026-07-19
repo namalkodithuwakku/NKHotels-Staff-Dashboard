@@ -109,7 +109,8 @@ export async function fetchEmailReaderItems() {
   return data.items || [];
 }
 export async function ignoreAIEmail(input: {
-  emailId: string;
+  emailId?: string;
+  emailIds?: string[];
   staffName: string;
   reason?: string;
 }) {
@@ -132,7 +133,7 @@ export async function ignoreAIEmail(input: {
     throw new Error("Ignore AI email API returned invalid JSON.");
   }
 
-  if (!data.success) {
+  if (!data.success && !data.ignoredCount) {
     throw new Error(data.error || "Failed to ignore AI email");
   }
 

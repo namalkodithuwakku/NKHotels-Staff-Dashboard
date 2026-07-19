@@ -1,0 +1,58 @@
+.email-bulk-toolbar {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  border-bottom: 1px solid var(--staff-border);
+  background: #fafbfb;
+}
+
+.email-bulk-toolbar span {
+  flex: 1;
+  color: #7a848d;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.email-bulk-toolbar button {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid #dfe3e6;
+  border-radius: 8px;
+  background: #fff;
+  color: #505b65;
+  font-size: 9px;
+  font-weight: 900;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.email-bulk-toolbar .bulk-ignore {
+  border-color: #efc5c5;
+  background: #fff3f3;
+  color: #a83232;
+}
+
+.email-bulk-toolbar button:disabled { opacity: .55; cursor: default; }
+.email-list-row { position: relative;display:grid;grid-template-columns:auto minmax(0,1fr);border-bottom:1px solid #edf0f1;background:#fff; }
+.email-list-row:hover,.email-list-row.selected { background:#fff8ed; }
+.email-list-row.checked { background:#fff4e4;box-shadow:inset 3px 0 #e98a15; }
+.email-select-box { width:22px;height:22px;align-self:center;margin-left:11px;display:grid;place-items:center;border:1px solid #ccd2d7;border-radius:6px;background:#fff;color:#fff;cursor:pointer; }
+.email-list-row.checked .email-select-box { border-color:#e98a15;background:#e98a15; }
+.email-list-main { min-width:0;width:100%;display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:8px;padding:14px 13px;border:0;background:transparent;color:var(--staff-text);text-align:left;cursor:pointer; }
+.email-list-main>div { min-width:0; }
+.email-list-main>div>div { display:flex;gap:8px; }
+.email-list-main strong { flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px; }
+.email-list-main time { color:var(--staff-muted);font-size:10px; }
+.email-list-main small,.email-list-main p { display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.email-list-main small { margin:4px 0;color:#995d0c;font-size:10px; }
+.email-list-main p { margin:0;color:var(--staff-muted);font-size:12px; }
+
+@media(max-width:900px){
+  .email-bulk-toolbar { overflow-x:auto; }
+  .email-bulk-toolbar span { display:none; }
+}
