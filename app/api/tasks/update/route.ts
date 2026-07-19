@@ -6,16 +6,6 @@ type TaskRow = { id: string; status: string };
 type StaffRow = { id: string; display_name: string };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-async function notifyInboxTaskCompleted(input: { taskId: string; status: string; staffName: string; completionNote: string }) {
-  const url = process.env.INBOX_TASK_COMPLETION_URL, secret = process.env.INBOX_INTEGRATION_SECRET;
-  if (!url || !secret) return { sent: false, skipped: true, error: "Inbox completion integration is not configured" };
-  try {
-    const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "x-nkh-inbox-secret": secret }, body: JSON.stringify(input), cache: "no-store" });
-    const data = await response.json();
-    return response.ok ? { sent: data.sent === true, skipped: data.skipped === true } : { sent: false, error: data.error || "Inbox rejected completion notification" };
-  } catch (error) { return { sent: false, error: error instanceof Error ? error.message : "Inbox completion notification failed" }; }
-}
-
 export async function GET(request: NextRequest) {
   try {
     const session = readServerSession(request);
@@ -42,8 +32,7 @@ export async function GET(request: NextRequest) {
       from_status: task.status, to_status: status, actor_staff_id: staff?.id || null, actor_name_snapshot: staffName || null,
       note: completionNote || null,
     }});
-    const completionNotification = status === "Done" ? await notifyInboxTaskCompleted({ taskId: task.id, status, staffName, completionNote }) : undefined;
-    return NextResponse.json({ success: true, taskId: task.id, status, completionNotification });
+    return NextResponse.json({ success: true, taskId: task.id, status });
   } catch (error) {
     return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Task update failed." }, { status: 500 });
   }

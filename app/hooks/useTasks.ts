@@ -45,9 +45,9 @@ export function useTasks(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  async function loadTasks() {
+  async function loadTasks(showLoader = false) {
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
 
       const allTasks = await fetchTasks();
 
@@ -104,14 +104,14 @@ const shift = sortNewest(
     } catch (err: any) {
       setError(err.message || "Failed to load tasks");
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadTasks();
+    loadTasks(true);
 
-    const timer = setInterval(loadTasks, 20000);
+    const timer = setInterval(() => loadTasks(false), 20000);
 
     return () => clearInterval(timer);
   }, [
@@ -130,6 +130,6 @@ const shift = sortNewest(
     performance,
     loading,
     error,
-    reload: loadTasks,
+    reload: () => loadTasks(false),
   };
 }
