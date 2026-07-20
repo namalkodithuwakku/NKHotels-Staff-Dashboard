@@ -13,7 +13,7 @@ export default function MobileLogin({
 }: {
   onLogin: (staff: StaffSession) => void;
 }) {
-  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -30,7 +30,7 @@ export default function MobileLogin({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name,
+          username,
           pin,
         }),
       });
@@ -72,16 +72,17 @@ export default function MobileLogin({
         </p>
 
         <label htmlFor="mobile-staff-name">
-          Staff Name
+          Username
         </label>
 
         <div className="mobile-login-field">
           <UserRound size={17} />
           <input
             id="mobile-staff-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Enter your name"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter your username"
+            autoCapitalize="none"
             autoComplete="username"
           />
         </div>

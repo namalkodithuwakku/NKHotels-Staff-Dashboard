@@ -5,7 +5,7 @@ import { ArrowRight, KeyRound, UserRound } from "lucide-react";
 import { StaffSession } from "../hooks/useAuth";
 
 export default function Login({ onLogin }: { onLogin: (staff: StaffSession) => void }) {
-  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,7 +19,7 @@ export default function Login({ onLogin }: { onLogin: (staff: StaffSession) => v
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, pin }),
+        body: JSON.stringify({ username, pin }),
       });
 
       const data = await res.json();
@@ -47,8 +47,8 @@ export default function Login({ onLogin }: { onLogin: (staff: StaffSession) => v
           <p>Sign in to manage N K Hotels operations.</p>
         </div>
         <div className="login-form-body">
-          <label htmlFor="staff-name">Staff Name</label>
-          <div className="login-field"><UserRound size={18}/><input id="staff-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name" autoComplete="username" /></div>
+          <label htmlFor="staff-name">Username</label>
+          <div className="login-field"><UserRound size={18}/><input id="staff-name" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Enter your username" autoCapitalize="none" autoComplete="username" /></div>
           <label htmlFor="staff-pin">PIN</label>
           <div className="login-field"><KeyRound size={18}/><input id="staff-pin" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="Enter your PIN" type="password" inputMode="numeric" autoComplete="current-password" /></div>
           {error && <div className="login-error">{error}</div>}
