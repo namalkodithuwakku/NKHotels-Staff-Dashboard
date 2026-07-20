@@ -133,3 +133,4 @@ export async function analyzeOperationalEmail(input: EmailInput): Promise<EmailI
     console.error("OpenAI email analysis failed; using operational fallback.", error);
     return safeFallback;
   }
+}
