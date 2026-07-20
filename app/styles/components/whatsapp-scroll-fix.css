@@ -1,0 +1,75 @@
+whatsapp-scroll-fix.css
+
+
+/* Keep the WhatsApp workspace inside the visible dashboard viewport. */
+.staff-os .wa-grid {
+  height: calc(100dvh - 185px);
+  min-height: 0;
+  max-height: calc(100dvh - 185px);
+}
+
+.staff-os .wa-list,
+.staff-os .wa-chat {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.staff-os .wa-chat > header {
+  flex: 0 0 65px;
+}
+
+.staff-os .wa-messages {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #c0c7cc transparent;
+}
+
+.staff-os .wa-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.staff-os .wa-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.staff-os .wa-messages::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #c0c7cc;
+}
+
+.staff-os .wa-compose {
+  flex: 0 0 auto;
+}
+
+.staff-os .wa-details {
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 900px) {
+  .staff-os .wa-grid {
+    height: calc(100dvh - 165px);
+    max-height: calc(100dvh - 165px);
+    min-height: 0;
+  }
+}
+
+@media (max-width: 650px) {
+  .staff-os .wa-grid {
+    height: calc(100dvh - 150px);
+    max-height: calc(100dvh - 150px);
+  }
+
+  .staff-os .wa-list:has(+ .wa-chat header) + .wa-chat {
+    min-height: 0;
+    height: 100%;
+  }
+}
