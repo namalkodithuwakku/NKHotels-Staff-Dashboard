@@ -1,11 +1,9 @@
-import { after, NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { canManageProperties, readServerSession } from "../../../lib/serverSession";
 
 type NamedRow = { id: string; property_name?: string; display_name?: string };
 type CreatedTask = { id: string };
-
-const GOOGLE_WEBAPP_URL = process.env.GOOGLE_WEBAPP_URL;
 
 async function first<T>(path: string) {
   const rows = await supabaseAdmin<T[]>(path);
@@ -91,23 +89,20 @@ export async function POST(request: NextRequest) {
         event_data: { source_email_id: emailId },
       },
     });
-    if (GOOGLE_WEBAPP_URL) {
-      after(async () => {
-        try {
-          const params = new URLSearchParams({
-            action: "markEmailTaskCreated",
-            emailId,
-            taskId: task.id,
-            staffName: session?.name || staffName || "",
-          });
-          await fetch(`${GOOGLE_WEBAPP_URL}?${params.toString()}`, {
-            method: "GET",
-            cache: "no-store",
-          });
-        } catch (error) {
-          console.error("Background email status update failed", error);
-        }
-      });
+    const inboxRows = await supabaseAdmin<Array<{ id: string }>>(`nkh_email_inbox?select=id&gmail_message_id=eq.${encodeURIComponent(emailId)}&limit=1`);
+    if (inboxRows[0]) {
+      const handledAt = new Date().toISOString();
+      await Promise.all([
+        supabaseAdmin(`nkh_email_inbox?id=eq.${inboxRows[0].id}`, { method: "PATCH", prefer: "return=minimal", body: {
+          status: "Task Created", task_id: task.id, handled_by_staff_id: staff?.id || null,
+          handled_by_name_snapshot: session?.name || staffName || null, handled_at: handledAt,
+        }}),
+        supabaseAdmin("nkh_email_audit", { method: "POST", prefer: "return=minimal", body: {
+          email_inbox_id: inboxRows[0].id, gmail_message_id: emailId, action: "Task Created",
+          actor_staff_id: staff?.id || null, actor_name_snapshot: session?.name || staffName || null,
+          task_id: task.id, details: { task_type: taskType, property: propertyName || null },
+        }}),
+      ]);
     }
     return NextResponse.json({ success: true, created: true, id: task.id, taskId: task.id });
   } catch (error) {
