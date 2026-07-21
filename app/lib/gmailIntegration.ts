@@ -9,16 +9,6 @@ type GmailMessage = {
   payload?: GmailPart & { headers?: GmailHeader[] };
 };
 
-const senderHints = [
-  "agoda.com", "booking.com", "guest.booking.com", "airbnb.com",
-  "expedia.com", "vrbo.com", "trip.com", "makemytrip.com", "goibibo.com",
-];
-const subjectHints = [
-  "new booking", "last-minute booking", "modified booking", "cancelled booking",
-  "canceled booking", "cancellation", "new message", "received this message",
-  "reservation confirmed", "booking confirmed", "confirmation code", "reservation id",
-  "payment", "review", "inquiry", "availability",
-];
 
 function decode(value?: string) {
   if (!value) return "";
@@ -73,10 +63,6 @@ function sourceFrom(from: string) {
   return "Email";
 }
 
-function relevant(from: string, subject: string) {
-  const sender = from.toLowerCase(), title = subject.toLowerCase();
-  return senderHints.some(value => sender.includes(value)) && subjectHints.some(value => title.includes(value));
-}
 
 export async function gmailAccessToken() {
   const clientId = process.env.GOOGLE_GMAIL_CLIENT_ID;
@@ -110,7 +96,6 @@ export async function importGmailMessage(messageId: string, token: string) {
   if (existing.length) return false;
   const message = await gmail<GmailMessage>(`messages/${encodeURIComponent(messageId)}?format=full`, token);
   const from = header(message, "From"), subject = header(message, "Subject"), to = header(message, "To");
-  if (!relevant(from, subject)) return false;
   const content = collect(message.payload), body = content.plain.join("\n\n").trim() || stripHtml(content.html.join("\n"));
   const properties = await supabaseAdmin<Array<{ id: string; property_name: string }>>("nkh_properties?select=id,property_name&client_status=eq.Active");
   const haystack = `${subject}\n${body}`.toLowerCase();
