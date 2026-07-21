@@ -6,6 +6,8 @@ export type EmailIntelligence = {
   taskType: string;
   priority: "Normal" | "High" | "Urgent";
   bookingId: string | null;
+  source: "openai" | "fallback";
+  error?: string;
 };
 
 type EmailInput = {
@@ -56,6 +58,7 @@ function fallback(input: EmailInput): EmailIntelligence {
     taskType: eventType,
     priority: ["Cancelled Booking", "Guest Message"].includes(eventType) ? "High" : "Normal",
     bookingId,
+    source: "fallback",
   };
 }
 
@@ -128,9 +131,10 @@ export async function analyzeOperationalEmail(input: EmailInput): Promise<EmailI
       taskType: clean(parsed.task_type, safeFallback.taskType, 80),
       priority: ["Normal", "High", "Urgent"].includes(String(parsed.priority)) ? parsed.priority as EmailIntelligence["priority"] : safeFallback.priority,
       bookingId: parsed.booking_id ? clean(parsed.booking_id, "", 80) : safeFallback.bookingId,
+      source: "openai",
     };
   } catch (error) {
     console.error("OpenAI email analysis failed; using operational fallback.", error);
-    return safeFallback;
+    return { ...safeFallback, error: error instanceof Error ? error.message : "Unknown OpenAI error." };
   }
 }
