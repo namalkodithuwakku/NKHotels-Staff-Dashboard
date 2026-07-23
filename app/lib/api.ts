@@ -108,6 +108,51 @@ export async function fetchEmailReaderItems() {
 
   return data.items || [];
 }
+
+export async function refreshGmailInbox() {
+  const response = await fetch("/api/integrations/gmail/refresh", {
+    method: "POST",
+    cache: "no-store",
+  });
+  const text = await response.text();
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error("Gmail refresh API returned invalid JSON.");
+  }
+
+  if (!data.success) {
+    throw new Error(data.error || "Failed to refresh Gmail inbox");
+  }
+
+  return data as { success: true; imported: number };
+}
+
+export async function fetchInboxNotificationCounts() {
+  const response = await fetch("/api/notifications/counts", {
+    cache: "no-store",
+  });
+  const text = await response.text();
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error("Notification counts API returned invalid JSON.");
+  }
+
+  if (!data.success) {
+    throw new Error(data.error || "Failed to load notification counts");
+  }
+
+  return {
+    whatsapp: Math.max(0, Number(data.counts?.whatsapp || 0)),
+    sms: Math.max(0, Number(data.counts?.sms || 0)),
+  };
+}
+
 export async function ignoreAIEmail(input: {
   emailId?: string;
   emailIds?: string[];

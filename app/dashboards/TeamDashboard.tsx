@@ -6,7 +6,7 @@ import { StaffSession } from "../hooks/useAuth";
 import { useShift } from "../hooks/useShift";
 import { useSuperMode } from "../hooks/useSuperMode";
 import { useTasks } from "../hooks/useTasks";
-import { fetchEmailReaderItems } from "../lib/api";
+import { fetchEmailReaderItems, fetchInboxNotificationCounts, refreshGmailInbox } from "../lib/api";
 import OperationsStatusTabs from "../components/status/OperationsStatusTabs";
 import StaffHome from "../components/home/StaffHome";
 import ShiftTasks from "../components/tasks/ShiftTasks";
@@ -55,6 +55,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
   const [emailError, setEmailError] = useState("");
   const [emailLoading, setEmailLoading] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
+  const [channelCounts, setChannelCounts] = useState({ whatsapp: 0, sms: 0 });
 
   async function loadEmails() {
     try {
@@ -73,9 +74,39 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
   useEffect(() => {
     if (!["home", "email"].includes(view)) return;
     void loadEmails();
-    const timer = window.setInterval(loadEmails, 60000);
-    return () => window.clearInterval(timer);
+    const inboxTimer = window.setInterval(loadEmails, 60000);
+
+    async function syncGmail() {
+      try {
+        await refreshGmailInbox();
+        await loadEmails();
+      } catch (err) {
+        console.error("Automatic Gmail refresh failed.", err);
+      }
+    }
+
+    void syncGmail();
+    const gmailTimer = window.setInterval(syncGmail, 120000);
+
+    return () => {
+      window.clearInterval(inboxTimer);
+      window.clearInterval(gmailTimer);
+    };
   }, [view]);
+
+  useEffect(() => {
+    async function loadNotificationCounts() {
+      try {
+        setChannelCounts(await fetchInboxNotificationCounts());
+      } catch (err) {
+        console.error("Notification count refresh failed.", err);
+      }
+    }
+
+    void loadNotificationCounts();
+    const timer = window.setInterval(loadNotificationCounts, 15000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const counts = useMemo(() => {
     let urgent = 0, pending = 0, active = 0, done = 0;
@@ -92,6 +123,13 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
     return { urgent, pending, active, done };
   }, [last24Tasks]);
 
+  const notificationCounts: Partial<Record<WorkspaceView, number>> = {
+    tasks: counts.pending,
+    email: emails.length,
+    whatsapp: channelCounts.whatsapp,
+    sms: channelCounts.sms,
+  };
+
   const activeShiftStaffName = canWork
     ? staff.name
     : String((shift as any)?.activeStaffName || (shift as any)?.onShiftStaffName || "");
@@ -104,7 +142,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
           {nav.map(item => (
             <button key={item.key} className={view === item.key ? "active" : ""} onClick={() => setView(item.key)}>
               <span className={`nav-mark nav-${item.key}`} />{item.label}
-              {item.key === "email" && emails.length > 0 && <b>{emails.length}</b>}
+              {Boolean(notificationCounts[item.key]) && <b>{notificationCounts[item.key]}</b>}
             </button>
           ))}
         </nav>
@@ -152,7 +190,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
       </section>
 
       <nav className="staff-mobile-nav" aria-label="Mobile workspace">
-        {nav.filter(item => ["home", "tasks", "email", "whatsapp", "scheduled"].includes(item.key)).map(item => <button key={item.key} className={view === item.key ? "active" : ""} onClick={() => setView(item.key)}><span className={`nav-mark nav-${item.key}`} /><small>{item.short}</small></button>)}
+        {nav.filter(item => ["home", "tasks", "email", "whatsapp", "scheduled"].includes(item.key)).map(item => <button key={item.key} className={view === item.key ? "active" : ""} onClick={() => setView(item.key)}><span className={`nav-mark nav-${item.key}`} /><small>{item.short}</small>{Boolean(notificationCounts[item.key]) && <b>{notificationCounts[item.key]}</b>}</button>)}
       </nav>
 
       <button className="staff-fab" onClick={() => setCreatorOpen(true)} aria-label="Create task">＋</button>
