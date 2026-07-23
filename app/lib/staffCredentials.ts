@@ -1,11 +1,14 @@
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
 export function normalizeUsername(value: unknown) {
-  return String(value || "").trim().toLowerCase();
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized
+    ? normalized.charAt(0).toUpperCase() + normalized.slice(1)
+    : "";
 }
 
 export function validUsername(value: string) {
-  return /^[a-z0-9._-]{3,40}$/.test(value);
+  return /^[A-Z][a-z0-9._-]{2,39}$/.test(value);
 }
 
 export function validPin(value: unknown) {
