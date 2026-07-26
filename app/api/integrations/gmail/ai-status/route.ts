@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     success: result.source === "openai",
     configured,
-    model: process.env.OPENAI_EMAIL_MODEL || "gpt-5.4-nano",
+    model: process.env.OPENAI_EMAIL_MODEL || "gpt-5.6-luna",
     source: result.source,
     error: result.error || null,
     sample: result.source === "openai" ? { title: result.title, summary: result.summary, action: result.recommendedAction } : null,

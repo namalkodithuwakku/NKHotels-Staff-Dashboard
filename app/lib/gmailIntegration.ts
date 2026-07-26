@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "./supabaseAdmin";
+import { analyzeOperationalEmail } from "./emailIntelligence";
 
 type GmailHeader = { name?: string; value?: string };
 type GmailPart = { mimeType?: string; filename?: string; body?: { data?: string }; parts?: GmailPart[] };
@@ -33,22 +34,6 @@ function stripHtml(value: string) {
     .replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n").replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">")
     .replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
-}
-
-function eventFrom(subject: string) {
-  const value = subject.toLowerCase();
-  if (value.includes("cancel")) return "Cancelled Booking";
-  if (value.includes("modif")) return "Modified Booking";
-  if (value.includes("message")) return "Guest Message";
-  if (value.includes("payment")) return "Payment";
-  if (value.includes("review")) return "Review";
-  if (value.includes("inquiry") || value.includes("availability")) return "Inquiry";
-  if (value.includes("booking") || value.includes("reservation") || value.includes("confirmation")) return "New Booking";
-  return "Other";
-}
-
-function priorityFrom(event: string) {
-  return ["Cancelled Booking", "Guest Message"].includes(event) ? "High" : "Normal";
 }
 
 function sourceFrom(from: string) {
@@ -100,7 +85,14 @@ export async function importGmailMessage(messageId: string, token: string) {
   const properties = await supabaseAdmin<Array<{ id: string; property_name: string }>>("nkh_properties?select=id,property_name&client_status=eq.Active");
   const haystack = `${subject}\n${body}`.toLowerCase();
   const property = properties.find(item => haystack.includes(item.property_name.toLowerCase()));
-  const event = eventFrom(subject), source = sourceFrom(from), receivedAt = message.internalDate ? new Date(Number(message.internalDate)).toISOString() : new Date().toISOString();
+  const source = sourceFrom(from);
+  const receivedAt = message.internalDate ? new Date(Number(message.internalDate)).toISOString() : new Date().toISOString();
+  const intelligence = await analyzeOperationalEmail({
+    from,
+    subject,
+    body,
+    property: property?.property_name || null,
+  });
   await supabaseAdmin("nkh_email_inbox", { method: "POST", prefer: "return=minimal", body: {
     gmail_message_id: message.id,
     gmail_thread_id: message.threadId || null,
@@ -113,15 +105,23 @@ export async function importGmailMessage(messageId: string, token: string) {
     received_at: receivedAt,
     property_id: property?.id || null,
     property_name_snapshot: property?.property_name || null,
-    event_type: event,
+    event_type: intelligence.eventType,
     category: source,
-    task_type: event === "Guest Message" ? "Guest message" : event,
-    priority: priorityFrom(event),
-    ai_title: `${event}${property ? ` · ${property.property_name}` : ""}`,
-    summary: body.replace(/\s+/g, " ").slice(0, 500) || subject,
-    recommended_action: "Review this email and create a task if action is required.",
+    task_type: intelligence.taskType,
+    priority: intelligence.priority,
+    booking_id: intelligence.bookingId,
+    ai_title: intelligence.title,
+    summary: intelligence.summary,
+    recommended_action: intelligence.recommendedAction,
     status: "Needs Review",
-    source_metadata: { source, imported_via: "Gmail API" },
+    source_metadata: {
+      source,
+      imported_via: "Gmail API",
+      ai_source: intelligence.source,
+      ai_error: intelligence.error || null,
+      ai_model: process.env.OPENAI_EMAIL_MODEL || "gpt-5.6-luna",
+      ai_processed_at: new Date().toISOString(),
+    },
   }});
   return true;
 }
