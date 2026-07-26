@@ -9,6 +9,13 @@ type TaskLink = {
 type Conversation = { id: string; contact_id: string | null };
 type Contact = { id: string; wa_id: string | null; phone: string | null };
 
+function normalizeRecipient(value: string) {
+  let recipient = String(value || "").replace(/[^\d]/g, "");
+  if (recipient.startsWith("0094")) recipient = recipient.slice(2);
+  if (recipient.startsWith("0")) recipient = `94${recipient.slice(1)}`;
+  return recipient;
+}
+
 function whatsappSettings() {
   const token = process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WHATSAPP_ACCESS_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.META_WHATSAPP_PHONE_NUMBER_ID;
@@ -31,7 +38,7 @@ async function targetForTask(taskId: string) {
     `wa_contacts?id=eq.${encodeURIComponent(conversation.contact_id)}&select=id,wa_id,phone&limit=1`,
   );
   const contact = contacts[0];
-  const recipient = String(contact?.wa_id || contact?.phone || "").replace(/[^\d]/g, "");
+  const recipient = normalizeRecipient(String(contact?.wa_id || contact?.phone || ""));
   if (!recipient) throw new Error("WhatsApp task contact has no WhatsApp number.");
   return { link, recipient };
 }

@@ -41,7 +41,9 @@ export async function GET(request: NextRequest) {
     await supabaseAdmin(`wa_task_links?dashboard_task_id=eq.${encodeURIComponent(task.id)}`, {
       method: "PATCH",
       prefer: "return=minimal",
-      body: { task_status: status, assigned_to: staffName || null, completion_note: completionNote || null },
+      body: status === "Done"
+        ? { task_status: status, assigned_to: staffName || null, completion_note: completionNote || null }
+        : { task_status: status, assigned_to: staffName || null },
     });
 
     let whatsapp = { sent: false, skipped: true };
@@ -60,7 +62,14 @@ export async function GET(request: NextRequest) {
         console.error("WhatsApp completion confirmation failed", { taskId: task.id, error: whatsappWarning });
       }
     }
-    return NextResponse.json({ success: true, taskId: task.id, status, whatsapp, whatsappWarning });
+    return NextResponse.json({
+      success: true,
+      taskId: task.id,
+      status,
+      whatsapp,
+      whatsappWarning,
+      whatsappConfirmationSent: whatsapp.sent === true,
+    });
   } catch (error) {
     return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Task update failed." }, { status: 500 });
   }
