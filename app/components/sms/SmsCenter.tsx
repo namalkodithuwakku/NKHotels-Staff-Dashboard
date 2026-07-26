@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, RefreshCw, Search, Send, Users } from "lucide-react";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 type Recipient = {
   key: string; type: "Staff" | "Client" | "Lead"; id: string; name: string;
@@ -40,6 +41,7 @@ export default function SmsCenter({ staff }: { staff: any }) {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -78,14 +80,20 @@ export default function SmsCenter({ staff }: { staff: any }) {
       : Array.from(new Set([...current, ...keys])));
   }
 
-  async function sendSms() {
+  function requestSend() {
     const customPhones = custom.split(/[\s,;\n]+/).map(value => value.trim()).filter(Boolean);
     const total = selected.length + customPhones.length;
     if (!total) return setError("Select a recipient or enter a custom phone number.");
     if (!message.trim()) return setError("Enter an SMS message.");
     if (total > 1 && !canBulk) return setError("Master or Supervisor access is required for bulk SMS.");
-    if (!window.confirm(`Send this SMS to ${total} recipient${total === 1 ? "" : "s"}?`)) return;
+    setError("");
+    setConfirmOpen(true);
+  }
+
+  async function sendSms() {
+    const customPhones = custom.split(/[\s,;\n]+/).map(value => value.trim()).filter(Boolean);
     try {
+      setConfirmOpen(false);
       setBusy("send"); setError(""); setNotice("");
       const response = await fetch("/api/sms", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -101,6 +109,17 @@ export default function SmsCenter({ staff }: { staff: any }) {
       await load();
     } finally { setBusy(""); }
   }
+
+  const customCount = custom.split(/[\s,;\n]+/).map(value => value.trim()).filter(Boolean).length;
+  const sendCount = selected.length + customCount;
+  const selectedNames = selected
+    .map(key => recipients.find(item => item.key === key)?.name)
+    .filter(Boolean);
+  const recipientSummary = selectedNames.length
+    ? `${selectedNames.slice(0, 3).join(", ")}${selectedNames.length > 3 ? ` and ${selectedNames.length - 3} more` : ""}`
+    : customCount
+      ? `${customCount} custom phone number${customCount === 1 ? "" : "s"}`
+      : "No recipient selected";
 
   async function retry(id: string) {
     try {
@@ -145,7 +164,7 @@ export default function SmsCenter({ staff }: { staff: any }) {
         <label>Custom phone numbers <span>Separate multiple numbers using commas</span><textarea className="sms-custom-numbers" value={custom} onChange={event => setCustom(event.target.value)} placeholder="9477XXXXXXX"/></label>
         <label>Message<textarea value={message} maxLength={450} onChange={event => setMessage(event.target.value)} placeholder="Write your reminder or operational message…"/></label>
         <div className="sms-counter"><span>{chars}/450 characters</span><strong>{parts} SMS part{parts === 1 ? "" : "s"}</strong></div>
-        <button className="sms-send" onClick={sendSms} disabled={busy === "send" || (!selected.length && !custom.trim()) || !message.trim()}><Send size={16}/>{busy === "send" ? "Sending…" : `Send SMS${selected.length ? ` (${selected.length})` : ""}`}</button>
+        <button className="sms-send" onClick={requestSend} disabled={busy === "send" || (!selected.length && !custom.trim()) || !message.trim()}><Send size={16}/>{busy === "send" ? "Sending…" : `Send SMS${sendCount ? ` (${sendCount})` : ""}`}</button>
         <p className="sms-sender-note">Sending as {staff?.name || "NKH Team"} via the configured Dialog mask.</p>
       </section>
     </div>
@@ -158,5 +177,21 @@ export default function SmsCenter({ staff }: { staff: any }) {
         <aside><time>{date(item.sent_at || item.created_at)}</time><small>{item.message_parts} part{item.message_parts === 1 ? "" : "s"} · by {item.sent_by}</small>{item.delivery_status === "Failed" && <button onClick={() => retry(item.id)} disabled={busy === item.id}>{busy === item.id ? "Retrying…" : "Retry"}</button>}</aside>
       </article>)}{!visibleHistory.length && <p className="sms-empty">No SMS records in this view.</p>}</div>
     </section>
+
+    <ConfirmDialog
+      open={confirmOpen}
+      title={`Send SMS to ${sendCount} recipient${sendCount === 1 ? "" : "s"}?`}
+      message="Please review the recipient and message before sending. SMS delivery cannot be recalled."
+      confirmLabel="Send SMS"
+      tone="amber"
+      loading={busy === "send"}
+      details={[
+        `Recipient: ${recipientSummary}`,
+        `Message: ${message.trim().slice(0, 110)}${message.trim().length > 110 ? "…" : ""}`,
+        `${chars} characters · ${parts} SMS part${parts === 1 ? "" : "s"}`,
+      ]}
+      onConfirm={sendSms}
+      onCancel={() => setConfirmOpen(false)}
+    />
   </section>;
 }
