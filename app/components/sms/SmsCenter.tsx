@@ -6,7 +6,7 @@ import { Check, RefreshCw, Search, Send, Users } from "lucide-react";
 import ConfirmDialog from "../ui/ConfirmDialog";
 
 type Recipient = {
-  key: string; type: "Staff" | "Client" | "Lead"; id: string; name: string;
+  key: string; type: "Staff" | "Client" | "Lead" | "Custom"; id: string; name: string;
   phone: string; property?: string | null;
 };
 type History = {
@@ -14,6 +14,9 @@ type History = {
   phone_masked: string; message: string; message_parts: number; delivery_status: string;
   error_message: string | null; attempt_count: number; sent_by: string; sent_at: string | null; created_at: string;
 };
+type SmsTemplate = { id: string; name: string; message: string; category: string };
+type GroupRecipient = Recipient & { key: string };
+type SmsGroup = { id: string; name: string; description?: string | null; recipients: GroupRecipient[] };
 
 const templates = [
   { name: "Custom message", text: "" },
@@ -42,6 +45,16 @@ export default function SmsCenter({ staff }: { staff: any }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [savedTemplates, setSavedTemplates] = useState<SmsTemplate[]>([]);
+  const [savedGroups, setSavedGroups] = useState<SmsGroup[]>([]);
+  const [canEditLibrary, setCanEditLibrary] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [templateCategory, setTemplateCategory] = useState("General");
+  const [editingTemplate, setEditingTemplate] = useState("");
+  const [groupName, setGroupName] = useState("");
+  const [groupDescription, setGroupDescription] = useState("");
+  const [editingGroup, setEditingGroup] = useState("");
+  const [libraryBusy, setLibraryBusy] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -58,7 +71,20 @@ export default function SmsCenter({ staff }: { staff: any }) {
     } finally { setBusy(current => current === "load" ? "" : current); }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  const loadLibrary = useCallback(async () => {
+    try {
+      const response = await fetch("/api/sms/library", { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "Unable to load saved SMS items.");
+      setSavedTemplates(data.templates || []);
+      setSavedGroups(data.groups || []);
+      setCanEditLibrary(Boolean(data.canEdit));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to load saved SMS items.");
+    }
+  }, []);
+
+  useEffect(() => { void load(); void loadLibrary(); }, [load, loadLibrary]);
 
   const visible = useMemo(() => recipients.filter(item => {
     const matchesGroup = group === "All" || item.type === group;
@@ -78,6 +104,75 @@ export default function SmsCenter({ staff }: { staff: any }) {
     setSelected(current => keys.every(key => current.includes(key))
       ? current.filter(key => !keys.includes(key))
       : Array.from(new Set([...current, ...keys])));
+  }
+
+  function currentGroupRecipients() {
+    const chosen = selected
+      .map(key => recipients.find(item => item.key === key))
+      .filter(Boolean) as Recipient[];
+    const customRecipients: GroupRecipient[] = custom
+      .split(/[\s,;\n]+/)
+      .map(value => value.trim())
+      .filter(Boolean)
+      .map(phone => ({ key: `Custom:${phone}`, type: "Custom" as const, id: "", name: "Custom recipient", phone }));
+    return [...chosen, ...customRecipients];
+  }
+
+  async function saveTemplate() {
+    if (!templateName.trim() || !message.trim()) return setError("Enter a template name and message.");
+    try {
+      setLibraryBusy("template"); setError("");
+      const response = await fetch("/api/sms/library", {
+        method: editingTemplate ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "template", id: editingTemplate, name: templateName, category: templateCategory, message }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "Unable to save template.");
+      setNotice(editingTemplate ? "SMS template updated." : "SMS template saved.");
+      setTemplateName(""); setTemplateCategory("General"); setEditingTemplate("");
+      await loadLibrary();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save template."); }
+    finally { setLibraryBusy(""); }
+  }
+
+  async function saveGroup() {
+    const members = currentGroupRecipients();
+    if (!groupName.trim() || !members.length) return setError("Enter a group name and select at least one recipient.");
+    try {
+      setLibraryBusy("group"); setError("");
+      const response = await fetch("/api/sms/library", {
+        method: editingGroup ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "group", id: editingGroup, name: groupName, description: groupDescription, recipients: members }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "Unable to save recipient group.");
+      setNotice(editingGroup ? "Recipient group updated." : "Recipient group saved.");
+      setGroupName(""); setGroupDescription(""); setEditingGroup("");
+      await loadLibrary();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save recipient group."); }
+    finally { setLibraryBusy(""); }
+  }
+
+  async function removeLibraryItem(type: "template" | "group", id: string) {
+    try {
+      setLibraryBusy(id); setError("");
+      const response = await fetch("/api/sms/library", {
+        method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, id }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "Unable to remove saved item.");
+      await loadLibrary();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to remove saved item."); }
+    finally { setLibraryBusy(""); }
+  }
+
+  function applyGroup(group: SmsGroup) {
+    const availableKeys = new Set(recipients.map(item => item.key));
+    setSelected(group.recipients.map(item => item.key).filter(key => availableKeys.has(key)));
+    setCustom(group.recipients.filter(item => !availableKeys.has(item.key)).map(item => item.phone).join(", "));
+    setNotice(`${group.name} loaded with ${group.recipients.length} recipient${group.recipients.length === 1 ? "" : "s"}.`);
   }
 
   function requestSend() {
@@ -160,7 +255,18 @@ export default function SmsCenter({ staff }: { staff: any }) {
 
       <section className="sms-composer">
         <header><small>NEW MESSAGE</small><h3>Compose SMS</h3></header>
-        <label>Template<select onChange={event => setMessage(templates[Number(event.target.value)].text)}>{templates.map((item, index) => <option value={index} key={item.name}>{item.name}</option>)}</select></label>
+        <label>Template<select defaultValue="" onChange={event => {
+          const value = event.target.value;
+          if (value.startsWith("built:")) setMessage(templates[Number(value.slice(6))].text);
+          else {
+            const item = savedTemplates.find(template => template.id === value);
+            if (item) setMessage(item.message);
+          }
+        }}>
+          <option value="">Choose a template</option>
+          <optgroup label="Built-in">{templates.map((item, index) => <option value={`built:${index}`} key={item.name}>{item.name}</option>)}</optgroup>
+          {savedTemplates.length > 0 && <optgroup label="Saved templates">{savedTemplates.map(item => <option value={item.id} key={item.id}>{item.name}</option>)}</optgroup>}
+        </select></label>
         <label>Custom phone numbers <span>Separate multiple numbers using commas</span><textarea className="sms-custom-numbers" value={custom} onChange={event => setCustom(event.target.value)} placeholder="9477XXXXXXX"/></label>
         <label>Message<textarea value={message} maxLength={450} onChange={event => setMessage(event.target.value)} placeholder="Write your reminder or operational message…"/></label>
         <div className="sms-counter"><span>{chars}/450 characters</span><strong>{parts} SMS part{parts === 1 ? "" : "s"}</strong></div>
@@ -168,6 +274,58 @@ export default function SmsCenter({ staff }: { staff: any }) {
         <p className="sms-sender-note">Sending as {staff?.name || "NKH Team"} via the configured Dialog mask.</p>
       </section>
     </div>
+
+    <section className="sms-library">
+      <header>
+        <div><small>QUICK SEND LIBRARY</small><h3>Templates & recipient groups</h3></div>
+        <p>Reuse approved messages and frequently contacted number lists.</p>
+      </header>
+      <div className="sms-library-grid">
+        <section>
+          <div className="sms-library-heading"><strong>Saved templates</strong><span>{savedTemplates.length}</span></div>
+          <div className="sms-library-items">
+            {savedTemplates.map(item => <article key={item.id}>
+              <button className="sms-library-main" onClick={() => setMessage(item.message)}>
+                <strong>{item.name}</strong><small>{item.category}</small><p>{item.message}</p>
+              </button>
+              {canEditLibrary && <div>
+                <button onClick={() => { setEditingTemplate(item.id); setTemplateName(item.name); setTemplateCategory(item.category); setMessage(item.message); }}>Edit</button>
+                <button className="danger" disabled={libraryBusy === item.id} onClick={() => void removeLibraryItem("template", item.id)}>Delete</button>
+              </div>}
+            </article>)}
+            {!savedTemplates.length && <p className="sms-library-empty">No saved templates yet.</p>}
+          </div>
+          {canEditLibrary && <div className="sms-library-form">
+            <input value={templateName} onChange={event => setTemplateName(event.target.value)} placeholder="Template name"/>
+            <input value={templateCategory} onChange={event => setTemplateCategory(event.target.value)} placeholder="Category"/>
+            <button onClick={() => void saveTemplate()} disabled={libraryBusy === "template" || !templateName.trim() || !message.trim()}>{editingTemplate ? "Update current template" : "Save current message"}</button>
+            {editingTemplate && <button className="sms-library-cancel" onClick={() => { setEditingTemplate(""); setTemplateName(""); setTemplateCategory("General"); }}>Cancel edit</button>}
+          </div>}
+        </section>
+
+        <section>
+          <div className="sms-library-heading"><strong>Recipient groups</strong><span>{savedGroups.length}</span></div>
+          <div className="sms-library-items">
+            {savedGroups.map(item => <article key={item.id}>
+              <button className="sms-library-main" onClick={() => applyGroup(item)}>
+                <strong>{item.name}</strong><small>{item.recipients.length} recipient{item.recipients.length === 1 ? "" : "s"}</small><p>{item.description || item.recipients.slice(0, 3).map(member => member.name).join(", ")}</p>
+              </button>
+              {canEditLibrary && <div>
+                <button onClick={() => { applyGroup(item); setEditingGroup(item.id); setGroupName(item.name); setGroupDescription(item.description || ""); }}>Edit</button>
+                <button className="danger" disabled={libraryBusy === item.id} onClick={() => void removeLibraryItem("group", item.id)}>Delete</button>
+              </div>}
+            </article>)}
+            {!savedGroups.length && <p className="sms-library-empty">No saved recipient groups yet.</p>}
+          </div>
+          {canEditLibrary && <div className="sms-library-form">
+            <input value={groupName} onChange={event => setGroupName(event.target.value)} placeholder="Group name"/>
+            <input value={groupDescription} onChange={event => setGroupDescription(event.target.value)} placeholder="Short description (optional)"/>
+            <button onClick={() => void saveGroup()} disabled={libraryBusy === "group" || !groupName.trim() || !currentGroupRecipients().length}>{editingGroup ? "Update selected group" : `Save selected recipients (${currentGroupRecipients().length})`}</button>
+            {editingGroup && <button className="sms-library-cancel" onClick={() => { setEditingGroup(""); setGroupName(""); setGroupDescription(""); }}>Cancel edit</button>}
+          </div>}
+        </section>
+      </div>
+    </section>
 
     <section className="sms-history">
       <header><div><small>DELIVERY RECORDS</small><h3>SMS History</h3></div><div>{["All","Sent","Failed","Pending"].map(item => <button key={item} className={status === item ? "active" : ""} onClick={() => setStatus(item)}>{item}</button>)}</div></header>
