@@ -36,6 +36,11 @@
   background: #fff3f3;
   color: #a83232;
 }
+.email-bulk-toolbar .bulk-create {
+  background: #e98a15;
+  border-color: #e98a15;
+  color: #fff;
+}
 
 .email-bulk-toolbar button:disabled { opacity: .55; cursor: default; }
 .email-list-row { position: relative;display:grid;grid-template-columns:auto minmax(0,1fr);border-bottom:1px solid #edf0f1;background:#fff; }

@@ -46,7 +46,7 @@ export default function MobileHeader({
         <div className="mobile-logo-wrap">
           <img
             src="/favicon.ico"
-            alt="NKH Staff Dashboard"
+            alt="NKH Dashboard"
             className="mobile-logo"
           />
         </div>

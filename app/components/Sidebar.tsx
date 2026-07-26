@@ -18,13 +18,13 @@ export default function Sidebar({
         <div className="logo">
           <img
             src="/icons/Favicon.png"
-            alt="NKH Staff Dashboard"
+            alt="NKH Dashboard"
             style={{ width: "100%", height: "100%", objectFit: "contain" }}
           />
         </div>
 
         <div>
-          <strong>NKH Staff Dashboard</strong>
+          <strong>NKH Dashboard</strong>
           <span>
             {staff.access === "Master"
               ? "Command Center"

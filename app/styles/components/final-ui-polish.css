@@ -1,0 +1,363 @@
+/* Final visual consistency pass. Kept separate so it safely overrides legacy styles. */
+.staff-os,
+.staff-login-page {
+  color: #142033;
+  text-rendering: optimizeLegibility;
+}
+
+.staff-os h1,
+.staff-os h2,
+.staff-os h3,
+.staff-os h4,
+.staff-os strong,
+.staff-os label {
+  color: #152033;
+}
+
+.staff-rail h1,
+.staff-rail h2,
+.staff-rail h3,
+.staff-rail strong,
+.staff-rail label,
+.home-welcome h1,
+.home-welcome h2,
+.home-welcome h3,
+.home-welcome strong {
+  color: inherit;
+}
+
+.staff-os p,
+.staff-os small {
+  opacity: 1;
+}
+
+.staff-brand {
+  align-items: center;
+  gap: 9px;
+  padding-right: 4px;
+}
+
+.staff-brand > span {
+  flex: 0 0 auto;
+  letter-spacing: -.035em;
+}
+
+.staff-brand strong {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.staff-brand em {
+  white-space: nowrap;
+}
+
+.staff-os button,
+.staff-os input,
+.staff-os select,
+.staff-os textarea {
+  font: inherit;
+}
+
+.staff-os input,
+.staff-os select,
+.staff-os textarea {
+  color: #172235;
+}
+
+.staff-os input::placeholder,
+.staff-os textarea::placeholder {
+  color: #7f8b9e;
+  opacity: 1;
+}
+
+.staff-os button:focus-visible,
+.staff-os a:focus-visible,
+.staff-os input:focus-visible,
+.staff-os select:focus-visible,
+.staff-os textarea:focus-visible {
+  outline: 3px solid rgba(238, 137, 12, .22);
+  outline-offset: 2px;
+}
+
+.staff-os button:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+  box-shadow: none;
+}
+
+.property-list > input {
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+.property-list > input:focus {
+  border-color: #ed8b0b;
+  box-shadow: 0 0 0 3px rgba(237, 139, 11, .12);
+}
+
+.property-list > button > span {
+  overflow: hidden;
+  font-size: 10px;
+  letter-spacing: .02em;
+  text-overflow: clip;
+}
+
+.property-search-empty {
+  margin: 8px 14px 18px;
+  padding: 18px 10px;
+  color: #718096;
+  font-size: 12px;
+  text-align: center;
+}
+
+.property-profile > header {
+  min-width: 0;
+}
+
+.property-profile > header > div:nth-child(2) {
+  min-width: 0;
+}
+
+.property-profile > header h2,
+.property-profile > header p {
+  overflow-wrap: anywhere;
+}
+
+.property-avatar {
+  width: 64px;
+  min-width: 64px;
+  padding: 0 6px;
+  font-size: 10px;
+  letter-spacing: .01em;
+}
+
+.profile-tabs {
+  scrollbar-width: thin;
+}
+
+.profile-tabs button {
+  min-height: 52px;
+  white-space: nowrap;
+}
+
+.profile-card-grid article {
+  min-width: 0;
+}
+
+.profile-card-grid article h3,
+.profile-card-grid article p {
+  overflow-wrap: anywhere;
+}
+
+.task-bulk-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 50px;
+  margin: -7px 0 14px;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid #e1e5e9;
+  border-radius: 11px;
+}
+
+.task-bulk-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 7px 10px;
+  background: #fff;
+  color: #344154;
+  border: 1px solid #dce1e6;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.task-bulk-toolbar > span {
+  flex: 1;
+  color: #6a7687;
+  font-size: 11px;
+}
+
+.task-bulk-toolbar .bulk-start {
+  color: #1761b0;
+  background: #edf5ff;
+  border-color: #bfd8f5;
+}
+
+.task-bulk-toolbar .bulk-done {
+  color: #fff;
+  background: #2f9255;
+  border-color: #2f9255;
+}
+
+.shift-task {
+  grid-template-columns: 30px 20px minmax(250px, 1fr) 130px 120px;
+  transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+
+.shift-task.selected {
+  background: #fffbf4;
+  border-color: #efb45f;
+  box-shadow: 0 0 0 2px rgba(233, 138, 21, .09);
+}
+
+.task-select-box {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: #fff;
+  color: #fff;
+  border: 1px solid #cfd6dd;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.shift-task.selected .task-select-box {
+  background: #e98a15;
+  border-color: #e98a15;
+}
+
+.roster-toolbar-actions .roster-today-button {
+  color: #925005;
+  background: #fff3df;
+  border-color: #efc486;
+}
+
+.roster-day.today {
+  background: #fff9ef;
+  border-color: #e98a15;
+  box-shadow: inset 0 0 0 2px #e98a15, 0 8px 24px rgba(233, 138, 21, .12);
+}
+
+.roster-day.today > header {
+  background: #ffedcf;
+}
+
+.roster-day.today > header small,
+.roster-day.today > header strong {
+  color: #844700;
+}
+
+.roster-vertical-row.today {
+  position: relative;
+  background: #fff7e9;
+  box-shadow: inset 4px 0 #e98a15, inset 0 1px #efc486, inset 0 -1px #efc486;
+}
+
+.roster-vertical-row.today .roster-vertical-date {
+  background: #ffe8c2;
+  color: #7e4300;
+}
+
+.roster-vertical-row.today .roster-vertical-date span {
+  color: #8d4c00;
+  font-weight: 900;
+}
+
+.property-edit-grid input,
+.property-edit-grid select,
+.property-edit-grid textarea,
+.contact-form input,
+.contact-form select {
+  background: #fff;
+}
+
+@media (max-width: 1150px) and (min-width: 901px) {
+  .shift-task {
+    grid-template-columns: 30px 14px minmax(0, 1fr) 90px 100px;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 900px) {
+  .property-profile > header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .property-profile > header > button {
+    display: inline-flex !important;
+    margin: 0 0 0 76px;
+  }
+
+  .property-avatar {
+    width: 64px;
+  }
+
+  .profile-tabs {
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+
+  .task-bulk-toolbar {
+    overflow-x: auto;
+  }
+
+  .task-bulk-toolbar > span {
+    display: none;
+  }
+
+  .task-bulk-toolbar button {
+    flex: 0 0 auto;
+  }
+
+  .shift-task {
+    grid-template-columns: 30px 12px minmax(0, 1fr);
+    gap: 8px 10px;
+  }
+
+  .shift-task .task-main,
+  .shift-task .task-owner,
+  .shift-task .task-actions {
+    grid-column: 3;
+  }
+}
+
+@media (max-width: 620px) {
+  .staff-brand {
+    padding-bottom: 20px;
+  }
+
+  .property-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .property-toolbar > button {
+    align-self: flex-start;
+  }
+
+  .property-profile > header > button {
+    width: 100%;
+    justify-content: center;
+    margin-left: 0;
+  }
+
+  .property-edit-grid footer,
+  .inline-property-form footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .staff-os *,
+  .staff-login-page * {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       method: "POST", prefer: "return=representation",
       body: {
         status: "Pending", priority: ["Normal", "High", "Urgent", "Critical"].includes(body.priority) ? body.priority : "Normal",
-        task_type: String(body.taskType || "Other"), source: String(body.source || "Staff Dashboard"),
+        task_type: String(body.taskType || "Other"), source: String(body.source || "NKH Dashboard"),
         property_id: property?.id || null, property_name_snapshot: propertyName, subject,
         notes: String(body.note || "").trim() || null, assigned_staff_id: staff?.id || null,
         assigned_name_snapshot: staffName || null, shift_label: String(body.shift || "").trim() || null,

@@ -59,7 +59,7 @@ export default function MobileLogin({
         className="mobile-login-card"
         onSubmit={handleLogin}
       >
-        <div className="mobile-login-logo login-wordmark" aria-label="NKH Staff Dashboard"><b>NKH</b><span>Staff <em>Dashboard</em></span></div>
+        <div className="mobile-login-logo login-wordmark" aria-label="NKH Dashboard"><b>NKH</b><span><em>Dashboard</em></span></div>
 
         <span className="mobile-login-kicker">
           STAFF OPERATIONS
@@ -128,7 +128,7 @@ export default function MobileLogin({
         </button>
 
         <p className="mobile-login-version">
-          N K Hotels · Staff Dashboard
+          N K Hotels · NKH Dashboard
         </p>
       </form>
     </main>

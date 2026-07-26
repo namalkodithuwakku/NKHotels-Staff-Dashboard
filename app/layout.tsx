@@ -9,7 +9,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "NKH Staff Dashboard",
+  title: "NKH Dashboard",
   description: "N K Hotels staff operations dashboard",
 };
 

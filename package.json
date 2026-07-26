@@ -1,5 +1,5 @@
 {
-  "name": "nk-hotel-os-staff-dashboard",
+  "name": "nkh-dashboard",
   "version": "0.1.0",
   "private": true,
   "engines": {
@@ -28,5 +28,5 @@
     "typescript": "5.9.3"
   },
   "type": "module",
-  "displayName": "NKH Staff Dashboard"
+  "displayName": "NKH Dashboard"
 }

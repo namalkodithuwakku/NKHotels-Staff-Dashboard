@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { createTask, fetchProperties, updateTaskStatus } from "../../lib/api";
 
 const taskTypes = ["FIT Booking", "TA Inquiry", "TA Booking", "TA Follow-up", "Room Block", "Rate Update", "Booking Info", "Promotions", "OTA Issue", "Guest Message", "Other"];
-const sources = ["Phone Call", "WhatsApp Group", "Email", "OTA", "Client Portal", "Staff Dashboard", "Scheduled"];
+const sources = ["Phone Call", "WhatsApp Group", "Email", "OTA", "Client Portal", "NKH Dashboard", "Scheduled"];
 
 export default function TaskCreatorModal({ open, onClose, staff, shift, onCreated }: any) {
   const [properties, setProperties] = useState<string[]>([]); const [property, setProperty] = useState(""); const [type, setType] = useState("Room Block"); const [source, setSource] = useState("Phone Call"); const [priority, setPriority] = useState("Normal"); const [title, setTitle] = useState(""); const [note, setNote] = useState(""); const [busy, setBusy] = useState(""); const [error, setError] = useState("");

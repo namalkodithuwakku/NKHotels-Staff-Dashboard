@@ -72,6 +72,44 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
     }
   }
 
+  async function createSelected() {
+    if (!canUseTasks || selectedIds.length === 0) return;
+    if (!window.confirm(`Create ${selectedIds.length} task${selectedIds.length === 1 ? "" : "s"} from the selected emails?`)) return;
+    const selectedItems = filtered.filter((item: any) => selectedIds.includes(String(item.emailId || item.id)));
+    const created: string[] = [];
+    const failed: string[] = [];
+    try {
+      setBusy("bulk-create");
+      for (const item of selectedItems) {
+        const id = String(item.emailId || item.id);
+        try {
+          await startEmailTask({
+            emailId: id, staffName: staff.name, shift: shift?.shift || "", property: item.property,
+            taskType: item.taskType, category: item.category, priority: item.priority,
+            aiTitle: item.aiTitle, subject: item.subject, summary: item.summary,
+            action: item.action, event: item.event, bookingId: item.bookingId,
+            gmailLink: item.gmailLink, from: item.from, to: item.to, time: item.time,
+          });
+          created.push(id);
+          setHiddenIds(current => Array.from(new Set([...current, id])));
+          setSelectedIds(current => current.filter(value => value !== id));
+          if (id === selectedId) setSelectedId("");
+        } catch {
+          failed.push(id);
+        }
+      }
+      if (created.length) {
+        showNotice(`${created.length} task${created.length === 1 ? "" : "s"} created`);
+        void (onTaskCreated || onRefresh)();
+      }
+      if (failed.length) {
+        alert(`${failed.length} selected email${failed.length === 1 ? "" : "s"} could not be converted. They remain selected so you can retry.`);
+      }
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function ignore() {
     if (!selected) return;
     const id = String(selected.emailId || selected.id);
@@ -114,7 +152,7 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
             {allVisibleSelected ? <CheckSquare2 size={16}/> : someVisibleSelected ? <MinusSquare size={16}/> : <Square size={16}/>} Select all visible
           </button>
           <span>{selectedIds.length ? `${selectedIds.length} selected` : "Select emails to manage"}</span>
-          {selectedIds.length > 0 && <><button type="button" onClick={() => setSelectedIds([])} disabled={busy !== ""}>Clear</button><button type="button" className="bulk-ignore" onClick={ignoreSelected} disabled={busy !== ""}>{busy === "bulk-ignore" ? "Ignoring…" : "Ignore selected"}</button></>}
+          {selectedIds.length > 0 && <><button type="button" onClick={() => setSelectedIds([])} disabled={busy !== ""}>Clear</button><button type="button" className="bulk-create" onClick={createSelected} disabled={!canUseTasks || busy !== ""}>{busy === "bulk-create" ? "Creating tasks…" : "Create tasks"}</button><button type="button" className="bulk-ignore" onClick={ignoreSelected} disabled={busy !== ""}>{busy === "bulk-ignore" ? "Ignoring…" : "Ignore selected"}</button></>}
         </div>
         {error && <p className="workspace-error">{error}</p>}
         <div className="message-list">
