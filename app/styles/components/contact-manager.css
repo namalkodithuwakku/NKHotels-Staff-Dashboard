@@ -1,0 +1,40 @@
+.contact-manager{overflow:hidden;border:1px solid var(--staff-border);border-radius:15px;background:#fff;color:var(--staff-text);box-shadow:0 8px 28px rgba(32,37,43,.07)}
+.contact-manager.modal{width:min(980px,calc(100vw - 28px));max-height:92vh}
+.contact-manager.embedded{border:0;border-radius:0;box-shadow:none}
+.contact-manager>header{min-height:76px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:17px 20px;border-bottom:1px solid var(--staff-border)}
+.contact-manager.embedded>header{padding:0 0 17px}
+.contact-manager>header small,.contact-form-heading small{color:var(--staff-amber);font-size:8px;font-weight:900;letter-spacing:.14em}
+.contact-manager>header h2{margin:4px 0 0;font-size:20px}
+.contact-manager>header p{margin:5px 0 0;color:var(--staff-muted);font-size:11px}
+.contact-manager>header>button{border:0;background:transparent;color:#68727c;font-size:25px;cursor:pointer}
+.contact-manager-layout{height:min(650px,calc(92vh - 76px));display:grid;grid-template-columns:minmax(250px,34%) 1fr}
+.contact-manager.embedded .contact-manager-layout{height:520px;border:1px solid var(--staff-border);border-radius:13px;overflow:hidden}
+.contact-manager-layout>aside{min-width:0;overflow:hidden;display:flex;flex-direction:column;border-right:1px solid var(--staff-border);background:#f7f8f8}
+.contact-list-tools{padding:12px;border-bottom:1px solid var(--staff-border)}
+.contact-list-tools button{width:100%;height:39px;border:1px solid #efc98f;border-radius:9px;background:#fff5e7;color:#965204;font-weight:900;cursor:pointer}
+.contact-list-tools input{width:100%;height:38px;margin-top:8px;padding:0 10px;border:1px solid var(--staff-border);border-radius:9px;background:#fff;color:var(--staff-text)}
+.contact-list{overflow:auto;padding:8px}
+.contact-list>p{padding:24px 10px;text-align:center;color:var(--staff-muted);font-size:11px}
+.contact-list>button{width:100%;display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:9px;margin-bottom:6px;padding:10px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--staff-text);text-align:left;cursor:pointer}
+.contact-list>button:hover{background:#fff}
+.contact-list>button.active{border-color:#ebbd7d;background:#fff;box-shadow:0 3px 10px rgba(32,37,43,.05)}
+.contact-list>button>span{width:35px;height:35px;display:grid;place-items:center;border-radius:10px;background:#e9f7ee;color:#277848;font-size:9px;font-weight:900}
+.contact-list>button>div{min-width:0;display:grid;gap:4px}
+.contact-list strong,.contact-list small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.contact-list strong{font-size:11px}.contact-list small{color:var(--staff-muted);font-size:9px}
+.contact-list em{border-radius:10px;background:#e9f7ee;color:#267646;padding:4px 6px;font-size:8px;font-style:normal;font-weight:900}
+.contact-manager-layout>form{min-width:0;overflow:auto;display:flex;flex-direction:column;padding:19px 20px}
+.contact-form-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:15px}
+.contact-form-heading h3{margin:4px 0 0}
+.contact-form-heading button{height:34px;padding:0 10px;border:1px solid var(--staff-border);border-radius:8px;background:#fff;color:var(--staff-text);font-weight:800}
+.contact-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.contact-form-grid label{display:grid;gap:6px;color:#4f5963;font-size:10px;font-weight:900}
+.contact-form-grid label.wide{grid-column:1/-1}
+.contact-form-grid input,.contact-form-grid select,.contact-form-grid textarea{width:100%;padding:10px;border:1px solid var(--staff-border);border-radius:9px;background:#fff;color:var(--staff-text);outline:none}
+.contact-form-grid input:focus,.contact-form-grid select:focus,.contact-form-grid textarea:focus,.contact-list-tools input:focus{border-color:#e5a04a;box-shadow:0 0 0 3px rgba(233,138,21,.13)}
+.contact-form-grid textarea{min-height:82px;resize:vertical}
+.contact-form-grid .contact-active{display:flex;align-items:center;gap:8px}.contact-form-grid .contact-active input{width:auto}
+.contact-manager form>footer{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:8px;margin-top:auto;padding-top:16px;border-top:1px solid var(--staff-border)}
+.contact-manager form>footer button:not(.primary-action){min-height:40px;padding:0 12px;border:1px solid var(--staff-border);border-radius:9px;background:#fff;color:var(--staff-text);font-weight:800}
+.contact-manager form>footer .danger-action{border-color:#efc1c1!important;background:#fff3f3!important;color:#a42d2d!important}
+@media(max-width:750px){.contact-manager-layout,.contact-manager.embedded .contact-manager-layout{height:auto;max-height:none;display:block;overflow:visible}.contact-manager-layout>aside{max-height:270px;border-right:0;border-bottom:1px solid var(--staff-border)}.contact-manager-layout>form{overflow:visible}.contact-form-grid{grid-template-columns:1fr}.contact-form-grid label.wide{grid-column:auto}.contact-manager form>footer{grid-template-columns:1fr 1fr}.contact-manager form>footer>span{display:none}.contact-manager.embedded>header{padding-top:2px}}

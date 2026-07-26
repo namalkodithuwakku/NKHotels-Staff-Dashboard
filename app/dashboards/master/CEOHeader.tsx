@@ -5,7 +5,7 @@ export default function CEOHeader({ staff }: { staff: StaffSession }) {
   return (
     <header className="hero polished-hero">
       <div>
-        <p>N K Hotel OS</p>
+        <p>NKH Staff Dashboard</p>
         <h1>Operations Command Center</h1>
         <span className="sub">
           Good Day, {staff.name} · Master View · Company operations overview

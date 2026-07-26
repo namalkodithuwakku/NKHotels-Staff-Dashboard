@@ -86,7 +86,7 @@ export default function ConfirmDialog({
 
         <div className="confirm-dialog-copy">
           <span className="confirm-dialog-kicker">
-            N K HOTEL OS
+            NKH STAFF DASHBOARD
           </span>
 
           <h2 id="confirm-dialog-title">

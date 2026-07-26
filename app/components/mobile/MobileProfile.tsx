@@ -60,7 +60,7 @@ export default function MobileProfile({
         Log out
       </button>
 
-      <p className="mobile-version">N K Hotel OS · Version 1.0</p>
+      <p className="mobile-version">NKH Staff Dashboard · Version 1.0</p>
     </section>
   );
 }

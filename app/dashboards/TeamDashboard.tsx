@@ -137,7 +137,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
   return (
     <main className="staff-os">
       <aside className="staff-rail">
-        <div className="staff-brand"><span>N K</span><strong>Hotel <em>OS</em></strong></div>
+        <div className="staff-brand"><span>NKH</span><strong>Staff <em>Dashboard</em></strong></div>
         <nav aria-label="Main workspace">
           {nav.map(item => (
             <button key={item.key} className={view === item.key ? "active" : ""} onClick={() => setView(item.key)}>
@@ -156,7 +156,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
       <section className="staff-stage">
         <header className="staff-topbar">
           <div>
-            <small>OPERATIONS WORKSPACE</small>
+            <small>NKH STAFF WORKSPACE</small>
             <h1>{nav.find(item => item.key === view)?.label}</h1>
           </div>
           <OperationsStatusTabs

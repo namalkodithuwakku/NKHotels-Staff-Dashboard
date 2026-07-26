@@ -9,8 +9,8 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "NK Hotel OS",
-  description: "N K Hotels Work Dashboard",
+  title: "NKH Staff Dashboard",
+  description: "N K Hotels staff operations dashboard",
 };
 
 export default function RootLayout({

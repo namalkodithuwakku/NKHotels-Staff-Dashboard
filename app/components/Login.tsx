@@ -41,8 +41,8 @@ export default function Login({ onLogin }: { onLogin: (staff: StaffSession) => v
     <main className="login-page">
       <form className="login-card" onSubmit={handleLogin}>
         <div className="login-brand-panel">
-          <div className="login-wordmark" aria-label="N K Hotel OS"><b>N K</b><span>Hotel <em>OS</em></span></div>
-          <span>OPERATIONS WORKSPACE</span>
+          <div className="login-wordmark" aria-label="NKH Staff Dashboard"><b>NKH</b><span>Staff <em>Dashboard</em></span></div>
+          <span>STAFF OPERATIONS</span>
           <h1>Welcome back</h1>
           <p>Sign in to manage N K Hotels operations.</p>
         </div>
@@ -53,7 +53,7 @@ export default function Login({ onLogin }: { onLogin: (staff: StaffSession) => v
           <div className="login-field"><KeyRound size={18}/><input id="staff-pin" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="Enter your PIN" type="password" inputMode="numeric" autoComplete="current-password" /></div>
           {error && <div className="login-error">{error}</div>}
           <button type="submit" disabled={loading}><span>{loading ? "Signing in..." : "Sign In"}</span>{!loading && <ArrowRight size={18}/>}</button>
-          <small className="login-version">N K Hotel OS · Staff Dashboard</small>
+          <small className="login-version">N K Hotels · Staff Dashboard</small>
         </div>
       </form>
     </main>

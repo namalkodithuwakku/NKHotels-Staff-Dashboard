@@ -46,17 +46,17 @@ export default function MobileHeader({
         <div className="mobile-logo-wrap">
           <img
             src="/favicon.ico"
-            alt="N K Hotel OS"
+            alt="NKH Staff Dashboard"
             className="mobile-logo"
           />
         </div>
 
         <div className="mobile-header-brand">
           <span className="mobile-header-kicker">
-            N K HOTEL OS
+            NKH STAFF
           </span>
 
-          <strong>OPERATIONS</strong>
+          <strong>DASHBOARD</strong>
         </div>
       </div>
 

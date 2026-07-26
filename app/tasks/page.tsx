@@ -112,7 +112,7 @@ export default function CompanyTaskCenterPage() {
         <section className="main">
           <header className="hero polished-hero">
             <div>
-              <p>N K Hotel OS</p>
+              <p>NKH Staff Dashboard</p>
               <h1>Access Restricted</h1>
               <span className="sub">
                 Company Task Center is available for Master and Supervisor access only.
@@ -139,7 +139,7 @@ export default function CompanyTaskCenterPage() {
       <section className="main">
         <header className="hero polished-hero">
           <div>
-            <p>N K Hotel OS</p>
+            <p>NKH Staff Dashboard</p>
             <h1>Company Task Center</h1>
             <span className="sub">
               Manage company-wide operational tasks, assignments, and follow-ups.

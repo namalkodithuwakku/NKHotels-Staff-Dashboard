@@ -111,7 +111,7 @@ export default function TaskSchedulerPage() {
         <section className="main">
           <header className="hero polished-hero">
             <div>
-              <p>N K Hotel OS</p>
+              <p>NKH Staff Dashboard</p>
               <h1>Access Restricted</h1>
               <span className="sub">Task Scheduler is available for Master and Supervisor only.</span>
             </div>
@@ -132,7 +132,7 @@ export default function TaskSchedulerPage() {
       <section className="main">
         <header className="hero polished-hero">
           <div>
-            <p>N K Hotel OS</p>
+            <p>NKH Staff Dashboard</p>
             <h1>Task Scheduler</h1>
             <span className="sub">Create one-time, weekly, and monthly property tasks.</span>
           </div>
