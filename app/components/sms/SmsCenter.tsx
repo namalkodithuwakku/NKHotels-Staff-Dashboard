@@ -50,10 +50,13 @@ export default function SmsCenter({ staff }: { staff: any }) {
   const [canEditLibrary, setCanEditLibrary] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [templateCategory, setTemplateCategory] = useState("General");
+  const [templateMessage, setTemplateMessage] = useState("");
   const [editingTemplate, setEditingTemplate] = useState("");
+  const [showTemplateForm, setShowTemplateForm] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
   const [editingGroup, setEditingGroup] = useState("");
+  const [showGroupForm, setShowGroupForm] = useState(false);
   const [libraryBusy, setLibraryBusy] = useState("");
 
   const load = useCallback(async () => {
@@ -119,18 +122,18 @@ export default function SmsCenter({ staff }: { staff: any }) {
   }
 
   async function saveTemplate() {
-    if (!templateName.trim() || !message.trim()) return setError("Enter a template name and message.");
+    if (!templateName.trim() || !templateMessage.trim()) return setError("Enter a template name and message.");
     try {
       setLibraryBusy("template"); setError("");
       const response = await fetch("/api/sms/library", {
         method: editingTemplate ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "template", id: editingTemplate, name: templateName, category: templateCategory, message }),
+        body: JSON.stringify({ type: "template", id: editingTemplate, name: templateName, category: templateCategory, message: templateMessage }),
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "Unable to save template.");
       setNotice(editingTemplate ? "SMS template updated." : "SMS template saved.");
-      setTemplateName(""); setTemplateCategory("General"); setEditingTemplate("");
+      setTemplateName(""); setTemplateCategory("General"); setTemplateMessage(""); setEditingTemplate(""); setShowTemplateForm(false);
       await loadLibrary();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save template."); }
     finally { setLibraryBusy(""); }
@@ -149,7 +152,7 @@ export default function SmsCenter({ staff }: { staff: any }) {
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "Unable to save recipient group.");
       setNotice(editingGroup ? "Recipient group updated." : "Recipient group saved.");
-      setGroupName(""); setGroupDescription(""); setEditingGroup("");
+      setGroupName(""); setGroupDescription(""); setEditingGroup(""); setShowGroupForm(false);
       await loadLibrary();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save recipient group."); }
     finally { setLibraryBusy(""); }
@@ -282,46 +285,56 @@ export default function SmsCenter({ staff }: { staff: any }) {
       </header>
       <div className="sms-library-grid">
         <section>
-          <div className="sms-library-heading"><strong>Saved templates</strong><span>{savedTemplates.length}</span></div>
+          <div className="sms-library-heading"><div><strong>Saved templates</strong><span>{savedTemplates.length}</span></div>{canEditLibrary && <button className="sms-library-add" onClick={() => {
+            setEditingTemplate(""); setTemplateName(""); setTemplateCategory("General"); setTemplateMessage(message); setShowTemplateForm(true);
+          }}>+ Add Template</button>}</div>
           <div className="sms-library-items">
             {savedTemplates.map(item => <article key={item.id}>
               <button className="sms-library-main" onClick={() => setMessage(item.message)}>
                 <strong>{item.name}</strong><small>{item.category}</small><p>{item.message}</p>
               </button>
               {canEditLibrary && <div>
-                <button onClick={() => { setEditingTemplate(item.id); setTemplateName(item.name); setTemplateCategory(item.category); setMessage(item.message); }}>Edit</button>
+                <button onClick={() => { setEditingTemplate(item.id); setTemplateName(item.name); setTemplateCategory(item.category); setTemplateMessage(item.message); setShowTemplateForm(true); }}>Edit</button>
                 <button className="danger" disabled={libraryBusy === item.id} onClick={() => void removeLibraryItem("template", item.id)}>Delete</button>
               </div>}
             </article>)}
             {!savedTemplates.length && <p className="sms-library-empty">No saved templates yet.</p>}
           </div>
-          {canEditLibrary && <div className="sms-library-form">
+          {canEditLibrary && showTemplateForm && <div className="sms-library-form sms-library-template-form">
             <input value={templateName} onChange={event => setTemplateName(event.target.value)} placeholder="Template name"/>
             <input value={templateCategory} onChange={event => setTemplateCategory(event.target.value)} placeholder="Category"/>
-            <button onClick={() => void saveTemplate()} disabled={libraryBusy === "template" || !templateName.trim() || !message.trim()}>{editingTemplate ? "Update current template" : "Save current message"}</button>
-            {editingTemplate && <button className="sms-library-cancel" onClick={() => { setEditingTemplate(""); setTemplateName(""); setTemplateCategory("General"); }}>Cancel edit</button>}
+            <textarea value={templateMessage} maxLength={450} onChange={event => setTemplateMessage(event.target.value)} placeholder="Write the saved SMS message here"/>
+            <div className="sms-library-form-actions">
+              <button className="sms-library-cancel" onClick={() => { setShowTemplateForm(false); setEditingTemplate(""); setTemplateName(""); setTemplateCategory("General"); setTemplateMessage(""); }}>Cancel</button>
+              <button onClick={() => void saveTemplate()} disabled={libraryBusy === "template" || !templateName.trim() || !templateMessage.trim()}>{editingTemplate ? "Update Template" : "Save Template"}</button>
+            </div>
           </div>}
         </section>
 
         <section>
-          <div className="sms-library-heading"><strong>Recipient groups</strong><span>{savedGroups.length}</span></div>
+          <div className="sms-library-heading"><div><strong>Recipient groups</strong><span>{savedGroups.length}</span></div>{canEditLibrary && <button className="sms-library-add" onClick={() => {
+            setEditingGroup(""); setGroupName(""); setGroupDescription(""); setShowGroupForm(true);
+          }}>+ Add Group</button>}</div>
           <div className="sms-library-items">
             {savedGroups.map(item => <article key={item.id}>
               <button className="sms-library-main" onClick={() => applyGroup(item)}>
                 <strong>{item.name}</strong><small>{item.recipients.length} recipient{item.recipients.length === 1 ? "" : "s"}</small><p>{item.description || item.recipients.slice(0, 3).map(member => member.name).join(", ")}</p>
               </button>
               {canEditLibrary && <div>
-                <button onClick={() => { applyGroup(item); setEditingGroup(item.id); setGroupName(item.name); setGroupDescription(item.description || ""); }}>Edit</button>
+                <button onClick={() => { applyGroup(item); setEditingGroup(item.id); setGroupName(item.name); setGroupDescription(item.description || ""); setShowGroupForm(true); }}>Edit</button>
                 <button className="danger" disabled={libraryBusy === item.id} onClick={() => void removeLibraryItem("group", item.id)}>Delete</button>
               </div>}
             </article>)}
             {!savedGroups.length && <p className="sms-library-empty">No saved recipient groups yet.</p>}
           </div>
-          {canEditLibrary && <div className="sms-library-form">
+          {canEditLibrary && showGroupForm && <div className="sms-library-form">
+            <p className="sms-group-help">Select staff, clients or leads in the Recipients panel above. Custom phone numbers entered above will also be saved.</p>
             <input value={groupName} onChange={event => setGroupName(event.target.value)} placeholder="Group name"/>
             <input value={groupDescription} onChange={event => setGroupDescription(event.target.value)} placeholder="Short description (optional)"/>
-            <button onClick={() => void saveGroup()} disabled={libraryBusy === "group" || !groupName.trim() || !currentGroupRecipients().length}>{editingGroup ? "Update selected group" : `Save selected recipients (${currentGroupRecipients().length})`}</button>
-            {editingGroup && <button className="sms-library-cancel" onClick={() => { setEditingGroup(""); setGroupName(""); setGroupDescription(""); }}>Cancel edit</button>}
+            <div className="sms-library-form-actions">
+              <button className="sms-library-cancel" onClick={() => { setShowGroupForm(false); setEditingGroup(""); setGroupName(""); setGroupDescription(""); }}>Cancel</button>
+              <button onClick={() => void saveGroup()} disabled={libraryBusy === "group" || !groupName.trim() || !currentGroupRecipients().length}>{editingGroup ? "Update Group" : `Save Group (${currentGroupRecipients().length})`}</button>
+            </div>
           </div>}
         </section>
       </div>
