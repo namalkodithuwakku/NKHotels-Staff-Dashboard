@@ -55,6 +55,7 @@ export default function SmsCenter({ staff }: { staff: any }) {
   const [showTemplateForm, setShowTemplateForm] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
+  const [groupNumbers, setGroupNumbers] = useState("");
   const [editingGroup, setEditingGroup] = useState("");
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [libraryBusy, setLibraryBusy] = useState("");
@@ -113,12 +114,14 @@ export default function SmsCenter({ staff }: { staff: any }) {
     const chosen = selected
       .map(key => recipients.find(item => item.key === key))
       .filter(Boolean) as Recipient[];
-    const customRecipients: GroupRecipient[] = custom
+    const customRecipients: GroupRecipient[] = groupNumbers
       .split(/[\s,;\n]+/)
       .map(value => value.trim())
       .filter(Boolean)
       .map(phone => ({ key: `Custom:${phone}`, type: "Custom" as const, id: "", name: "Custom recipient", phone }));
-    return [...chosen, ...customRecipients];
+    return Array.from(
+      new Map([...chosen, ...customRecipients].map(item => [item.key, item])).values(),
+    );
   }
 
   async function saveTemplate() {
@@ -152,7 +155,7 @@ export default function SmsCenter({ staff }: { staff: any }) {
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "Unable to save recipient group.");
       setNotice(editingGroup ? "Recipient group updated." : "Recipient group saved.");
-      setGroupName(""); setGroupDescription(""); setEditingGroup(""); setShowGroupForm(false);
+      setGroupName(""); setGroupDescription(""); setGroupNumbers(""); setEditingGroup(""); setShowGroupForm(false);
       await loadLibrary();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save recipient group."); }
     finally { setLibraryBusy(""); }
@@ -313,7 +316,7 @@ export default function SmsCenter({ staff }: { staff: any }) {
 
         <section>
           <div className="sms-library-heading"><div><strong>Recipient groups</strong><span>{savedGroups.length}</span></div>{canEditLibrary && <button className="sms-library-add" onClick={() => {
-            setEditingGroup(""); setGroupName(""); setGroupDescription(""); setShowGroupForm(true);
+            setEditingGroup(""); setGroupName(""); setGroupDescription(""); setGroupNumbers(""); setShowGroupForm(true);
           }}>+ Add Group</button>}</div>
           <div className="sms-library-items">
             {savedGroups.map(item => <article key={item.id}>
@@ -321,18 +324,31 @@ export default function SmsCenter({ staff }: { staff: any }) {
                 <strong>{item.name}</strong><small>{item.recipients.length} recipient{item.recipients.length === 1 ? "" : "s"}</small><p>{item.description || item.recipients.slice(0, 3).map(member => member.name).join(", ")}</p>
               </button>
               {canEditLibrary && <div>
-                <button onClick={() => { applyGroup(item); setEditingGroup(item.id); setGroupName(item.name); setGroupDescription(item.description || ""); setShowGroupForm(true); }}>Edit</button>
+                <button onClick={() => {
+                  applyGroup(item);
+                  const availableKeys = new Set(recipients.map(recipient => recipient.key));
+                  setEditingGroup(item.id);
+                  setGroupName(item.name);
+                  setGroupDescription(item.description || "");
+                  setGroupNumbers(item.recipients.filter(recipient => !availableKeys.has(recipient.key)).map(recipient => recipient.phone).join("\n"));
+                  setShowGroupForm(true);
+                }}>Edit</button>
                 <button className="danger" disabled={libraryBusy === item.id} onClick={() => void removeLibraryItem("group", item.id)}>Delete</button>
               </div>}
             </article>)}
             {!savedGroups.length && <p className="sms-library-empty">No saved recipient groups yet.</p>}
           </div>
           {canEditLibrary && showGroupForm && <div className="sms-library-form">
-            <p className="sms-group-help">Select staff, clients or leads in the Recipients panel above. Custom phone numbers entered above will also be saved.</p>
+            <p className="sms-group-help">Paste numbers below, or select staff, clients and leads from the Recipients panel above. Both can be saved together.</p>
             <input value={groupName} onChange={event => setGroupName(event.target.value)} placeholder="Group name"/>
             <input value={groupDescription} onChange={event => setGroupDescription(event.target.value)} placeholder="Short description (optional)"/>
+            <label className="sms-group-numbers">
+              <span>Phone numbers <em>{currentGroupRecipients().length} recipient{currentGroupRecipients().length === 1 ? "" : "s"} detected</em></span>
+              <textarea value={groupNumbers} onChange={event => setGroupNumbers(event.target.value)} placeholder={"94771234567\n94772345678\n94773456789"}/>
+              <small>Use commas, spaces, semicolons, or one number per line.</small>
+            </label>
             <div className="sms-library-form-actions">
-              <button className="sms-library-cancel" onClick={() => { setShowGroupForm(false); setEditingGroup(""); setGroupName(""); setGroupDescription(""); }}>Cancel</button>
+              <button className="sms-library-cancel" onClick={() => { setShowGroupForm(false); setEditingGroup(""); setGroupName(""); setGroupDescription(""); setGroupNumbers(""); }}>Cancel</button>
               <button onClick={() => void saveGroup()} disabled={libraryBusy === "group" || !groupName.trim() || !currentGroupRecipients().length}>{editingGroup ? "Update Group" : `Save Group (${currentGroupRecipients().length})`}</button>
             </div>
           </div>}
