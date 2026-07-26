@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Grid2X2, X } from "lucide-react";
+import { Grid2X2, LogOut, X } from "lucide-react";
 
 type Item = { key: string; label: string; short?: string };
 
@@ -11,12 +11,14 @@ export default function MobileWorkspaceMenu({
   activeKey,
   counts = {},
   onSelect,
+  onLogout,
 }: {
   items: Item[];
   primaryKeys: string[];
   activeKey: string;
   counts?: Record<string, number | undefined>;
   onSelect: (key: string) => void;
+  onLogout?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const primary = primaryKeys.map(key => items.find(item => item.key === key)).filter(Boolean) as Item[];
@@ -49,6 +51,10 @@ export default function MobileWorkspaceMenu({
           <strong>{item.label}</strong>
           {Boolean(counts[item.key]) && <b>{counts[item.key]}</b>}
         </button>)}</div>
+        {onLogout && <button className="mobile-more-logout" onClick={onLogout}>
+          <LogOut size={17} aria-hidden="true" />
+          Log out
+        </button>}
       </section>
     </div>}
   </>;
