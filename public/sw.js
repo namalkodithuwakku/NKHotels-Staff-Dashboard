@@ -1,4 +1,4 @@
-const VERSION = "nkh-dashboard-v3";
+const VERSION = "nkh-dashboard-v4";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 const SHELL = ["/", "/offline.html", "/manifest.webmanifest"];
