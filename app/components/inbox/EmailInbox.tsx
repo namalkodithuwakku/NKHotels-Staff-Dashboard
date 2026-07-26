@@ -21,7 +21,6 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
   const [busy, setBusy] = useState("");
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
   const [notice, setNotice] = useState("");
-  const isMaster = String(staff?.access || "").trim().toLowerCase() === "master";
 
   const filtered = useMemo(() => items.filter((item: any) => {
     const id = String(item.emailId || item.id);
@@ -89,11 +88,11 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
   }
 
   async function ignoreSelected() {
-    if (!isMaster || selectedIds.length === 0) return;
+    if (selectedIds.length === 0) return;
     if (!window.confirm(`Ignore ${selectedIds.length} selected email${selectedIds.length === 1 ? "" : "s"}?`)) return;
     try {
       setBusy("bulk-ignore");
-      const result = await ignoreAIEmail({ emailIds: selectedIds, staffName: staff.name, reason: "Bulk ignored by Master" });
+      const result = await ignoreAIEmail({ emailIds: selectedIds, staffName: staff.name, reason: "Bulk ignored in Email Inbox" });
       const ignored = Array.isArray(result.ignored) ? result.ignored : selectedIds;
       setHiddenIds(current => Array.from(new Set([...current, ...ignored])));
       setSelectedIds(current => current.filter(id => !ignored.includes(id)));
@@ -110,13 +109,13 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
     <div className={`inbox-shell ${selected ? "has-selection" : ""}`}>
       <section className="inbox-list">
         <div className="inbox-search"><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search mail"/><button disabled={loading} onClick={onRefresh}>{loading ? "…" : "↻"}</button></div>
-        {isMaster && <div className="email-bulk-toolbar">
+        <div className="email-bulk-toolbar">
           <button type="button" onClick={toggleAllVisible} disabled={!visibleIds.length || busy !== ""}>
             {allVisibleSelected ? <CheckSquare2 size={16}/> : someVisibleSelected ? <MinusSquare size={16}/> : <Square size={16}/>} Select all visible
           </button>
           <span>{selectedIds.length ? `${selectedIds.length} selected` : "Select emails to manage"}</span>
           {selectedIds.length > 0 && <><button type="button" onClick={() => setSelectedIds([])} disabled={busy !== ""}>Clear</button><button type="button" className="bulk-ignore" onClick={ignoreSelected} disabled={busy !== ""}>{busy === "bulk-ignore" ? "Ignoring…" : "Ignore selected"}</button></>}
-        </div>}
+        </div>
         {error && <p className="workspace-error">{error}</p>}
         <div className="message-list">
           {loading && items.length === 0 ? <div className="workspace-empty"><strong>Loading email inbox…</strong><p>Reading processed emails from Google.</p></div>
@@ -125,7 +124,7 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
               const id = String(item.emailId || item.id);
               const checked = selectedIds.includes(id);
               return <div key={id} className={`email-list-row ${selected === item ? "selected" : ""} ${checked ? "checked" : ""}`}>
-                {isMaster && <button type="button" className="email-select-box" onClick={() => toggleSelected(id)} aria-label={`${checked ? "Deselect" : "Select"} email`}>{checked ? <Check size={14}/> : null}</button>}
+                <button type="button" className="email-select-box" onClick={() => toggleSelected(id)} aria-label={`${checked ? "Deselect" : "Select"} email`}>{checked ? <Check size={14}/> : null}</button>
                 <button type="button" className="email-list-main" onClick={() => setSelectedId(id)}>
                   <span className="mail-dot"/><div><div><strong>{item.aiTitle || item.subject || "New email"}</strong><time>{time(item.time)}</time></div><small>{item.property || item.category || "General"} · {item.from || "Email"}</small><p>{item.summary || item.action || "Open to review this message"}</p></div>{item.attachmentNames && <b title="Attachment">⌕</b>}
                 </button>
