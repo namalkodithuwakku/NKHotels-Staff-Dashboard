@@ -8,6 +8,7 @@ type StaffRow = {
   id: string; display_name: string; access_level: string; employment_status: string;
   phone: string | null; whatsapp_number: string | null; login_username: string | null;
   pin_hash: string | null; login_enabled: boolean; google_staff_name: string | null;
+  can_access_whatsapp: boolean; can_access_sms: boolean;
 };
 
 function publicStaff(row: StaffRow) {
@@ -19,6 +20,8 @@ function publicStaff(row: StaffRow) {
     phone: row.phone || "",
     whatsapp: row.whatsapp_number || row.phone || "",
     username: row.login_username || "",
+    canAccessWhatsApp: row.access_level === "Master" || row.can_access_whatsapp,
+    canAccessSms: row.access_level === "Master" || row.can_access_sms,
   };
 }
 
@@ -38,7 +41,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Invalid username or PIN." }, { status: 401 });
     }
 
-    let rows = await supabaseAdmin<StaffRow[]>(`nkh_staff?select=id,display_name,access_level,employment_status,phone,whatsapp_number,login_username,pin_hash,login_enabled,google_staff_name&login_username=eq.${encodeURIComponent(username)}&limit=1`);
+    let rows = await supabaseAdmin<StaffRow[]>(`nkh_staff?select=id,display_name,access_level,employment_status,phone,whatsapp_number,login_username,pin_hash,login_enabled,google_staff_name,can_access_whatsapp,can_access_sms&login_username=eq.${encodeURIComponent(username)}&limit=1`);
     let staff = rows[0] || null;
 
     if (staff?.pin_hash) {
@@ -52,7 +55,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: "Invalid username or PIN." }, { status: 401 });
       }
       if (!staff) {
-        rows = await supabaseAdmin<StaffRow[]>(`nkh_staff?select=id,display_name,access_level,employment_status,phone,whatsapp_number,login_username,pin_hash,login_enabled,google_staff_name&or=(google_staff_name.eq.${encodeURIComponent(legacy.staff.name)},display_name.eq.${encodeURIComponent(legacy.staff.name)})&limit=1`);
+        rows = await supabaseAdmin<StaffRow[]>(`nkh_staff?select=id,display_name,access_level,employment_status,phone,whatsapp_number,login_username,pin_hash,login_enabled,google_staff_name,can_access_whatsapp,can_access_sms&or=(google_staff_name.eq.${encodeURIComponent(legacy.staff.name)},display_name.eq.${encodeURIComponent(legacy.staff.name)})&limit=1`);
         staff = rows[0] || null;
       }
       if (!staff || !staff.login_enabled || staff.employment_status !== "Active") {

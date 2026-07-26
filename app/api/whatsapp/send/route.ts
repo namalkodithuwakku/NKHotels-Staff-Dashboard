@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
-import { canManageProperties, readServerSession } from "../../../lib/serverSession";
+import { hasChannelAccess, readServerSession } from "../../../lib/serverSession";
 
 type Target = { id: string; contact: { wa_id: string } };
 export async function POST(request: NextRequest) {
   try {
-    const session = readServerSession(request); if (!canManageProperties(session)) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
+    const session = readServerSession(request); if (!await hasChannelAccess(session, "whatsapp")) return NextResponse.json({ error: "WhatsApp Inbox access is not enabled for this profile." }, { status: 403 });
     const input = await request.json(), text = String(input.text || "").trim();
     if (!input.conversation_id || !text) return NextResponse.json({ error: "Conversation and message are required." }, { status: 400 });
     const token = process.env.WHATSAPP_ACCESS_TOKEN, phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;

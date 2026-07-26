@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextRequest } from "next/server";
+import { supabaseAdmin } from "./supabaseAdmin";
 
 export const SESSION_COOKIE = "nkh_dashboard_session";
 type ServerSession = { name: string; access: string; exp: number };
@@ -40,4 +41,17 @@ export function canManageProperties(session: ServerSession | null) {
 
 export function isMasterSession(session: ServerSession | null) {
   return String(session?.access || "").trim().toLowerCase() === "master";
+}
+
+export async function hasChannelAccess(
+  session: ServerSession | null,
+  channel: "whatsapp" | "sms",
+) {
+  if (!session) return false;
+  if (isMasterSession(session)) return true;
+  const field = channel === "whatsapp" ? "can_access_whatsapp" : "can_access_sms";
+  const rows = await supabaseAdmin<Array<Record<string, boolean>>>(
+    `nkh_staff?select=${field}&or=(display_name.eq.${encodeURIComponent(session.name)},google_staff_name.eq.${encodeURIComponent(session.name)})&employment_status=eq.Active&limit=1`,
+  );
+  return rows[0]?.[field] === true;
 }

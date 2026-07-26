@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
-import { canManageProperties, isMasterSession, readServerSession } from "../../../lib/serverSession";
+import { hasChannelAccess, isMasterSession, readServerSession } from "../../../lib/serverSession";
 
-function sessionFor(request: NextRequest) { const session = readServerSession(request); return canManageProperties(session) ? session : null; }
+async function sessionFor(request: NextRequest) { const session = readServerSession(request); return await hasChannelAccess(session, "whatsapp") ? session : null; }
 async function audit(actor: string, role: string, action: string, entityId: string, details: Record<string, unknown> = {}) {
   try { await supabaseAdmin("inbox_audit_logs", { method: "POST", prefer: "return=minimal", body: { actor_role: role.toUpperCase(), action, entity_type: "conversation", entity_id: entityId, details: { actor, ...details } } }); } catch { /* Audit schema belongs to the inbox; deletion must not be left half-complete. */ }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    if (!sessionFor(request)) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
+    if (!await sessionFor(request)) return NextResponse.json({ error: "WhatsApp Inbox access is not enabled for this profile." }, { status: 403 });
     const id = request.nextUrl.searchParams.get("conversation_id");
     if (id) {
       const [messages, notes] = await Promise.all([
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const session = sessionFor(request); if (!session) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
+    const session = await sessionFor(request); if (!session) return NextResponse.json({ error: "WhatsApp Inbox access is not enabled for this profile." }, { status: 403 });
     const input = await request.json(); if (!input.id) return NextResponse.json({ error: "Conversation ID is required." }, { status: 400 });
     const allowed = ["status", "assigned_to", "label", "unread_count"];
     const update = Object.fromEntries(allowed.filter(key => input[key] !== undefined).map(key => [key, input[key]]));
@@ -40,7 +40,7 @@ export async function PATCH(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = sessionFor(request); if (!session) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
+    const session = await sessionFor(request); if (!session) return NextResponse.json({ error: "WhatsApp Inbox access is not enabled for this profile." }, { status: 403 });
     const input = await request.json();
     if (!input.conversation_id || !String(input.note || "").trim()) return NextResponse.json({ error: "Conversation and note are required." }, { status: 400 });
     await supabaseAdmin("wa_internal_notes", { method: "POST", prefer: "return=minimal", body: { conversation_id: input.conversation_id, note: String(input.note).trim(), created_by: session.name } });

@@ -7,6 +7,8 @@ export type StaffSession = {
   role: string;
   whatsapp: string;
   access: string;
+  canAccessWhatsApp?: boolean;
+  canAccessSms?: boolean;
 };
 
 const STORAGE_KEY = "NKH_STAFF_SESSION";

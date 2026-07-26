@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { maskPhone, normalizeSriLankanPhone, sendDialogSms, smsParts } from "../../lib/dialogSms";
-import { canManageProperties, readServerSession } from "../../lib/serverSession";
+import { hasChannelAccess, readServerSession } from "../../lib/serverSession";
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
 
 type Recipient = {
@@ -48,7 +48,7 @@ async function recipients() {
 export async function GET(request: NextRequest) {
   try {
     const session = readServerSession(request);
-    if (!canManageProperties(session)) return NextResponse.json({ success: false, error: "Please sign in again." }, { status: 401 });
+    if (!await hasChannelAccess(session, "sms")) return NextResponse.json({ success: false, error: "SMS Center access is not enabled for this profile." }, { status: 403 });
     const [available, history] = await Promise.all([
       recipients(),
       supabaseAdmin<SmsRow[]>("nkh_sms_messages?select=id,batch_id,recipient_type,recipient_name,property_name,phone_masked,message,message_parts,delivery_status,error_message,attempt_count,sent_by,sent_at,created_at&order=created_at.desc&limit=250"),
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = readServerSession(request);
-    if (!canManageProperties(session)) return NextResponse.json({ success: false, error: "Please sign in again." }, { status: 401 });
+    if (!await hasChannelAccess(session, "sms")) return NextResponse.json({ success: false, error: "SMS Center access is not enabled for this profile." }, { status: 403 });
     const input = await request.json();
     const message = String(input.message || "").trim().slice(0, 450);
     if (!message) return NextResponse.json({ success: false, error: "Enter an SMS message." }, { status: 400 });
@@ -126,7 +126,7 @@ function maskPhoneSafe(phone: string) {
 export async function PATCH(request: NextRequest) {
   try {
     const session = readServerSession(request);
-    if (!canManageProperties(session)) return NextResponse.json({ success: false, error: "Please sign in again." }, { status: 401 });
+    if (!await hasChannelAccess(session, "sms")) return NextResponse.json({ success: false, error: "SMS Center access is not enabled for this profile." }, { status: 403 });
     const input = await request.json();
     const rows = await supabaseAdmin<Array<SmsRow & { phone: string }>>(
       `nkh_sms_messages?id=eq.${encodeURIComponent(String(input.id || ""))}&select=*&limit=1`,

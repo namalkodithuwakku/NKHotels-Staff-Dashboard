@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readServerSession } from "../../../lib/serverSession";
+import { hasChannelAccess, readServerSession } from "../../../lib/serverSession";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 
 type WhatsAppConversation = {
@@ -7,20 +7,26 @@ type WhatsAppConversation = {
 };
 
 export async function GET(request: NextRequest) {
-  if (!readServerSession(request)) {
+  const session = readServerSession(request);
+  if (!session) {
     return NextResponse.json(
       { success: false, error: "Staff access required." },
       { status: 401 }
     );
   }
 
+  const [whatsappAllowed, smsAllowed] = await Promise.all([
+    hasChannelAccess(session, "whatsapp"),
+    hasChannelAccess(session, "sms"),
+  ]);
+
   const [conversations, pendingSms] = await Promise.all([
-    supabaseAdmin<WhatsAppConversation[]>(
+    whatsappAllowed ? supabaseAdmin<WhatsAppConversation[]>(
       "wa_conversations?select=unread_count&unread_count=gt.0"
-    ).catch(() => []),
-    supabaseAdmin<Array<{ id: string }>>(
+    ).catch(() => []) : [],
+    smsAllowed ? supabaseAdmin<Array<{ id: string }>>(
       "nkh_task_notifications?select=id&channel=eq.SMS&delivery_status=eq.Pending"
-    ).catch(() => []),
+    ).catch(() => []) : [],
   ]);
 
   const whatsapp = conversations.reduce(

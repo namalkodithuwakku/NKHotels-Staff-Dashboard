@@ -3,7 +3,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
-type Profile = { id: string; display_name: string; email: string | null; phone: string | null; whatsapp_number: string | null; access_level: string; employment_status: string; timezone: string; color_hex: string; google_staff_name: string | null; login_username: string | null; login_enabled: boolean; has_pin: boolean; pin_updated_at: string | null; last_login_at: string | null };
+type Profile = { id: string; display_name: string; email: string | null; phone: string | null; whatsapp_number: string | null; access_level: string; employment_status: string; timezone: string; color_hex: string; google_staff_name: string | null; login_username: string | null; login_enabled: boolean; can_access_whatsapp: boolean; can_access_sms: boolean; has_pin: boolean; pin_updated_at: string | null; last_login_at: string | null };
 async function json<T>(url: string, init?: RequestInit): Promise<T> { const response = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers || {}) } }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Request failed."); return data as T; }
 
 export default function StaffProfilesWorkspace() {
@@ -13,7 +13,12 @@ export default function StaffProfilesWorkspace() {
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError("");
     const form = new FormData(event.currentTarget), values = Object.fromEntries(form);
-    const payload = { ...values, login_enabled: form.has("login_enabled") };
+    const payload = {
+      ...values,
+      login_enabled: form.has("login_enabled"),
+      can_access_whatsapp: form.has("can_access_whatsapp"),
+      can_access_sms: form.has("can_access_sms"),
+    };
     try { await json("/api/staff-profiles", { method: editor === "new" ? "POST" : "PATCH", body: JSON.stringify(editor === "new" ? payload : { ...payload, id: editor?.id }) }); setEditor(null); await load(); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save staff."); } finally { setBusy(false); }
   }
@@ -32,6 +37,11 @@ export default function StaffProfilesWorkspace() {
         <label>Status<select name="employment_status" defaultValue={editing?.employment_status || "Active"}><option>Active</option><option>Inactive</option><option>Leave</option></select></label>
         <label>New PIN<input name="pin" required={editor === "new"} type="password" inputMode="numeric" autoComplete="new-password" minLength={4} maxLength={12} placeholder={editing?.has_pin ? "Leave blank to keep current PIN" : "4–12 numbers"} /></label>
         <label className="staff-login-toggle"><span>Login access</span><span><input name="login_enabled" type="checkbox" defaultChecked={editing?.login_enabled ?? true} /> Enabled</span></label>
+        <div className="staff-channel-permissions wide">
+          <div><strong>Communication access</strong><small>Choose which private inboxes this staff member can see and use.</small></div>
+          <label><input name="can_access_whatsapp" type="checkbox" defaultChecked={editing?.access_level === "Master" || editing?.can_access_whatsapp || false} /> WhatsApp Inbox</label>
+          <label><input name="can_access_sms" type="checkbox" defaultChecked={editing?.access_level === "Master" || editing?.can_access_sms || false} /> SMS Center</label>
+        </div>
         <label>Phone<input name="phone" inputMode="tel" defaultValue={editing?.phone || ""} placeholder="947XXXXXXXX" /></label>
         <label>WhatsApp<input name="whatsapp_number" inputMode="tel" defaultValue={editing?.whatsapp_number || ""} placeholder="947XXXXXXXX" /></label>
         <label>Email<input name="email" type="email" defaultValue={editing?.email || ""} /></label>

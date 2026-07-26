@@ -36,6 +36,11 @@ const nav: Array<{ key: WorkspaceView; label: string; short: string }> = [
 ];
 
 export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession; onLogout: () => void }) {
+  const availableNav = nav.filter(item =>
+    item.key === "whatsapp" ? staff.canAccessWhatsApp === true :
+    item.key === "sms" ? staff.canAccessSms === true :
+    true
+  );
   const { shift } = useShift(staff.name);
   const canWork = shift?.canWork === true;
   const superMode = useSuperMode({
@@ -141,7 +146,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
       <aside className="staff-rail">
         <div className="staff-brand"><span>NKH</span><strong><em>Dashboard</em></strong></div>
         <nav aria-label="Main workspace">
-          {nav.map(item => (
+          {availableNav.map(item => (
             <button key={item.key} className={view === item.key ? "active" : ""} onClick={() => setView(item.key)}>
               <span className={`nav-mark nav-${item.key}`} />{item.label}
               {Boolean(notificationCounts[item.key]) && <b>{notificationCounts[item.key]}</b>}
@@ -159,7 +164,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
         <header className="staff-topbar">
           <div>
             <small>NKH OPERATIONS WORKSPACE</small>
-            <h1>{nav.find(item => item.key === view)?.label}</h1>
+            <h1>{availableNav.find(item => item.key === view)?.label}</h1>
           </div>
           <OperationsStatusTabs
             currentStaffName={staff.name}
@@ -191,7 +196,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
         </div>
       </section>
 
-      <MobileWorkspaceMenu items={nav} primaryKeys={["home", "tasks", "email", "whatsapp"]} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as WorkspaceView)} onLogout={onLogout} />
+      <MobileWorkspaceMenu items={availableNav} primaryKeys={["home", "tasks", "email", "whatsapp"].filter(key => availableNav.some(item => item.key === key))} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as WorkspaceView)} onLogout={onLogout} />
 
       <button className="staff-fab" onClick={() => setCreatorOpen(true)} aria-label="Create task">＋</button>
       <TaskCreatorModal open={creatorOpen} onClose={() => setCreatorOpen(false)} staff={staff} shift={shift} onCreated={refreshAll} />

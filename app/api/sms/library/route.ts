@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { canManageProperties, readServerSession } from "../../../lib/serverSession";
+import { hasChannelAccess, readServerSession } from "../../../lib/serverSession";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 
 function canEdit(access?: string) {
@@ -15,8 +15,8 @@ function table(type: unknown) {
 export async function GET(request: NextRequest) {
   try {
     const session = readServerSession(request);
-    if (!canManageProperties(session)) {
-      return NextResponse.json({ success: false, error: "Please sign in again." }, { status: 401 });
+    if (!await hasChannelAccess(session, "sms")) {
+      return NextResponse.json({ success: false, error: "SMS Center access is not enabled for this profile." }, { status: 403 });
     }
     const [templates, groups] = await Promise.all([
       supabaseAdmin("nkh_sms_templates?select=id,name,message,category,created_by,created_at,updated_at&active=eq.true&order=name.asc"),

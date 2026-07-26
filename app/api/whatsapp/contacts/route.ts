@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
-import { canManageProperties, isMasterSession, readServerSession } from "../../../lib/serverSession";
+import { hasChannelAccess, isMasterSession, readServerSession } from "../../../lib/serverSession";
 
 const normalize = (value: string) => value.replace(/\D/g, "");
 async function contactAudit(actor: string, role: string, action: string, id: string, details: Record<string, unknown> = {}) {
@@ -9,7 +9,7 @@ async function contactAudit(actor: string, role: string, action: string, id: str
 
 export async function GET(request: NextRequest) {
   try {
-    if (!canManageProperties(readServerSession(request))) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
+    if (!await hasChannelAccess(readServerSession(request), "whatsapp")) return NextResponse.json({ error: "WhatsApp Inbox access is not enabled for this profile." }, { status: 403 });
     const [contacts, properties] = await Promise.all([
       supabaseAdmin<unknown[]>("wa_contacts?select=id,wa_id,phone,profile_name,property_name,property_id,contact_name,name_prefix,job_position,is_active,client_status,notes,created_at&order=property_name.asc.nullslast,contact_name.asc.nullslast"),
       supabaseAdmin<unknown[]>("nkh_properties?select=id,client_code,property_name,client_status&order=property_name.asc"),
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 }
 
 async function save(request: NextRequest, update: boolean) {
-  const session = readServerSession(request); if (!canManageProperties(session)) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
+  const session = readServerSession(request); if (!await hasChannelAccess(session, "whatsapp")) return NextResponse.json({ error: "WhatsApp Inbox access is not enabled for this profile." }, { status: 403 });
   const input = await request.json(), waId = normalize(String(input.phone || input.wa_id || ""));
   if (waId.length < 8 || waId.length > 15) return NextResponse.json({ error: "Use a valid number with country code, for example +94771234567." }, { status: 400 });
   if (update && !input.id) return NextResponse.json({ error: "Contact ID is required." }, { status: 400 });
