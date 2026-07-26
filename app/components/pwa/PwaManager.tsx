@@ -24,7 +24,7 @@ export default function PwaManager() {
       window.location.reload();
     };
 
-    navigator.serviceWorker.register("/sw.js?v=6", { updateViaCache: "none" }).then(value => {
+    navigator.serviceWorker.register("/sw.js?v=7", { updateViaCache: "none" }).then(value => {
       registration = value;
       if (registration.waiting) setUpdateReady(true);
       registration.addEventListener("updatefound", () => {

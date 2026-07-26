@@ -12,6 +12,7 @@ import StaffHome from "../components/home/StaffHome";
 import ShiftTasks from "../components/tasks/ShiftTasks";
 import EmailInbox from "../components/inbox/EmailInbox";
 import WhatsAppInbox from "../components/whatsapp/WhatsAppInbox";
+import SmsCenter from "../components/sms/SmsCenter";
 import ScheduledTasks from "../components/scheduled/ScheduledTasks";
 import TaskCreatorModal from "../components/tasks/TaskCreatorModal";
 import PropertiesWorkspace from "../components/properties/PropertiesWorkspace";
@@ -183,14 +184,14 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
           {view === "whatsapp" && <WhatsAppInbox staff={staff} onCreate={() => setCreatorOpen(true)} />}
           {view === "scheduled" && <ScheduledTasks onCreate={() => setCreatorOpen(true)} />}
           {view === "properties" && <PropertiesWorkspace access={staff.access} />}
-          {view === "sms" && <ComingSoonWorkspace title="SMS Inbox" description="Property-linked SMS conversations and task creation will appear here." />}
+          {view === "sms" && <SmsCenter staff={staff} />}
           {view === "roster" && <RosterWorkspace />}
           {view === "calendar" && <ComingSoonWorkspace title="Calendars" description="Operational events, reminders and property schedules will appear here." />}
           {view === "faq" && <ComingSoonWorkspace title="Hotel FAQ" description="Search approved answers across every active property profile." />}
         </div>
       </section>
 
-      <MobileWorkspaceMenu items={nav} primaryKeys={["home", "tasks", "email", "whatsapp"]} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as WorkspaceView)} />
+      <MobileWorkspaceMenu items={nav} primaryKeys={["home", "tasks", "email", "whatsapp"]} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as WorkspaceView)} onLogout={onLogout} />
 
       <button className="staff-fab" onClick={() => setCreatorOpen(true)} aria-label="Create task">＋</button>
       <TaskCreatorModal open={creatorOpen} onClose={() => setCreatorOpen(false)} staff={staff} shift={shift} onCreated={refreshAll} />

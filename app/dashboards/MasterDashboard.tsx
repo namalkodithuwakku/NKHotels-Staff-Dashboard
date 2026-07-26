@@ -8,6 +8,7 @@ import { fetchEmailReaderItems, fetchInboxNotificationCounts, refreshGmailInbox 
 import ShiftTasks from "../components/tasks/ShiftTasks";
 import EmailInbox from "../components/inbox/EmailInbox";
 import WhatsAppInbox from "../components/whatsapp/WhatsAppInbox";
+import SmsCenter from "../components/sms/SmsCenter";
 import PropertiesWorkspace from "../components/properties/PropertiesWorkspace";
 import RosterWorkspace from "../components/roster/RosterWorkspace";
 import StaffProfilesWorkspace from "../components/master/StaffProfilesWorkspace";
@@ -77,6 +78,6 @@ export default function MasterDashboard({ staff, onLogout }: { staff: StaffSessi
     {view === "tasks" && <ShiftTasks tasks={last24Tasks} staffName={staff.name} canUseTasks loading={loading} error={error} onCreate={() => setCreatorOpen(true)} onRefresh={refreshAll} />}
     {view === "properties" && <PropertiesWorkspace access="Master" />}{view === "staff" && <StaffProfilesWorkspace />}{view === "roster" && <RosterWorkspace />}
     {view === "email" && <EmailInbox items={emails} staff={staff} shift={shift} canUseTasks loading={emailLoading} error={emailError} onRefresh={loadEmails} onTaskCreated={refreshAll} />}{view === "whatsapp" && <WhatsAppInbox staff={staff} onCreate={() => setCreatorOpen(true)} />}
-    {view === "sms" && <ComingSoonWorkspace title="SMS Center" description="Dialog SMS delivery, urgent-task alerts and delivery history will be managed here." />}{view === "reports" && <ComingSoonWorkspace title="Reports" description="Company performance, roster coverage and service reports will appear here." />}{view === "settings" && <ComingSoonWorkspace title="Settings" description="Company-wide integrations, access rules and operational defaults will appear here." />}
-  </div></section><MobileWorkspaceMenu items={navigation} primaryKeys={["overview","tasks","email","whatsapp"]} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as MasterView)} /><button className="staff-fab" onClick={() => setCreatorOpen(true)}>＋</button><TaskCreatorModal open={creatorOpen} onClose={() => setCreatorOpen(false)} staff={staff} shift={shift} onCreated={refreshAll} /></main>;
+    {view === "sms" && <SmsCenter staff={staff} />}{view === "reports" && <ComingSoonWorkspace title="Reports" description="Company performance, roster coverage and service reports will appear here." />}{view === "settings" && <ComingSoonWorkspace title="Settings" description="Company-wide integrations, access rules and operational defaults will appear here." />}
+  </div></section><MobileWorkspaceMenu items={navigation} primaryKeys={["overview","tasks","email","whatsapp"]} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as MasterView)} onLogout={onLogout} /><button className="staff-fab" onClick={() => setCreatorOpen(true)}>＋</button><TaskCreatorModal open={creatorOpen} onClose={() => setCreatorOpen(false)} staff={staff} shift={shift} onCreated={refreshAll} /></main>;
 }
