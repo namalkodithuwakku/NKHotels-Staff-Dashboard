@@ -265,6 +265,84 @@
   font-weight: 900;
 }
 
+.wa-compose > div {
+  align-items: stretch;
+}
+
+.wa-compose button {
+  min-width: 66px;
+  min-height: 44px;
+  align-self: stretch;
+}
+
+.wa-note textarea {
+  display: block;
+  margin-top: 8px;
+  color: #172235;
+  background: #fff;
+}
+
+.wa-note button {
+  min-height: 40px;
+  margin-top: 8px;
+  border-radius: 9px;
+  transition: background-color .16s ease, transform .16s ease;
+}
+
+.wa-note button:hover:not(:disabled) {
+  background: #252b31;
+}
+
+.wa-danger-zone {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #efd6d6;
+}
+
+.wa-danger-zone > small {
+  display: block;
+  margin-bottom: 7px;
+  color: #a33a3a;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.wa-danger-zone .wa-delete {
+  width: 100%;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid #efbcbc !important;
+  border-radius: 9px;
+  background: #fff4f4 !important;
+  color: #a42d2d !important;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.wa-danger-zone .wa-delete:hover {
+  background: #fde8e8 !important;
+  border-color: #e69d9d !important;
+}
+
+.sticky-actions .email-done-action,
+.email-bulk-toolbar .bulk-create {
+  background: #2f9255 !important;
+  border-color: #2f9255 !important;
+  color: #fff !important;
+}
+
+.sticky-actions .email-done-action:hover:not(:disabled),
+.email-bulk-toolbar .bulk-create:hover:not(:disabled) {
+  background: #287d49 !important;
+  border-color: #287d49 !important;
+}
+
 .property-edit-grid input,
 .property-edit-grid select,
 .property-edit-grid textarea,

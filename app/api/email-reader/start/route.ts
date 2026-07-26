@@ -3,7 +3,7 @@ import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { canManageProperties, readServerSession } from "../../../lib/serverSession";
 
 type NamedRow = { id: string; property_name?: string; display_name?: string };
-type CreatedTask = { id: string };
+type CreatedTask = { id: string; status?: string };
 
 async function first<T>(path: string) {
   const rows = await supabaseAdmin<T[]>(path);
@@ -28,19 +28,46 @@ export async function POST(request: NextRequest) {
     const staffName = String(body.staffName || session?.name || "").trim();
     const taskType = String(body.taskType || body.category || "Other").trim() || "Other";
     const subject = String(body.aiTitle || body.subject || taskType).trim();
+    const markDone = body.markDone === true;
     if (!emailId || !subject) {
       return NextResponse.json({ success: false, error: "Email ID and task subject are required." }, { status: 400 });
-    }
-
-    const existing = await first<CreatedTask>(`nkh_tasks?select=id&source_email_id=eq.${encodeURIComponent(emailId)}&limit=1`);
-    if (existing) {
-      return NextResponse.json({ success: true, created: false, id: existing.id, taskId: existing.id });
     }
 
     const [property, staff] = await Promise.all([
       propertyName ? first<NamedRow>(`nkh_properties?select=id,property_name&property_name=eq.${encodeURIComponent(propertyName)}&limit=1`) : null,
       staffName ? first<NamedRow>(`nkh_staff?select=id,display_name&or=(display_name.eq.${encodeURIComponent(staffName)},google_staff_name.eq.${encodeURIComponent(staffName)})&limit=1`) : null,
     ]);
+    const existing = await first<CreatedTask>(`nkh_tasks?select=id,status&source_email_id=eq.${encodeURIComponent(emailId)}&limit=1`);
+    if (existing) {
+      if (markDone && String(existing.status || "").toLowerCase() !== "done") {
+        const completedAt = new Date().toISOString();
+        await Promise.all([
+          supabaseAdmin(`nkh_tasks?id=eq.${encodeURIComponent(existing.id)}`, {
+            method: "PATCH",
+            prefer: "return=minimal",
+            body: {
+              status: "Done",
+              completed_at: completedAt,
+              completed_by_staff_id: staff?.id || null,
+              completed_by_name_snapshot: session?.name || staffName || null,
+            },
+          }),
+          supabaseAdmin("nkh_task_events", {
+            method: "POST",
+            prefer: "return=minimal",
+            body: {
+              task_id: existing.id,
+              event_type: "Completed from Email Inbox",
+              from_status: existing.status || null,
+              to_status: "Done",
+              actor_staff_id: staff?.id || null,
+              actor_name_snapshot: session?.name || staffName || null,
+            },
+          }),
+        ]);
+      }
+      return NextResponse.json({ success: true, created: false, completed: markDone, id: existing.id, taskId: existing.id });
+    }
 
     const notes = [String(body.summary || "").trim(), String(body.action || "").trim()]
       .filter(Boolean)
@@ -51,7 +78,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       prefer: "return=representation",
       body: {
-        status: "Pending",
+        status: markDone ? "Done" : "Pending",
         priority: cleanPriority(body.priority),
         intent: String(body.event || body.category || "").trim() || null,
         task_type: taskType,
@@ -73,6 +100,9 @@ export async function POST(request: NextRequest) {
         },
         created_by_staff_id: staff?.id || null,
         created_by_name_snapshot: session?.name || staffName || null,
+        completed_at: markDone ? new Date().toISOString() : null,
+        completed_by_staff_id: markDone ? staff?.id || null : null,
+        completed_by_name_snapshot: markDone ? session?.name || staffName || null : null,
       },
     });
 
@@ -82,8 +112,8 @@ export async function POST(request: NextRequest) {
       prefer: "return=minimal",
       body: {
         task_id: task.id,
-        event_type: "Created from Email",
-        to_status: "Pending",
+        event_type: markDone ? "Created and Completed from Email" : "Created from Email",
+        to_status: markDone ? "Done" : "Pending",
         actor_staff_id: staff?.id || null,
         actor_name_snapshot: session?.name || staffName || null,
         event_data: { source_email_id: emailId },
@@ -98,13 +128,13 @@ export async function POST(request: NextRequest) {
           handled_by_name_snapshot: session?.name || staffName || null, handled_at: handledAt,
         }}),
         supabaseAdmin("nkh_email_audit", { method: "POST", prefer: "return=minimal", body: {
-          email_inbox_id: inboxRows[0].id, gmail_message_id: emailId, action: "Task Created",
+          email_inbox_id: inboxRows[0].id, gmail_message_id: emailId, action: markDone ? "Task Completed" : "Task Created",
           actor_staff_id: staff?.id || null, actor_name_snapshot: session?.name || staffName || null,
-          task_id: task.id, details: { task_type: taskType, property: propertyName || null },
+          task_id: task.id, details: { task_type: taskType, property: propertyName || null, completed_immediately: markDone },
         }}),
       ]);
     }
-    return NextResponse.json({ success: true, created: true, id: task.id, taskId: task.id });
+    return NextResponse.json({ success: true, created: true, completed: markDone, id: task.id, taskId: task.id });
   } catch (error) {
     return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Failed to create email task." }, { status: 500 });
   }

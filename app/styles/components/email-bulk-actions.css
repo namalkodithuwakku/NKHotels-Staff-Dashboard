@@ -1,34 +1,57 @@
 .email-bulk-toolbar {
-  min-height: 46px;
+  min-height: 48px;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 11px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  padding: 8px 11px;
   border-bottom: 1px solid var(--staff-border);
   background: #fafbfb;
 }
 
-.email-bulk-toolbar span {
+.email-bulk-selection,
+.email-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.email-bulk-selection span {
   flex: 1;
   color: #7a848d;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
+  white-space: nowrap;
+  text-align: right;
 }
 
 .email-bulk-toolbar button {
-  min-height: 30px;
+  min-height: 34px;
   display: inline-flex;
+  flex: 0 0 auto;
+  justify-content: center;
   align-items: center;
   gap: 6px;
-  padding: 0 8px;
+  padding: 0 10px;
   border: 1px solid #dfe3e6;
   border-radius: 8px;
   background: #fff;
   color: #505b65;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 900;
   white-space: nowrap;
   cursor: pointer;
+}
+
+.email-bulk-actions {
+  display: grid;
+  grid-template-columns: minmax(58px, .7fr) minmax(104px, 1.2fr) minmax(72px, .85fr);
+}
+
+.email-bulk-actions button {
+  width: 100%;
+  padding-inline: 7px;
 }
 
 .email-bulk-toolbar .bulk-ignore {
@@ -58,6 +81,5 @@
 .email-list-main p { margin:0;color:var(--staff-muted);font-size:12px; }
 
 @media(max-width:900px){
-  .email-bulk-toolbar { overflow-x:auto; }
-  .email-bulk-toolbar span { display:none; }
+  .email-bulk-selection span { display:block; }
 }

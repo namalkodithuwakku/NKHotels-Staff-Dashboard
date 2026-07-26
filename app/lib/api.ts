@@ -203,6 +203,7 @@ export async function startEmailTask(input: {
   from?: string;
   to?: string;
   time?: string;
+  markDone?: boolean;
 }) {
   const response = await fetch("/api/email-reader/start", {
     method: "POST",

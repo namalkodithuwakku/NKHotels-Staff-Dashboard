@@ -58,23 +58,23 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
         taskType: selected.taskType, category: selected.category, priority: selected.priority,
         aiTitle: selected.aiTitle, subject: selected.subject, summary: selected.summary,
         action: selected.action, event: selected.event, bookingId: selected.bookingId,
-        gmailLink: selected.gmailLink, from: selected.from, to: selected.to, time: selected.time,
+        gmailLink: selected.gmailLink, from: selected.from, to: selected.to, time: selected.time, markDone: true,
       });
       setHiddenIds(current => [...current, id]);
       setSelectedIds(current => current.filter(value => value !== id));
       setSelectedId("");
-      showNotice("Task created successfully");
+      showNotice("Email task marked done");
       setBusy("");
       void (onTaskCreated || onRefresh)();
     } catch (reason) {
       setBusy("");
-      alert(reason instanceof Error ? reason.message : "Unable to create task");
+      alert(reason instanceof Error ? reason.message : "Unable to complete email task");
     }
   }
 
   async function createSelected() {
     if (!canUseTasks || selectedIds.length === 0) return;
-    if (!window.confirm(`Create ${selectedIds.length} task${selectedIds.length === 1 ? "" : "s"} from the selected emails?`)) return;
+    if (!window.confirm(`Mark ${selectedIds.length} selected email task${selectedIds.length === 1 ? "" : "s"} as done?`)) return;
     const selectedItems = filtered.filter((item: any) => selectedIds.includes(String(item.emailId || item.id)));
     const created: string[] = [];
     const failed: string[] = [];
@@ -88,7 +88,7 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
             taskType: item.taskType, category: item.category, priority: item.priority,
             aiTitle: item.aiTitle, subject: item.subject, summary: item.summary,
             action: item.action, event: item.event, bookingId: item.bookingId,
-            gmailLink: item.gmailLink, from: item.from, to: item.to, time: item.time,
+            gmailLink: item.gmailLink, from: item.from, to: item.to, time: item.time, markDone: true,
           });
           created.push(id);
           setHiddenIds(current => Array.from(new Set([...current, id])));
@@ -99,11 +99,11 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
         }
       }
       if (created.length) {
-        showNotice(`${created.length} task${created.length === 1 ? "" : "s"} created`);
+        showNotice(`${created.length} email task${created.length === 1 ? "" : "s"} marked done`);
         void (onTaskCreated || onRefresh)();
       }
       if (failed.length) {
-        alert(`${failed.length} selected email${failed.length === 1 ? "" : "s"} could not be converted. They remain selected so you can retry.`);
+        alert(`${failed.length} selected email task${failed.length === 1 ? "" : "s"} could not be completed. They remain selected so you can retry.`);
       }
     } finally {
       setBusy("");
@@ -147,12 +147,12 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
     <div className={`inbox-shell ${selected ? "has-selection" : ""}`}>
       <section className="inbox-list">
         <div className="inbox-search"><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search mail"/><button disabled={loading} onClick={onRefresh}>{loading ? "…" : "↻"}</button></div>
-        <div className="email-bulk-toolbar">
-          <button type="button" onClick={toggleAllVisible} disabled={!visibleIds.length || busy !== ""}>
-            {allVisibleSelected ? <CheckSquare2 size={16}/> : someVisibleSelected ? <MinusSquare size={16}/> : <Square size={16}/>} Select all visible
+        <div className={`email-bulk-toolbar ${selectedIds.length ? "has-actions" : ""}`}>
+          <div className="email-bulk-selection"><button type="button" onClick={toggleAllVisible} disabled={!visibleIds.length || busy !== ""}>
+            {allVisibleSelected ? <CheckSquare2 size={16}/> : someVisibleSelected ? <MinusSquare size={16}/> : <Square size={16}/>} Select visible
           </button>
-          <span>{selectedIds.length ? `${selectedIds.length} selected` : "Select emails to manage"}</span>
-          {selectedIds.length > 0 && <><button type="button" onClick={() => setSelectedIds([])} disabled={busy !== ""}>Clear</button><button type="button" className="bulk-create" onClick={createSelected} disabled={!canUseTasks || busy !== ""}>{busy === "bulk-create" ? "Creating tasks…" : "Create tasks"}</button><button type="button" className="bulk-ignore" onClick={ignoreSelected} disabled={busy !== ""}>{busy === "bulk-ignore" ? "Ignoring…" : "Ignore selected"}</button></>}
+          <span>{selectedIds.length ? `${selectedIds.length} selected` : "Select emails to manage"}</span></div>
+          {selectedIds.length > 0 && <div className="email-bulk-actions"><button type="button" onClick={() => setSelectedIds([])} disabled={busy !== ""}>Clear</button><button type="button" className="bulk-create" onClick={createSelected} disabled={!canUseTasks || busy !== ""}>{busy === "bulk-create" ? "Completing…" : "Mark done"}</button><button type="button" className="bulk-ignore" onClick={ignoreSelected} disabled={busy !== ""}>{busy === "bulk-ignore" ? "Ignoring…" : "Ignore"}</button></div>}
         </div>
         {error && <p className="workspace-error">{error}</p>}
         <div className="message-list">
@@ -170,7 +170,7 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
             })}
         </div>
       </section>
-      <section className="email-preview">{!selected ? <div className="preview-empty"><span>✉</span><strong>Select an email</strong><p>Read the summary and decide the next action.</p></div> : <><header><button className="mobile-back" onClick={() => setSelectedId("")}>← Inbox</button><div><span className="eyebrow">AI OPERATIONAL TITLE</span><h2>{selected.aiTitle || selected.subject || "Email review"}</h2><p>{selected.property || "Property not detected"}</p></div><span className="review-badge">Needs review</span></header><div className="email-meta"><p><strong>From</strong><span>{selected.from || "-"}</span></p><p><strong>To</strong><span>{selected.to || "-"}</span></p><p><strong>Received</strong><span>{selected.time ? new Date(selected.time).toLocaleString() : "-"}</span></p></div><div className="ai-summary"><span>AI SUMMARY</span><p>{selected.summary || selected.action || "Review the original email below."}</p></div><div className="original-email"><h3>Original email</h3><pre>{body(selected.body)}</pre>{selected.attachmentNames && <div className="attachments"><strong>Attachments</strong><span>{selected.attachmentNames}</span></div>}</div><div className="sticky-actions"><button className="secondary-action" disabled={busy !== ""} onClick={ignore}>{busy === "ignore" ? "Ignoring…" : "Ignore"}</button>{selected.gmailLink && <a href={selected.gmailLink} target="_blank" rel="noreferrer">Open in Gmail</a>}<button className="primary-action" disabled={!canUseTasks || busy !== ""} onClick={create}>{busy === "create" ? "Creating…" : "Create Task"}</button></div></>}</section>
+      <section className="email-preview">{!selected ? <div className="preview-empty"><span>✉</span><strong>Select an email</strong><p>Read the summary and decide the next action.</p></div> : <><header><button className="mobile-back" onClick={() => setSelectedId("")}>← Inbox</button><div><span className="eyebrow">AI OPERATIONAL TITLE</span><h2>{selected.aiTitle || selected.subject || "Email review"}</h2><p>{selected.property || "Property not detected"}</p></div><span className="review-badge">Needs review</span></header><div className="email-meta"><p><strong>From</strong><span>{selected.from || "-"}</span></p><p><strong>To</strong><span>{selected.to || "-"}</span></p><p><strong>Received</strong><span>{selected.time ? new Date(selected.time).toLocaleString() : "-"}</span></p></div><div className="ai-summary"><span>AI SUMMARY</span><p>{selected.summary || selected.action || "Review the original email below."}</p></div><div className="original-email"><h3>Original email</h3><pre>{body(selected.body)}</pre>{selected.attachmentNames && <div className="attachments"><strong>Attachments</strong><span>{selected.attachmentNames}</span></div>}</div><div className="sticky-actions"><button className="secondary-action" disabled={busy !== ""} onClick={ignore}>{busy === "ignore" ? "Ignoring…" : "Ignore"}</button>{selected.gmailLink && <a href={selected.gmailLink} target="_blank" rel="noreferrer">Open in Gmail</a>}<button className="primary-action email-done-action" disabled={!canUseTasks || busy !== ""} onClick={create}>{busy === "create" ? "Completing…" : "✓ Done"}</button></div></>}</section>
     </div>
     {notice && <div className="email-task-success" role="status"><span>✓</span><div><strong>{notice}</strong><small>The inbox has been updated.</small></div></div>}
   </>;

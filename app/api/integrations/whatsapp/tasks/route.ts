@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
+import { sendWhatsAppTaskCreated } from "../../../../lib/whatsappTaskNotifications";
 
 const secret = process.env.INBOX_INTEGRATION_SECRET;
 function authorized(received: string | null) { if (!secret || !received) return false; const a = Buffer.from(secret), b = Buffer.from(received); return a.length === b.length && timingSafeEqual(a, b); }
@@ -34,7 +35,22 @@ export async function POST(request: NextRequest) {
     }});
     const task = rows[0];
     await supabaseAdmin("nkh_task_events", { method: "POST", prefer: "return=minimal", body: { task_id: task.id, event_type: "Created", to_status: "Pending", actor_name_snapshot: "WhatsApp AI", event_data: { source: "WhatsApp" } } });
-    if (input.sourceMessageId && input.conversationId) await supabaseAdmin("wa_task_links", { method: "POST", prefer: "return=minimal", body: { conversation_id: input.conversationId, property_id: properties[0]?.id || null, source_message_id: input.sourceMessageId, dashboard_task_id: task.id, task_status: "Pending", assigned_to: active?.display_name || null } });
-    return NextResponse.json({ success: true, id: task.id, taskId: task.id, assignedTo: active?.display_name || null });
+    let whatsapp = { sent: false, skipped: true } as { sent: boolean; skipped: boolean; reason?: string };
+    let whatsappWarning: string | null = null;
+    if (input.sourceMessageId && input.conversationId) {
+      await supabaseAdmin("wa_task_links", { method: "POST", prefer: "return=minimal", body: { conversation_id: input.conversationId, property_id: properties[0]?.id || null, source_message_id: input.sourceMessageId, dashboard_task_id: task.id, task_status: "Pending", assigned_to: active?.display_name || null } });
+      try {
+        whatsapp = await sendWhatsAppTaskCreated({
+          taskId: task.id,
+          property: propertyName,
+          subject,
+          assignedTo: active?.display_name || null,
+        });
+      } catch (reason) {
+        whatsappWarning = reason instanceof Error ? reason.message : "WhatsApp task confirmation failed.";
+        console.error("WhatsApp task-created confirmation failed", { taskId: task.id, error: whatsappWarning });
+      }
+    }
+    return NextResponse.json({ success: true, id: task.id, taskId: task.id, assignedTo: active?.display_name || null, whatsapp, whatsappWarning });
   } catch (error) { return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Task creation failed" }, { status: 500 }); }
 }

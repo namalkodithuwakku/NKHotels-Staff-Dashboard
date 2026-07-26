@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { canManageProperties, readServerSession } from "../../../lib/serverSession";
+import { sendWhatsAppTaskDone } from "../../../lib/whatsappTaskNotifications";
 
 type TaskRow = {
   id: string;
@@ -9,93 +10,7 @@ type TaskRow = {
   property_name_snapshot: string | null;
 };
 type StaffRow = { id: string; display_name: string };
-type WhatsAppTaskLink = {
-  id: string;
-  conversation_id: string;
-  completion_reply_sent_at: string | null;
-  conversation: { contact: { wa_id: string } | null } | null;
-};
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-async function sendWhatsAppCompletion_(
-  task: TaskRow,
-  staffName: string,
-  completionNote: string,
-) {
-  const links = await supabaseAdmin<WhatsAppTaskLink[]>(
-    `wa_task_links?dashboard_task_id=eq.${encodeURIComponent(task.id)}&select=id,conversation_id,completion_reply_sent_at,conversation:wa_conversations(contact:wa_contacts(wa_id))&limit=1`,
-  );
-  const link = links[0];
-  if (!link || link.completion_reply_sent_at) return { sent: false, skipped: true };
-
-  const token = process.env.WHATSAPP_ACCESS_TOKEN;
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const waId = link.conversation?.contact?.wa_id;
-  if (!token || !phoneId || !waId) {
-    throw new Error("WhatsApp completion settings or contact are missing.");
-  }
-
-  const text = [
-    "✅ Task completed",
-    task.property_name_snapshot || null,
-    task.subject || null,
-    staffName ? `Completed by: ${staffName}` : null,
-    completionNote ? `Note: ${completionNote}` : null,
-  ].filter(Boolean).join("\n");
-  const version = process.env.WHATSAPP_GRAPH_VERSION || "v23.0";
-  const response = await fetch(`https://graph.facebook.com/${version}/${phoneId}/messages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to: waId,
-      type: "text",
-      text: { preview_url: false, body: text },
-    }),
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data?.error?.message || "WhatsApp rejected the completion message.");
-  }
-
-  const sentAt = new Date().toISOString();
-  await Promise.all([
-    supabaseAdmin("wa_messages", {
-      method: "POST",
-      prefer: "return=minimal",
-      body: {
-        conversation_id: link.conversation_id,
-        meta_message_id: data?.messages?.[0]?.id || null,
-        direction: "outgoing",
-        message_type: "text",
-        body: text,
-        delivery_status: "sent",
-        sent_by: staffName || "NKH Team",
-        meta_timestamp: sentAt,
-        raw_payload: data,
-      },
-    }),
-    supabaseAdmin(`wa_conversations?id=eq.${encodeURIComponent(link.conversation_id)}`, {
-      method: "PATCH",
-      prefer: "return=minimal",
-      body: { last_message_preview: text.slice(0, 180), last_message_at: sentAt },
-    }),
-    supabaseAdmin(`wa_task_links?id=eq.${encodeURIComponent(link.id)}`, {
-      method: "PATCH",
-      prefer: "return=minimal",
-      body: {
-        task_status: "Done",
-        completion_note: completionNote || null,
-        completion_reply_sent_at: sentAt,
-      },
-    }),
-  ]);
-  return { sent: true, skipped: false };
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -133,7 +48,13 @@ export async function GET(request: NextRequest) {
     let whatsappWarning: string | null = null;
     if (status === "Done") {
       try {
-        whatsapp = await sendWhatsAppCompletion_(task, staffName, completionNote);
+        whatsapp = await sendWhatsAppTaskDone({
+          taskId: task.id,
+          property: task.property_name_snapshot,
+          subject: task.subject,
+          staffName,
+          completionNote,
+        });
       } catch (reason) {
         whatsappWarning = reason instanceof Error ? reason.message : "WhatsApp completion confirmation failed.";
         console.error("WhatsApp completion confirmation failed", { taskId: task.id, error: whatsappWarning });

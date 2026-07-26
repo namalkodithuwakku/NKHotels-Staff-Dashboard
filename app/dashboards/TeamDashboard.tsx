@@ -17,6 +17,7 @@ import TaskCreatorModal from "../components/tasks/TaskCreatorModal";
 import PropertiesWorkspace from "../components/properties/PropertiesWorkspace";
 import ComingSoonWorkspace from "../components/shared/ComingSoonWorkspace";
 import RosterWorkspace from "../components/roster/RosterWorkspace";
+import MobileWorkspaceMenu from "../components/mobile/MobileWorkspaceMenu";
 
 export type WorkspaceView = "home" | "tasks" | "email" | "whatsapp" | "sms" | "scheduled" | "properties" | "roster" | "calendar" | "faq";
 
@@ -137,7 +138,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
   return (
     <main className="staff-os">
       <aside className="staff-rail">
-        <div className="staff-brand"><span>NKH</span><strong>Staff <em>Dashboard</em></strong></div>
+        <div className="staff-brand"><span>NKH</span><strong><em>Dashboard</em></strong></div>
         <nav aria-label="Main workspace">
           {nav.map(item => (
             <button key={item.key} className={view === item.key ? "active" : ""} onClick={() => setView(item.key)}>
@@ -156,7 +157,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
       <section className="staff-stage">
         <header className="staff-topbar">
           <div>
-            <small>NKH STAFF WORKSPACE</small>
+            <small>NKH OPERATIONS WORKSPACE</small>
             <h1>{nav.find(item => item.key === view)?.label}</h1>
           </div>
           <OperationsStatusTabs
@@ -189,9 +190,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
         </div>
       </section>
 
-      <nav className="staff-mobile-nav" aria-label="Mobile workspace">
-        {nav.filter(item => ["home", "tasks", "email", "whatsapp", "scheduled"].includes(item.key)).map(item => <button key={item.key} className={view === item.key ? "active" : ""} onClick={() => setView(item.key)}><span className={`nav-mark nav-${item.key}`} /><small>{item.short}</small>{Boolean(notificationCounts[item.key]) && <b>{notificationCounts[item.key]}</b>}</button>)}
-      </nav>
+      <MobileWorkspaceMenu items={nav} primaryKeys={["home", "tasks", "email", "whatsapp"]} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as WorkspaceView)} />
 
       <button className="staff-fab" onClick={() => setCreatorOpen(true)} aria-label="Create task">＋</button>
       <TaskCreatorModal open={creatorOpen} onClose={() => setCreatorOpen(false)} staff={staff} shift={shift} onCreated={refreshAll} />
