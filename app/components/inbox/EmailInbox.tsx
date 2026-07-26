@@ -21,6 +21,7 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
   const [busy, setBusy] = useState("");
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
   const [notice, setNotice] = useState("");
+  const [mobileListMode, setMobileListMode] = useState(true);
 
   const filtered = useMemo(() => items.filter((item: any) => {
     const id = String(item.emailId || item.id);
@@ -48,21 +49,23 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
       : Array.from(new Set([...current, ...visibleIds])));
   }
 
-  async function create() {
+  async function completeEmail() {
     if (!selected) return;
     const id = String(selected.emailId || selected.id);
     try {
       setBusy("create");
-      await startEmailTask({
+      const result = await startEmailTask({
         emailId: id, staffName: staff.name, shift: shift?.shift || "", property: selected.property,
         taskType: selected.taskType, category: selected.category, priority: selected.priority,
         aiTitle: selected.aiTitle, subject: selected.subject, summary: selected.summary,
         action: selected.action, event: selected.event, bookingId: selected.bookingId,
         gmailLink: selected.gmailLink, from: selected.from, to: selected.to, time: selected.time, markDone: true,
       });
+      if (result?.completed !== true) throw new Error("The task was created but was not confirmed as Done. Please retry.");
       setHiddenIds(current => [...current, id]);
       setSelectedIds(current => current.filter(value => value !== id));
       setSelectedId("");
+      setMobileListMode(true);
       showNotice("Email task marked done");
       setBusy("");
       void (onTaskCreated || onRefresh)();
@@ -72,28 +75,29 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
     }
   }
 
-  async function createSelected() {
+  async function completeSelected() {
     if (!canUseTasks || selectedIds.length === 0) return;
     if (!window.confirm(`Mark ${selectedIds.length} selected email task${selectedIds.length === 1 ? "" : "s"} as done?`)) return;
     const selectedItems = filtered.filter((item: any) => selectedIds.includes(String(item.emailId || item.id)));
     const created: string[] = [];
     const failed: string[] = [];
     try {
-      setBusy("bulk-create");
+      setBusy("bulk-done");
       for (const item of selectedItems) {
         const id = String(item.emailId || item.id);
         try {
-          await startEmailTask({
+          const result = await startEmailTask({
             emailId: id, staffName: staff.name, shift: shift?.shift || "", property: item.property,
             taskType: item.taskType, category: item.category, priority: item.priority,
             aiTitle: item.aiTitle, subject: item.subject, summary: item.summary,
             action: item.action, event: item.event, bookingId: item.bookingId,
             gmailLink: item.gmailLink, from: item.from, to: item.to, time: item.time, markDone: true,
           });
+          if (result?.completed !== true) throw new Error("Task completion was not confirmed.");
           created.push(id);
           setHiddenIds(current => Array.from(new Set([...current, id])));
           setSelectedIds(current => current.filter(value => value !== id));
-          if (id === selectedId) setSelectedId("");
+          if (id === selectedId) { setSelectedId(""); setMobileListMode(true); }
         } catch {
           failed.push(id);
         }
@@ -118,6 +122,7 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
       await ignoreAIEmail({ emailId: id, staffName: staff.name, reason: "Reviewed in Email Inbox" });
       setHiddenIds(current => [...current, id]);
       setSelectedId("");
+      setMobileListMode(true);
       showNotice("Email ignored");
       void onRefresh();
     } catch (reason) {
@@ -144,15 +149,15 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
   }
 
   return <>
-    <div className={`inbox-shell ${selected ? "has-selection" : ""}`}>
+    <div className={`inbox-shell ${selected ? "has-selection" : ""} ${mobileListMode ? "mobile-list-mode" : "mobile-preview-mode"}`}>
       <section className="inbox-list">
         <div className="inbox-search"><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search mail"/><button disabled={loading} onClick={onRefresh}>{loading ? "…" : "↻"}</button></div>
         <div className={`email-bulk-toolbar ${selectedIds.length ? "has-actions" : ""}`}>
           <div className="email-bulk-selection"><button type="button" onClick={toggleAllVisible} disabled={!visibleIds.length || busy !== ""}>
             {allVisibleSelected ? <CheckSquare2 size={16}/> : someVisibleSelected ? <MinusSquare size={16}/> : <Square size={16}/>} Select visible
           </button>
-          <span>{selectedIds.length ? `${selectedIds.length} selected` : "Select emails to manage"}</span></div>
-          {selectedIds.length > 0 && <div className="email-bulk-actions"><button type="button" onClick={() => setSelectedIds([])} disabled={busy !== ""}>Clear</button><button type="button" className="bulk-create" onClick={createSelected} disabled={!canUseTasks || busy !== ""}>{busy === "bulk-create" ? "Completing…" : "Mark done"}</button><button type="button" className="bulk-ignore" onClick={ignoreSelected} disabled={busy !== ""}>{busy === "bulk-ignore" ? "Ignoring…" : "Ignore"}</button></div>}
+          <span className={selectedIds.length ? "has-selection" : ""}>{selectedIds.length ? `${selectedIds.length} selected` : "Select emails to manage"}</span></div>
+          {selectedIds.length > 0 && <div className="email-bulk-actions"><button type="button" onClick={() => setSelectedIds([])} disabled={busy !== ""}>Clear</button><button type="button" className="bulk-done" onClick={completeSelected} disabled={!canUseTasks || busy !== ""}>{busy === "bulk-done" ? "Completing…" : "✓ Done selected"}</button><button type="button" className="bulk-ignore" onClick={ignoreSelected} disabled={busy !== ""}>{busy === "bulk-ignore" ? "Ignoring…" : "Ignore"}</button></div>}
         </div>
         {error && <p className="workspace-error">{error}</p>}
         <div className="message-list">
@@ -163,14 +168,14 @@ export default function EmailInbox({ items, staff, shift, canUseTasks, loading, 
               const checked = selectedIds.includes(id);
               return <div key={id} className={`email-list-row ${selected === item ? "selected" : ""} ${checked ? "checked" : ""}`}>
                 <button type="button" className="email-select-box" onClick={() => toggleSelected(id)} aria-label={`${checked ? "Deselect" : "Select"} email`}>{checked ? <Check size={14}/> : null}</button>
-                <button type="button" className="email-list-main" onClick={() => setSelectedId(id)}>
+                <button type="button" className="email-list-main" onClick={() => { setSelectedId(id); setMobileListMode(false); }}>
                   <span className="mail-dot"/><div><div><strong>{item.aiTitle || item.subject || "New email"}</strong><time>{time(item.time)}</time></div><small>{item.property || item.category || "General"} · {item.from || "Email"}</small><p>{item.summary || item.action || "Open to review this message"}</p></div>{item.attachmentNames && <b title="Attachment">⌕</b>}
                 </button>
               </div>;
             })}
         </div>
       </section>
-      <section className="email-preview">{!selected ? <div className="preview-empty"><span>✉</span><strong>Select an email</strong><p>Read the summary and decide the next action.</p></div> : <><header><button className="mobile-back" onClick={() => setSelectedId("")}>← Inbox</button><div><span className="eyebrow">AI OPERATIONAL TITLE</span><h2>{selected.aiTitle || selected.subject || "Email review"}</h2><p>{selected.property || "Property not detected"}</p></div><span className="review-badge">Needs review</span></header><div className="email-meta"><p><strong>From</strong><span>{selected.from || "-"}</span></p><p><strong>To</strong><span>{selected.to || "-"}</span></p><p><strong>Received</strong><span>{selected.time ? new Date(selected.time).toLocaleString() : "-"}</span></p></div><div className="ai-summary"><span>AI SUMMARY</span><p>{selected.summary || selected.action || "Review the original email below."}</p></div><div className="original-email"><h3>Original email</h3><pre>{body(selected.body)}</pre>{selected.attachmentNames && <div className="attachments"><strong>Attachments</strong><span>{selected.attachmentNames}</span></div>}</div><div className="sticky-actions"><button className="secondary-action" disabled={busy !== ""} onClick={ignore}>{busy === "ignore" ? "Ignoring…" : "Ignore"}</button>{selected.gmailLink && <a href={selected.gmailLink} target="_blank" rel="noreferrer">Open in Gmail</a>}<button className="primary-action email-done-action" disabled={!canUseTasks || busy !== ""} onClick={create}>{busy === "create" ? "Completing…" : "✓ Done"}</button></div></>}</section>
+      <section className="email-preview">{!selected ? <div className="preview-empty"><span>✉</span><strong>Select an email</strong><p>Read the summary and decide the next action.</p></div> : <><header><button className="mobile-back" onClick={() => { setMobileListMode(true); setSelectedId(""); }}>← Back to inbox</button><div><span className="eyebrow">AI OPERATIONAL TITLE</span><h2>{selected.aiTitle || selected.subject || "Email review"}</h2><p>{selected.property || "Property not detected"}</p></div><span className="review-badge">Needs review</span></header><div className="email-meta"><p><strong>From</strong><span>{selected.from || "-"}</span></p><p><strong>To</strong><span>{selected.to || "-"}</span></p><p><strong>Received</strong><span>{selected.time ? new Date(selected.time).toLocaleString() : "-"}</span></p></div><div className="ai-summary"><span>AI SUMMARY</span><p>{selected.summary || selected.action || "Review the original email below."}</p></div><div className="original-email"><h3>Original email</h3><pre>{body(selected.body)}</pre>{selected.attachmentNames && <div className="attachments"><strong>Attachments</strong><span>{selected.attachmentNames}</span></div>}</div><div className="sticky-actions"><button className="secondary-action" disabled={busy !== ""} onClick={ignore}>{busy === "ignore" ? "Ignoring…" : "Ignore"}</button>{selected.gmailLink && <a href={selected.gmailLink} target="_blank" rel="noreferrer">Open in Gmail</a>}<button className="primary-action email-done-action" disabled={!canUseTasks || busy !== ""} onClick={completeEmail}>{busy === "create" ? "Completing…" : "✓ Done"}</button></div></>}</section>
     </div>
     {notice && <div className="email-task-success" role="status"><span>✓</span><div><strong>{notice}</strong><small>The inbox has been updated.</small></div></div>}
   </>;

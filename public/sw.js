@@ -1,10 +1,10 @@
-const VERSION = "nkh-dashboard-v1";
+const VERSION = "nkh-dashboard-v3";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 const SHELL = ["/", "/offline.html", "/manifest.webmanifest"];
 
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(SHELL_CACHE).then(cache => cache.addAll(SHELL)));
+  event.waitUntil(caches.open(SHELL_CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", event => {

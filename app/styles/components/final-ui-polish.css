@@ -331,14 +331,14 @@
 }
 
 .sticky-actions .email-done-action,
-.email-bulk-toolbar .bulk-create {
+.email-bulk-toolbar .bulk-done {
   background: #2f9255 !important;
   border-color: #2f9255 !important;
   color: #fff !important;
 }
 
 .sticky-actions .email-done-action:hover:not(:disabled),
-.email-bulk-toolbar .bulk-create:hover:not(:disabled) {
+.email-bulk-toolbar .bulk-done:hover:not(:disabled) {
   background: #287d49 !important;
   border-color: #287d49 !important;
 }
@@ -359,6 +359,34 @@
 }
 
 @media (max-width: 900px) {
+  .inbox-shell.mobile-list-mode .inbox-list {
+    display: block;
+  }
+
+  .inbox-shell.mobile-list-mode .email-preview {
+    display: none;
+  }
+
+  .inbox-shell.mobile-preview-mode .inbox-list {
+    display: none;
+  }
+
+  .inbox-shell.mobile-preview-mode .email-preview {
+    display: block;
+  }
+
+  .mobile-back {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 0 10px;
+    border: 1px solid #efd0a2;
+    border-radius: 9px;
+    background: #fff7eb;
+    color: #995500;
+  }
+
   .property-profile > header {
     align-items: flex-start;
     flex-wrap: wrap;

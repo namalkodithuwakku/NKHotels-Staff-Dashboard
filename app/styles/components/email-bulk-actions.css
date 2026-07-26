@@ -59,10 +59,18 @@
   background: #fff3f3;
   color: #a83232;
 }
-.email-bulk-toolbar .bulk-create {
-  background: #e98a15;
-  border-color: #e98a15;
+.email-bulk-toolbar .bulk-done {
+  background: #2f9255;
+  border-color: #2f9255;
   color: #fff;
+}
+
+.email-bulk-selection span.has-selection {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 12px;
+  color: #85500b;
+  background: #fff0d8;
 }
 
 .email-bulk-toolbar button:disabled { opacity: .55; cursor: default; }
