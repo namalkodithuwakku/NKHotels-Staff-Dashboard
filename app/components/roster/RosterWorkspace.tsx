@@ -17,10 +17,10 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> { con
 export default function RosterWorkspace() {
   const [week, setWeek] = useState(() => {
     const today = new Date();
-    return new Date(today.getFullYear(), today.getMonth(), 1, 12);
+    return startOfWeek(today);
   });
   const [now, setNow] = useState(() => new Date());
-  const [view, setView] = useState<"week" | "month">("month");
+  const [view, setView] = useState<"week" | "month">("week");
   const [staff, setStaff] = useState<Staff[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);

@@ -45,7 +45,7 @@ export default function MasterDashboard({ staff, onLogout }: { staff: StaffSessi
     }
 
     void syncGmail();
-    const gmailTimer = window.setInterval(syncGmail, 120000);
+    const gmailTimer = window.setInterval(syncGmail, 60000);
 
     return () => {
       window.clearInterval(inboxTimer);

@@ -93,7 +93,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
     }
 
     void syncGmail();
-    const gmailTimer = window.setInterval(syncGmail, 120000);
+    const gmailTimer = window.setInterval(syncGmail, 60000);
 
     return () => {
       window.clearInterval(inboxTimer);
