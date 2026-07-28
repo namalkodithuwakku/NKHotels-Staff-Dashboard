@@ -51,7 +51,7 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
       setActionError("Select open tasks to complete.");
       return;
     }
-    const eligibleIds = eligible.map((task: any) => String(task.id));
+    const eligibleIds: string[] = eligible.map((task: any) => String(task.id));
     setOptimisticDoneIds(current => Array.from(new Set([...current, ...eligibleIds])));
     setSelectedIds(current => current.filter(id => !eligibleIds.includes(id)));
     try {
