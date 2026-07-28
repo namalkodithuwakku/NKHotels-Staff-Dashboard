@@ -49,6 +49,7 @@ body,
     radial-gradient(circle at 91% 2%, rgba(103, 197, 221, .10), transparent 22%),
     var(--nkh-workspace);
   color: var(--nkh-navy-strong);
+  grid-template-columns: 260px minmax(0, 1fr);
 }
 
 .staff-os button {
@@ -94,6 +95,11 @@ body,
   border: 1px solid transparent;
   color: #c6d0d5;
   border-radius: 12px;
+  white-space: nowrap;
+}
+
+.staff-rail nav button .nav-mark {
+  flex: 0 0 17px;
 }
 
 .staff-rail nav button:hover {

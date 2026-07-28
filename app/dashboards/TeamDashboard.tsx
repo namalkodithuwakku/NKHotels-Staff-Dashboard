@@ -85,9 +85,11 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
   const counts = useMemo(() => {
     let urgent = 0, pending = 0, active = 0, done = 0;
     last24Tasks.forEach((task: any) => {
-      const status = String(task.status || "").toLowerCase();
+      const status = String(task.status || "").trim().toLowerCase();
       const priority = String(task.priority || "").toLowerCase();
-      if (status.includes("done") || status.includes("completed")) done++;
+      const closed = ["done", "completed", "ignored", "acknowledged", "cancelled", "canceled"]
+        .some(value => status.includes(value));
+      if (closed) done++;
       else if (status.includes("progress")) active++;
       else {
         pending++;
@@ -98,7 +100,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
   }, [last24Tasks]);
 
   const notificationCounts: Partial<Record<WorkspaceView, number>> = {
-    tasks: Math.max(counts.pending, channelCounts.tasks),
+    tasks: counts.pending + counts.active,
     whatsapp: channelCounts.whatsapp,
     sms: channelCounts.sms,
   };

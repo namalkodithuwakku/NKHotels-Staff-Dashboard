@@ -48,9 +48,17 @@ export default function MasterDashboard({ staff, onLogout }: { staff: StaffSessi
       ),
     ]);
   }
-  const counts = useMemo(() => { let urgent = 0, open = 0, active = 0, done = 0; last24Tasks.forEach((task: any) => { const status = String(task.status || "").toLowerCase(), priority = String(task.priority || "").toLowerCase(); if (status.includes("done") || status.includes("completed")) done++; else if (status.includes("progress")) active++; else { open++; if (["high", "urgent", "critical"].includes(priority)) urgent++; } }); return { urgent, open, active, done }; }, [last24Tasks]);
+  const counts = useMemo(() => { let urgent = 0, open = 0, active = 0, done = 0; last24Tasks.forEach((task: any) => {
+    const status = String(task.status || "").trim().toLowerCase();
+    const priority = String(task.priority || "").toLowerCase();
+    const closed = ["done", "completed", "ignored", "acknowledged", "cancelled", "canceled"]
+      .some(value => status.includes(value));
+    if (closed) done++;
+    else if (status.includes("progress")) active++;
+    else { open++; if (["high", "urgent", "critical"].includes(priority)) urgent++; }
+  }); return { urgent, open, active, done }; }, [last24Tasks]);
   const notificationCounts: Partial<Record<MasterView, number>> = {
-    tasks: Math.max(counts.open, channelCounts.tasks),
+    tasks: counts.open + counts.active,
     whatsapp: channelCounts.whatsapp,
     sms: channelCounts.sms,
   };
