@@ -26,7 +26,7 @@ const navigation: Array<{ key: MasterView; label: string }> = [
 
 export default function MasterDashboard({ staff, onLogout }: { staff: StaffSession; onLogout: () => void }) {
   const [view, setView] = useState<MasterView>("overview"), [creatorOpen, setCreatorOpen] = useState(false);
-  const [channelCounts, setChannelCounts] = useState({ whatsapp: 0, sms: 0 });
+  const [channelCounts, setChannelCounts] = useState({ tasks: 0, whatsapp: 0, sms: 0 });
   const { last24Tasks, loading, error, reload } = useTasks(staff.name, true, true);
   useEffect(() => {
     async function loadNotificationCounts() {
@@ -40,10 +40,17 @@ export default function MasterDashboard({ staff, onLogout }: { staff: StaffSessi
     const timer = window.setInterval(loadNotificationCounts, 15000);
     return () => window.clearInterval(timer);
   }, []);
-  async function refreshAll() { await reload(); }
+  async function refreshAll() {
+    await Promise.all([
+      reload(),
+      fetchInboxNotificationCounts().then(setChannelCounts).catch(reason =>
+        console.error("Task notification refresh failed.", reason)
+      ),
+    ]);
+  }
   const counts = useMemo(() => { let urgent = 0, open = 0, active = 0, done = 0; last24Tasks.forEach((task: any) => { const status = String(task.status || "").toLowerCase(), priority = String(task.priority || "").toLowerCase(); if (status.includes("done") || status.includes("completed")) done++; else if (status.includes("progress")) active++; else { open++; if (["high", "urgent", "critical"].includes(priority)) urgent++; } }); return { urgent, open, active, done }; }, [last24Tasks]);
   const notificationCounts: Partial<Record<MasterView, number>> = {
-    tasks: counts.open,
+    tasks: Math.max(counts.open, channelCounts.tasks),
     whatsapp: channelCounts.whatsapp,
     sms: channelCounts.sms,
   };

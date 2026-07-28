@@ -57,10 +57,15 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
   );
   const [view, setView] = useState<WorkspaceView>("home");
   const [creatorOpen, setCreatorOpen] = useState(false);
-  const [channelCounts, setChannelCounts] = useState({ whatsapp: 0, sms: 0 });
+  const [channelCounts, setChannelCounts] = useState({ tasks: 0, whatsapp: 0, sms: 0 });
 
   async function refreshAll() {
-    await reload();
+    await Promise.all([
+      reload(),
+      fetchInboxNotificationCounts().then(setChannelCounts).catch(err =>
+        console.error("Task notification refresh failed.", err)
+      ),
+    ]);
   }
 
   useEffect(() => {
@@ -93,7 +98,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
   }, [last24Tasks]);
 
   const notificationCounts: Partial<Record<WorkspaceView, number>> = {
-    tasks: counts.pending,
+    tasks: Math.max(counts.pending, channelCounts.tasks),
     whatsapp: channelCounts.whatsapp,
     sms: channelCounts.sms,
   };

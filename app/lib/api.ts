@@ -159,6 +159,7 @@ export async function fetchInboxNotificationCounts() {
   }
 
   return {
+    tasks: Math.max(0, Number(data.counts?.tasks || 0)),
     whatsapp: Math.max(0, Number(data.counts?.whatsapp || 0)),
     sms: Math.max(0, Number(data.counts?.sms || 0)),
   };
