@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { StaffSession } from "../hooks/useAuth";
 import { useShift } from "../hooks/useShift";
 import { useSuperMode } from "../hooks/useSuperMode";
@@ -64,7 +64,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [channelCounts, setChannelCounts] = useState({ whatsapp: 0, sms: 0 });
 
-  async function loadEmails() {
+  const loadEmails = useCallback(async () => {
     try {
       setEmailLoading(true);
       setEmailError("");
@@ -72,7 +72,18 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
     } catch (err: any) {
       setEmailError(err?.message || "Unable to load the email inbox.");
     } finally { setEmailLoading(false); }
-  }
+  }, []);
+
+  const syncGmail = useCallback(async () => {
+    try {
+      await refreshGmailInbox();
+      await loadEmails();
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : "Unknown Gmail error.";
+      setEmailError(`Gmail synchronization failed: ${message}`);
+      console.error("Automatic Gmail refresh failed.", reason);
+    }
+  }, [loadEmails]);
 
   async function refreshAll() {
     await Promise.all([reload(), loadEmails()]);
@@ -83,15 +94,6 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
     void loadEmails();
     const inboxTimer = window.setInterval(loadEmails, 60000);
 
-    async function syncGmail() {
-      try {
-        await refreshGmailInbox();
-        await loadEmails();
-      } catch (err) {
-        console.error("Automatic Gmail refresh failed.", err);
-      }
-    }
-
     void syncGmail();
     const gmailTimer = window.setInterval(syncGmail, 60000);
 
@@ -99,7 +101,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
       window.clearInterval(inboxTimer);
       window.clearInterval(gmailTimer);
     };
-  }, [view]);
+  }, [view, loadEmails, syncGmail]);
 
   useEffect(() => {
     async function loadNotificationCounts() {
@@ -185,7 +187,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
         <div className="staff-content">
           {view === "home" && <StaffHome staffName={staff.name} shift={shift} counts={counts} tasks={last24Tasks} emails={emails} onOpen={setView} />}
           {view === "tasks" && <ShiftTasks tasks={last24Tasks} staffName={staff.name} canUseTasks={canUseTasks} loading={loading} error={error} onCreate={() => setCreatorOpen(true)} onRefresh={refreshAll} />}
-          {view === "email" && <EmailInbox items={emails} staff={staff} shift={shift} canUseTasks={canUseTasks} loading={emailLoading} error={emailError} onRefresh={loadEmails} onTaskCreated={refreshAll} />}
+          {view === "email" && <EmailInbox items={emails} staff={staff} shift={shift} canUseTasks={canUseTasks} loading={emailLoading} error={emailError} onRefresh={syncGmail} onTaskCreated={refreshAll} />}
           {view === "whatsapp" && <WhatsAppInbox staff={staff} onCreate={() => setCreatorOpen(true)} />}
           {view === "scheduled" && <ScheduledTasks onCreate={() => setCreatorOpen(true)} />}
           {view === "properties" && <PropertiesWorkspace access={staff.access} />}

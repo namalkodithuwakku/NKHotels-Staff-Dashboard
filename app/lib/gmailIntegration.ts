@@ -152,7 +152,7 @@ export async function setupGmailWatch() {
   const token = await gmailAccessToken();
   const watch = await gmail<{ historyId: string; expiration: string }>("watch", token, {
     method: "POST",
-    body: JSON.stringify({ topicName, labelIds: ["INBOX"], labelFilterBehavior: "INCLUDE" }),
+    body: JSON.stringify({ topicName }),
   });
   await supabaseAdmin("nkh_gmail_sync_state", { method: "POST", prefer: "resolution=merge-duplicates,return=minimal", body: {
     id: "primary", email_address: process.env.GOOGLE_GMAIL_ACCOUNT || null,
@@ -164,8 +164,24 @@ export async function setupGmailWatch() {
 
 export async function initialGmailImport() {
   const token = await gmailAccessToken();
-  const result = await gmail<{ messages?: Array<{ id: string }> }>(`messages?${new URLSearchParams({ q: "in:inbox newer_than:3d", maxResults: "100" })}`, token);
   let imported = 0;
-  for (const message of result.messages || []) if (await importGmailMessage(message.id, token)) imported += 1;
+  let pageToken = "";
+  let pages = 0;
+  do {
+    const query = new URLSearchParams({
+      q: "newer_than:3d -in:sent -in:drafts -in:trash -in:spam",
+      maxResults: "100",
+    });
+    if (pageToken) query.set("pageToken", pageToken);
+    const result = await gmail<{
+      messages?: Array<{ id: string }>;
+      nextPageToken?: string;
+    }>(`messages?${query}`, token);
+    for (const message of result.messages || []) {
+      if (await importGmailMessage(message.id, token)) imported += 1;
+    }
+    pageToken = result.nextPageToken || "";
+    pages += 1;
+  } while (pageToken && pages < 5);
   return imported;
 }
