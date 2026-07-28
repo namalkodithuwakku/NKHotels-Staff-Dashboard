@@ -82,24 +82,29 @@ async function generate(question: ImageQuestion) {
 
 export async function GET(request: NextRequest) {
   if (!authorised(request)) return NextResponse.json({ success: false, error: "Cron authorization required." }, { status: 401 });
-  const limit = Math.min(4, Math.max(1, Number(process.env.TEAM_BREAK_IMAGES_PER_DAY || 2)));
+  const limit = Math.min(20, Math.max(1, Number(process.env.TEAM_BREAK_IMAGES_PER_DAY || 20)));
   const queue = await supabaseAdmin<ImageQuestion[]>(
     `nkh_hospitality_questions?select=id,slug,term,definition,category,image_prompt,image_attempts&active=eq.true&image_url=is.null&image_attempts=lt.3&order=image_attempts.asc,created_at.asc&limit=${limit}`
   );
   const generated: unknown[] = [];
   const errors: Array<{ id: string; term: string; error: string }> = [];
-  for (const question of queue) {
-    try {
-      generated.push(await generate(question));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Image generation failed.";
-      errors.push({ id: question.id, term: question.term, error: message });
-      await supabaseAdmin(`nkh_hospitality_questions?id=eq.${question.id}`, {
-        method: "PATCH",
-        prefer: "return=minimal",
-        body: { image_status: "Failed", image_last_error: message.slice(0, 500) },
-      }).catch(() => undefined);
+  let cursor = 0;
+  async function worker() {
+    while (cursor < queue.length) {
+      const question = queue[cursor++];
+      try {
+        generated.push(await generate(question));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Image generation failed.";
+        errors.push({ id: question.id, term: question.term, error: message });
+        await supabaseAdmin(`nkh_hospitality_questions?id=eq.${question.id}`, {
+          method: "PATCH",
+          prefer: "return=minimal",
+          body: { image_status: "Failed", image_last_error: message.slice(0, 500) },
+        }).catch(() => undefined);
+      }
     }
   }
+  await Promise.all([worker(), worker()]);
   return NextResponse.json({ success: true, requested: queue.length, generated, errors });
 }

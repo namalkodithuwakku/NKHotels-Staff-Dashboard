@@ -27,7 +27,7 @@ The challenge is intentionally separate from task, roster, attendance and perfor
 
    - `OPENAI_API_KEY` already exists
    - Add `CRON_SECRET` with a new long random secret
-   - Optional: `TEAM_BREAK_IMAGES_PER_DAY=2`
+   - Optional: `TEAM_BREAK_IMAGES_PER_DAY=20`
    - Optional: `OPENAI_TEAM_BREAK_IMAGE_MODEL=gpt-image-1-mini`
 
 4. Push to GitHub and wait for Vercel to become Ready.
@@ -36,7 +36,7 @@ The challenge is intentionally separate from task, roster, attendance and perfor
 
 ## Image schedule
 
-The Vercel cron runs once daily at `22:35 UTC` (`04:05 Asia/Colombo`) and prepares two images by default.
-Set `TEAM_BREAK_IMAGES_PER_DAY` between 1 and 4 to change the daily batch.
+The Vercel cron runs once daily at `22:35 UTC` (`04:05 Asia/Colombo`) and prepares twenty low-quality 1024 × 1024 images by default.
+Set `TEAM_BREAK_IMAGES_PER_DAY` between 1 and 20 to change the daily batch.
 
-Questions work immediately before all images are generated.
+Questions work immediately before all images are generated. Daily selection prioritises questions whose individual images are already ready.

@@ -97,7 +97,8 @@ function dailyQuestions(questions: Question[], date: string, staffName: string) 
   let round = 0;
   while (chosen.length < DAILY_LIMIT && round < 20) {
     for (const category of categories) {
-      const bucket = seeded(categoryBuckets.get(category) || [], item => item.slug, `${date}|${staffName}|${category}`);
+      const bucket = seeded(categoryBuckets.get(category) || [], item => item.slug, `${date}|${staffName}|${category}`)
+        .sort((left, right) => Number(Boolean(right.image_url)) - Number(Boolean(left.image_url)));
       const question = bucket[round];
       if (question && !chosen.some(item => item.id === question.id)) chosen.push(question);
       if (chosen.length === DAILY_LIMIT) break;
