@@ -33,3 +33,74 @@
 }
 .staff-channel-permissions{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto;align-items:center!important;gap:12px!important;padding:13px 14px;border:1px solid #ecd2aa;border-radius:11px;background:#fff9f0}.staff-channel-permissions>div{display:grid;gap:3px}.staff-channel-permissions strong{color:#30373e;font-size:11px}.staff-channel-permissions small{color:#796d60;font-size:9px;line-height:1.35}.staff-channel-permissions>label{display:flex!important;align-items:center;gap:6px;margin:0!important;padding:8px 10px;border:1px solid #eadcc8;border-radius:8px;background:#fff;color:#4f5961;font-size:9px;font-weight:900;white-space:nowrap}.staff-channel-permissions input{width:15px!important;height:15px!important;accent-color:#e98a15}
 @media(max-width:650px){.staff-channel-permissions{grid-template-columns:1fr 1fr}.staff-channel-permissions>div{grid-column:1/-1}.staff-channel-permissions>label{justify-content:center}}
+/* Balanced task action buttons — append to app/styles/staff-workspace.css */
+.staff-os .shift-task {
+  grid-template-columns:14px minmax(0,1fr) minmax(105px,130px) minmax(188px,210px);
+}
+
+.staff-os .shift-task .task-actions {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  width:100%;
+  min-width:0;
+}
+
+.staff-os .shift-task .task-actions button {
+  width:auto;
+  min-width:88px;
+  height:38px;
+  padding:0 14px;
+  flex:0 0 auto;
+  white-space:nowrap;
+}
+
+.staff-os .shift-task .task-actions button:first-child:not(:last-child) {
+  min-width:112px;
+}
+
+.staff-os .shift-task .task-actions .done-button {
+  min-width:76px;
+}
+
+@media(max-width:1150px) and (min-width:901px) {
+  .staff-os .shift-task {
+    grid-template-columns:12px minmax(0,1fr) 96px minmax(172px,190px);
+    gap:10px;
+  }
+
+  .staff-os .shift-task .task-actions {
+    gap:6px;
+  }
+
+  .staff-os .shift-task .task-actions button {
+    padding:0 10px;
+  }
+
+  .staff-os .shift-task .task-actions button:first-child:not(:last-child) {
+    min-width:102px;
+  }
+
+  .staff-os .shift-task .task-actions .done-button {
+    min-width:64px;
+  }
+}
+
+@media(max-width:900px) {
+  .staff-os .shift-task {
+    grid-template-columns:12px minmax(0,1fr);
+  }
+
+  .staff-os .shift-task .task-actions {
+    grid-column:2;
+    justify-content:flex-start;
+    width:100%;
+  }
+
+  .staff-os .shift-task .task-actions button {
+    flex:1 1 0;
+    min-width:0;
+    max-width:150px;
+  }
+}
