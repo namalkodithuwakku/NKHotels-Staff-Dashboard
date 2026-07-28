@@ -63,12 +63,15 @@ async function ensureCatalogue() {
       body: hospitalityQuestionBank.slice(index, index + 50).map(item => ({
         ...item,
         image_prompt: [
-          "Create a clean, realistic, friendly hospitality training illustration.",
+          "Create a friendly, relaxing, polished hospitality learning image in the approachable visual language of a premium vocabulary picture card for adults.",
           `The visual concept is “${item.term}” in the ${item.category} category.`,
           `Meaning: ${item.definition}`,
-          "Show a believable boutique hotel environment, diverse professional staff or guests only when useful.",
-          "No text, letters, logos, watermarks, charts, UI screenshots or visible brand names.",
-          "Premium editorial photography style, natural light, uncluttered composition, landscape-friendly central subject.",
+          "Use a softly dimensional editorial illustration with gentle blue, green, amber and neutral colours, natural light, rounded forms and an uncluttered boutique hotel setting.",
+          "Keep it mature, calm and suitable for adult hotel staff training rather than a children's cartoon.",
+          "Show adult professional hotel staff or adult guests only when people are genuinely useful to explain the concept.",
+          "Objects and buildings must remain normal: never add eyes, mouths, faces, hands, arms, expressions or mascot personalities to beds, keys, luggage, food, documents, rooms, phones or any other item.",
+          "No children, cute mascots, talking objects, text, letters, logos, watermarks, charts, UI screenshots or visible brand names.",
+          "Clear landscape-friendly composition with one understandable central idea.",
         ].join(" "),
       })),
     });

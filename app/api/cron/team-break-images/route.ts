@@ -50,7 +50,13 @@ async function generate(question: ImageQuestion) {
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: process.env.OPENAI_TEAM_BREAK_IMAGE_MODEL || "gpt-image-1-mini",
-      prompt: question.image_prompt || `Create a clean realistic hospitality training illustration for “${question.term}”. ${question.definition}. No text or logos.`,
+      prompt: question.image_prompt || [
+        "Create a friendly, relaxing, softly dimensional hospitality learning image for adult hotel staff.",
+        `Show the concept “${question.term}”: ${question.definition}.`,
+        "Use gentle blue, green, amber and neutral colours in a believable boutique hotel setting.",
+        "Objects must remain normal and must never have eyes, mouths, faces, hands, arms or mascot personalities.",
+        "No children, childish cartoon style, text, logos, watermarks or UI.",
+      ].join(" "),
       size: "1024x1024",
       quality: "low",
       output_format: "webp",
