@@ -6,11 +6,10 @@ import { StaffSession } from "../hooks/useAuth";
 import { useShift } from "../hooks/useShift";
 import { useSuperMode } from "../hooks/useSuperMode";
 import { useTasks } from "../hooks/useTasks";
-import { fetchEmailReaderItems, fetchInboxNotificationCounts, refreshGmailInbox } from "../lib/api";
+import { fetchInboxNotificationCounts } from "../lib/api";
 import OperationsStatusTabs from "../components/status/OperationsStatusTabs";
 import StaffHome from "../components/home/StaffHome";
 import ShiftTasks from "../components/tasks/ShiftTasks";
-import EmailInbox from "../components/inbox/EmailInbox";
 import WhatsAppInbox from "../components/whatsapp/WhatsAppInbox";
 import SmsCenter from "../components/sms/SmsCenter";
 import ScheduledTasks from "../components/scheduled/ScheduledTasks";
@@ -20,12 +19,11 @@ import ComingSoonWorkspace from "../components/shared/ComingSoonWorkspace";
 import RosterWorkspace from "../components/roster/RosterWorkspace";
 import MobileWorkspaceMenu from "../components/mobile/MobileWorkspaceMenu";
 
-export type WorkspaceView = "home" | "tasks" | "email" | "whatsapp" | "sms" | "scheduled" | "properties" | "roster" | "calendar" | "faq";
+export type WorkspaceView = "home" | "tasks" | "whatsapp" | "sms" | "scheduled" | "properties" | "roster" | "calendar" | "faq";
 
 const nav: Array<{ key: WorkspaceView; label: string; short: string }> = [
   { key: "home", label: "Home", short: "Home" },
   { key: "tasks", label: "Shift Tasks", short: "Tasks" },
-  { key: "email", label: "Email Inbox", short: "Email" },
   { key: "whatsapp", label: "WhatsApp Inbox", short: "WhatsApp" },
   { key: "sms", label: "SMS Inbox", short: "SMS" },
   { key: "scheduled", label: "Scheduled Tasks", short: "Scheduled" },
@@ -58,50 +56,12 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
     shift?.scheduledEnd
   );
   const [view, setView] = useState<WorkspaceView>("home");
-  const [emails, setEmails] = useState<any[]>([]);
-  const [emailError, setEmailError] = useState("");
-  const [emailLoading, setEmailLoading] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [channelCounts, setChannelCounts] = useState({ whatsapp: 0, sms: 0 });
 
-  const loadEmails = useCallback(async () => {
-    try {
-      setEmailLoading(true);
-      setEmailError("");
-      setEmails(await fetchEmailReaderItems());
-    } catch (err: any) {
-      setEmailError(err?.message || "Unable to load the email inbox.");
-    } finally { setEmailLoading(false); }
-  }, []);
-
-  const syncGmail = useCallback(async () => {
-    try {
-      await refreshGmailInbox();
-      await loadEmails();
-    } catch (reason) {
-      const message = reason instanceof Error ? reason.message : "Unknown Gmail error.";
-      setEmailError(`Gmail synchronization failed: ${message}`);
-      console.error("Automatic Gmail refresh failed.", reason);
-    }
-  }, [loadEmails]);
-
   async function refreshAll() {
-    await Promise.all([reload(), loadEmails()]);
+    await reload();
   }
-
-  useEffect(() => {
-    if (!["home", "email"].includes(view)) return;
-    void loadEmails();
-    const inboxTimer = window.setInterval(loadEmails, 60000);
-
-    void syncGmail();
-    const gmailTimer = window.setInterval(syncGmail, 60000);
-
-    return () => {
-      window.clearInterval(inboxTimer);
-      window.clearInterval(gmailTimer);
-    };
-  }, [view, loadEmails, syncGmail]);
 
   useEffect(() => {
     async function loadNotificationCounts() {
@@ -134,7 +94,6 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
 
   const notificationCounts: Partial<Record<WorkspaceView, number>> = {
     tasks: counts.pending,
-    email: emails.length,
     whatsapp: channelCounts.whatsapp,
     sms: channelCounts.sms,
   };
@@ -185,9 +144,8 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
         </header>
 
         <div className="staff-content">
-          {view === "home" && <StaffHome staffName={staff.name} shift={shift} counts={counts} tasks={last24Tasks} emails={emails} onOpen={setView} />}
+          {view === "home" && <StaffHome staffName={staff.name} shift={shift} counts={counts} tasks={last24Tasks} onOpen={setView} />}
           {view === "tasks" && <ShiftTasks tasks={last24Tasks} staffName={staff.name} canUseTasks={canUseTasks} loading={loading} error={error} onCreate={() => setCreatorOpen(true)} onRefresh={refreshAll} />}
-          {view === "email" && <EmailInbox items={emails} staff={staff} shift={shift} canUseTasks={canUseTasks} loading={emailLoading} error={emailError} onRefresh={syncGmail} onTaskCreated={refreshAll} />}
           {view === "whatsapp" && <WhatsAppInbox staff={staff} onCreate={() => setCreatorOpen(true)} />}
           {view === "scheduled" && <ScheduledTasks onCreate={() => setCreatorOpen(true)} />}
           {view === "properties" && <PropertiesWorkspace access={staff.access} />}
@@ -198,7 +156,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
         </div>
       </section>
 
-      <MobileWorkspaceMenu items={availableNav} primaryKeys={["home", "tasks", "email", "whatsapp"].filter(key => availableNav.some(item => item.key === key))} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as WorkspaceView)} onLogout={onLogout} />
+      <MobileWorkspaceMenu items={availableNav} primaryKeys={["home", "tasks", "whatsapp", "roster"].filter(key => availableNav.some(item => item.key === key))} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as WorkspaceView)} onLogout={onLogout} />
 
       <button className="staff-fab" onClick={() => setCreatorOpen(true)} aria-label="Create task">＋</button>
       <TaskCreatorModal open={creatorOpen} onClose={() => setCreatorOpen(false)} staff={staff} shift={shift} onCreated={refreshAll} />

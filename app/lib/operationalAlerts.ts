@@ -1,7 +1,7 @@
 import { maskPhone, sendDialogSms } from "./dialogSms";
 import { supabaseAdmin } from "./supabaseAdmin";
 
-type Settings = { staff_alerts_enabled: boolean; master_alerts_enabled: boolean; whatsapp_wait_minutes: number; task_wait_minutes: number; email_full_threshold: number; cooldown_minutes: number; offline_after_minutes: number };
+type Settings = { staff_alerts_enabled: boolean; master_alerts_enabled: boolean; whatsapp_wait_minutes: number; task_wait_minutes: number; cooldown_minutes: number; offline_after_minutes: number };
 type Staff = { id: string; display_name: string; phone: string | null; whatsapp_number: string | null; access_level: string };
 type Shift = { staff_id: string; start_time: string | null; end_time: string | null; status: string };
 
@@ -49,27 +49,26 @@ export async function runOperationalAlerts() {
   const { date, minutes } = colomboParts();
   const taskCutoff = new Date(Date.now() - settings.task_wait_minutes * 60000).toISOString();
   const waCutoff = new Date(Date.now() - settings.whatsapp_wait_minutes * 60000).toISOString();
-  const [staff, shifts, emails, pendingTasks, longTasks, whatsapp] = await Promise.all([
+  const [staff, shifts, pendingTasks, longTasks, whatsapp] = await Promise.all([
     supabaseAdmin<Staff[]>("nkh_staff?select=id,display_name,phone,whatsapp_number,access_level&employment_status=eq.Active"),
     supabaseAdmin<Shift[]>(`nkh_roster_entries?select=staff_id,start_time,end_time,status&shift_date=eq.${date}&status=eq.Scheduled`),
-    supabaseAdmin<Array<{ id: string }>>("nkh_email_inbox?select=id&status=eq.Needs%20Review"),
     supabaseAdmin<Array<{ id: string }>>("nkh_tasks?select=id&status=in.(Pending,Open)"),
     supabaseAdmin<Array<{ id: string }>>(`nkh_tasks?select=id&status=in.(Pending,Open)&created_at=lt.${encodeURIComponent(taskCutoff)}`),
     supabaseAdmin<Array<{ id: string; unread_count: number }>>(`wa_conversations?select=id,unread_count&unread_count=gt.0&last_message_at=lt.${encodeURIComponent(waCutoff)}`),
   ]);
-  const snapshot = { emails: emails.length, pendingTasks: pendingTasks.length, longTasks: longTasks.length, waitingWhatsapp: whatsapp.reduce((sum, item) => sum + Number(item.unread_count || 0), 0) };
+  const snapshot = { pendingTasks: pendingTasks.length, longTasks: longTasks.length, waitingWhatsapp: whatsapp.reduce((sum, item) => sum + Number(item.unread_count || 0), 0) };
   const results: unknown[] = [];
   const onShiftIds = new Set(shifts.filter(shift => activeShift(shift, minutes)).map(shift => shift.staff_id));
-  const workAlertRequired = snapshot.longTasks > 0 || snapshot.emails > settings.email_full_threshold;
+  const workAlertRequired = snapshot.longTasks > 0;
   if (settings.staff_alerts_enabled && workAlertRequired) {
     for (const member of staff.filter(item => onShiftIds.has(item.id) && item.access_level !== "Master")) {
-      const message = `NKH Action Required | ${snapshot.longTasks} task${snapshot.longTasks === 1 ? "" : "s"} waiting over ${settings.task_wait_minutes} min | ${snapshot.emails} emails waiting. Please attend now.`;
+      const message = `NKH Action Required | ${snapshot.longTasks} task${snapshot.longTasks === 1 ? "" : "s"} waiting over ${settings.task_wait_minutes} min. Please attend now.`;
       results.push(await deliver("StaffSummary", member, message, snapshot, settings.cooldown_minutes));
     }
   }
   if (settings.master_alerts_enabled && workAlertRequired) {
     const onShiftNames = staff.filter(item => onShiftIds.has(item.id) && item.access_level !== "Master").map(item => item.display_name).join(", ") || "No staff";
-    const message = `NKH Master Overview | ${snapshot.longTasks} delayed tasks | Email queue: ${snapshot.emails} | On shift: ${onShiftNames}. Hourly operational alert.`;
+    const message = `NKH Master Overview | ${snapshot.longTasks} delayed tasks | On shift: ${onShiftNames}. Hourly operational alert.`;
     const masterRecipients = staff.filter(item => item.access_level === "Master" || item.display_name.trim().toLowerCase() === "namal");
     for (const member of masterRecipients) {
       results.push(await deliver("MasterSummary", member, message, snapshot, settings.cooldown_minutes));
