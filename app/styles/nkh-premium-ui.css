@@ -4,7 +4,7 @@
 ========================================================== */
 
 :root {
-  --font-main: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-main: var(--font-jakarta, "Plus Jakarta Sans"), Inter, "Segoe UI", Arial, sans-serif;
   --nkh-navy: #163e52;
   --nkh-navy-strong: #102f40;
   --nkh-blue: #3478b9;
@@ -31,6 +31,11 @@ body,
 .staff-os,
 .staff-login-page {
   font-family: var(--font-main) !important;
+}
+
+.staff-os *,
+.staff-login-page * {
+  font-family: inherit;
 }
 
 .staff-os {
@@ -243,7 +248,14 @@ body,
   border: 1px solid #e0e8eb;
 }
 
+.task-view-tabs {
+  flex: 0 0 auto;
+  min-width: 180px;
+  overflow: hidden;
+}
+
 .segmented button {
+  flex: 1 0 auto;
   color: #657783;
 }
 
