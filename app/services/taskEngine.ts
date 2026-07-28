@@ -11,7 +11,11 @@ function isCompletedStatus(status?: string) {
 
   return (
     value.includes("done") ||
-    value.includes("completed")
+    value.includes("completed") ||
+    value.includes("ignored") ||
+    value.includes("acknowledged") ||
+    value.includes("cancelled") ||
+    value.includes("canceled")
   );
 }
 

@@ -47,7 +47,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
     shiftActive: canWork,
   });
   const canUseTasks = superMode.canUseTasks;
-  const { last24Tasks, loading, error, reload } = useTasks(
+  const { last24Tasks, loading, error, reload, closeTasksOptimistically } = useTasks(
     staff.name,
     canUseTasks,
     false,
@@ -150,7 +150,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
 
         <div className="staff-content">
           {view === "home" && <StaffHome staffName={staff.name} shift={shift} counts={counts} tasks={last24Tasks} onOpen={setView} />}
-          {view === "tasks" && <ShiftTasks tasks={last24Tasks} staffName={staff.name} canUseTasks={canUseTasks} loading={loading} error={error} onCreate={() => setCreatorOpen(true)} onRefresh={refreshAll} />}
+          {view === "tasks" && <ShiftTasks tasks={last24Tasks} staffName={staff.name} canUseTasks={canUseTasks} loading={loading} error={error} onCreate={() => setCreatorOpen(true)} onRefresh={refreshAll} onOptimisticClose={closeTasksOptimistically} />}
           {view === "whatsapp" && <WhatsAppInbox staff={staff} onCreate={() => setCreatorOpen(true)} />}
           {view === "scheduled" && <ScheduledTasks onCreate={() => setCreatorOpen(true)} />}
           {view === "properties" && <PropertiesWorkspace access={staff.access} />}

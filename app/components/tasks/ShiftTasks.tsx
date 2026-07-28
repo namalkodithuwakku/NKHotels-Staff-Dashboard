@@ -1,11 +1,20 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useMemo, useState } from "react";
-import { Check, CheckSquare2, MinusSquare, Square } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, CheckSquare2, MinusSquare, Sparkles, Square, Zap } from "lucide-react";
 import { ignoreTasks, updateTaskStatus } from "../../lib/api";
 
-export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, error, onCreate, onRefresh }: any) {
+function sourceTone(source: unknown) {
+  const value = String(source || "").toLowerCase();
+  if (value.includes("whatsapp")) return "source-whatsapp";
+  if (value.includes("email")) return "source-email";
+  if (value.includes("phone")) return "source-phone";
+  if (value.includes("scheduled")) return "source-scheduled";
+  return "source-manual";
+}
+
+export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, error, onCreate, onRefresh, onOptimisticClose }: any) {
   const [filter, setFilter] = useState("open");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState("");
@@ -13,6 +22,17 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
   const [actionError, setActionError] = useState("");
   const [optimisticDoneIds, setOptimisticDoneIds] = useState<string[]>([]);
   const [optimisticAcknowledgedIds, setOptimisticAcknowledgedIds] = useState<string[]>([]);
+  const [celebration, setCelebration] = useState<{
+    count: number;
+    urgent: boolean;
+    queueCleared: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!celebration) return;
+    const timer = window.setTimeout(() => setCelebration(null), 1450);
+    return () => window.clearTimeout(timer);
+  }, [celebration]);
 
   const shown = useMemo(() => tasks.filter((task: any) => {
     const id = String(task.id);
@@ -52,8 +72,22 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
       return;
     }
     const eligibleIds: string[] = eligible.map((task: any) => String(task.id));
+    const openTasks = tasks.filter((task: any) => {
+      const status = String(task.status || "").toLowerCase();
+      return !status.includes("done") && !status.includes("completed") &&
+        !status.includes("ignored") && !status.includes("acknowledged");
+    });
+    const urgent = eligible.some((task: any) =>
+      ["high", "urgent", "critical"].includes(String(task.priority || "").toLowerCase())
+    );
     setOptimisticDoneIds(current => Array.from(new Set([...current, ...eligibleIds])));
     setSelectedIds(current => current.filter(id => !eligibleIds.includes(id)));
+    onOptimisticClose?.(eligibleIds);
+    setCelebration({
+      count: eligibleIds.length,
+      urgent,
+      queueCleared: eligibleIds.length >= openTasks.length,
+    });
     try {
       setBusy(ids.length === 1 ? ids[0] : "bulk-done");
       setActionError("");
@@ -78,6 +112,7 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
     if (!ids.length) return;
     setOptimisticAcknowledgedIds(current => Array.from(new Set([...current, ...ids])));
     setSelectedIds(current => current.filter(id => !ids.includes(id)));
+    onOptimisticClose?.(ids);
     try {
       setBusy(ids.length === 1 ? ids[0] : "bulk-acknowledge");
       setActionError("");
@@ -93,7 +128,7 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
 
   return <div className="tasks-workspace">
     <div className="workspace-tools">
-      <div className="segmented">{[["open","Open"],["done","Closed"],["all","All"]].map(([key,label]) =>
+      <div className="segmented task-view-tabs">{[["open","Open"],["done","Closed"],["all","All"]].map(([key,label]) =>
         <button className={filter === key ? "active" : ""} key={key} onClick={() => setFilter(key)}>{label}</button>)}
       </div>
       <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search tasks or properties"/>
@@ -107,10 +142,10 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
       <span>{selectedIds.length ? `${selectedIds.length} selected` : "Select tasks for a bulk update"}</span>
       {selectedIds.length > 0 && <>
         <button type="button" onClick={() => setSelectedIds([])} disabled={busy !== ""}>Clear</button>
-        <button type="button" onClick={() => acknowledge(selectedIds)} disabled={!canUseTasks || busy !== ""}>
+        <button type="button" className="nkh-button nkh-button-acknowledge" onClick={() => acknowledge(selectedIds)} disabled={!canUseTasks || busy !== ""}>
           {busy === "bulk-acknowledge" ? "Acknowledging…" : "Acknowledge selected"}
         </button>
-        <button type="button" className="bulk-done" onClick={() => markDone(selectedIds)} disabled={!canUseTasks || busy !== ""}>
+        <button type="button" className="bulk-done nkh-button nkh-button-success" onClick={() => markDone(selectedIds)} disabled={!canUseTasks || busy !== ""}>
           {busy === "bulk-done" ? "Completing…" : "Mark selected done"}
         </button>
       </>}
@@ -133,7 +168,7 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
         const label = acknowledged ? "Acknowledged" : completed ? "Done" : urgent ? "Urgent" : "Pending";
         const chip = acknowledged ? "amber" : completed ? "green" : urgent ? "red" : "amber";
 
-        return <article className={`shift-task ${urgent && !closed ? "urgent" : ""} ${checked ? "selected" : ""}`} key={task.id}>
+        return <article className={`shift-task ${sourceTone(task.source)} ${urgent && !closed ? "urgent" : ""} ${checked ? "selected" : ""}`} key={task.id}>
           <button type="button" className="task-select-box" onClick={() => toggleSelected(id)}
             aria-label={`${checked ? "Deselect" : "Select"} task`}>{checked ? <Check size={14}/> : null}</button>
           <div className="task-state"><span className={closed ? "done" : "pending"}/></div>
@@ -145,14 +180,25 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
           </div>
           <div className="task-owner"><small>OWNER</small><strong>{task.assignedTo || "Unassigned"}</strong></div>
           <div className="task-actions">
-            {!closed && emailTask && <button disabled={!canUseTasks || busy !== ""} onClick={() => acknowledge([id])}>
+            {!closed && emailTask && <button className="acknowledge-button" disabled={!canUseTasks || busy !== ""} onClick={() => acknowledge([id])}>
               {busy === id ? "Saving…" : "Acknowledge"}</button>}
             {!closed && <button className="done-button" disabled={!canUseTasks || busy !== ""} onClick={() => markDone([id])}>
-              {busy === id ? "Completing…" : "Done"}</button>}
+              <Check size={15}/>{busy === id ? "Completing…" : "Done"}</button>}
             {acknowledged && <span>✓ Acknowledged</span>}
             {completed && <span>✓ Completed</span>}
           </div>
         </article>;
       })}</div>}
+    {celebration && <div className="task-celebration-layer" role="status" aria-live="polite" onClick={() => setCelebration(null)}>
+      <div className={`task-celebration ${celebration.urgent ? "urgent-win" : ""} ${celebration.queueCleared ? "queue-win" : ""}`}>
+        <div className="celebration-orbit"><span/><span/><span/></div>
+        <div className="celebration-check">{celebration.urgent ? <Zap size={39}/> : <Check size={42}/>}</div>
+        <Sparkles className="celebration-spark left" size={23}/>
+        <Sparkles className="celebration-spark right" size={18}/>
+        <small>{celebration.queueCleared ? "QUEUE CLEARED" : celebration.urgent ? "URGENT WORK RESOLVED" : "TASK COMPLETED"}</small>
+        <h2>{celebration.count > 1 ? `${celebration.count} tasks completed!` : `Great work, ${staffName}!`}</h2>
+        <p>{celebration.queueCleared ? "Everything is under control." : "Another guest operation handled beautifully."}</p>
+      </div>
+    </div>}
   </div>;
 }

@@ -123,6 +123,12 @@ const shift = sortNewest(
     scheduledEnd,
   ]);
 
+  function closeTasksOptimistically(taskIds: string[]) {
+    const ids = new Set(taskIds.map(String));
+    setLast24Tasks(current => current.filter(task => !ids.has(String(task.id))));
+    setShiftTasks(current => current.filter(task => !ids.has(String(task.id))));
+  }
+
   return {
     last24Tasks,
     shiftTasks,
@@ -131,5 +137,6 @@ const shift = sortNewest(
     loading,
     error,
     reload: () => loadTasks(false),
+    closeTasksOptimistically,
   };
 }
