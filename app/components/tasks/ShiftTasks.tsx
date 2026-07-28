@@ -11,15 +11,20 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
   const [busy, setBusy] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [actionError, setActionError] = useState("");
+  const [optimisticDoneIds, setOptimisticDoneIds] = useState<string[]>([]);
+  const [optimisticAcknowledgedIds, setOptimisticAcknowledgedIds] = useState<string[]>([]);
 
   const shown = useMemo(() => tasks.filter((task: any) => {
+    const id = String(task.id);
     const status = String(task.status || "").toLowerCase();
-    const acknowledged = status.includes("ignored") || status.includes("acknowledged");
-    const completed = status.includes("done") || status.includes("completed");
+    const acknowledged = optimisticAcknowledgedIds.includes(id) ||
+      status.includes("ignored") || status.includes("acknowledged");
+    const completed = optimisticDoneIds.includes(id) ||
+      status.includes("done") || status.includes("completed");
     const closed = acknowledged || completed;
     const filterOk = filter === "all" || (filter === "open" && !closed) || (filter === "done" && closed);
     return filterOk && [task.subject, task.notes, task.property, task.type].join(" ").toLowerCase().includes(search.toLowerCase());
-  }), [tasks, filter, search]);
+  }), [tasks, filter, search, optimisticDoneIds, optimisticAcknowledgedIds]);
 
   const visibleIds = shown.map((task: any) => String(task.id));
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id: string) => selectedIds.includes(id));
@@ -46,24 +51,24 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
       setActionError("Select open tasks to complete.");
       return;
     }
-    if (!window.confirm(`Mark ${eligible.length} task${eligible.length === 1 ? "" : "s"} as done?`)) return;
-
-    const completed: string[] = [];
-    let failures = 0;
+    const eligibleIds = eligible.map((task: any) => String(task.id));
+    setOptimisticDoneIds(current => Array.from(new Set([...current, ...eligibleIds])));
+    setSelectedIds(current => current.filter(id => !eligibleIds.includes(id)));
     try {
       setBusy(ids.length === 1 ? ids[0] : "bulk-done");
       setActionError("");
-      for (const task of eligible) {
-        try {
-          await updateTaskStatus(String(task.id), "Done", staffName);
-          completed.push(String(task.id));
-        } catch {
-          failures++;
-        }
+      const results = await Promise.allSettled(
+        eligibleIds.map(id => updateTaskStatus(id, "Done", staffName))
+      );
+      const failedIds = eligibleIds.filter((_, index) => results[index].status === "rejected");
+      if (failedIds.length) {
+        setOptimisticDoneIds(current => current.filter(id => !failedIds.includes(id)));
+        setActionError(`${failedIds.length} task${failedIds.length === 1 ? "" : "s"} could not be completed.`);
       }
-      setSelectedIds(current => current.filter(id => !completed.includes(id)));
       await onRefresh();
-      if (failures) setActionError(`${failures} task${failures === 1 ? "" : "s"} could not be completed.`);
+    } catch (reason: any) {
+      setOptimisticDoneIds(current => current.filter(id => !eligibleIds.includes(id)));
+      setActionError(reason?.message || "Unable to complete tasks.");
     } finally {
       setBusy("");
     }
@@ -71,18 +76,15 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
 
   async function acknowledge(ids: string[]) {
     if (!ids.length) return;
-    const note = window.prompt(
-      "Add an acknowledgement note (optional). Similar email patterns are learned after three acknowledgements.",
-      "Reviewed — no further action"
-    );
-    if (note === null) return;
+    setOptimisticAcknowledgedIds(current => Array.from(new Set([...current, ...ids])));
+    setSelectedIds(current => current.filter(id => !ids.includes(id)));
     try {
       setBusy(ids.length === 1 ? ids[0] : "bulk-acknowledge");
       setActionError("");
-      await ignoreTasks(ids, note || "Reviewed — no further action");
-      setSelectedIds(current => current.filter(id => !ids.includes(id)));
+      await ignoreTasks(ids, "Reviewed — no further action");
       await onRefresh();
     } catch (reason: any) {
+      setOptimisticAcknowledgedIds(current => current.filter(id => !ids.includes(id)));
       setActionError(reason?.message || "Unable to acknowledge tasks.");
     } finally {
       setBusy("");
@@ -118,13 +120,15 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
     {loading ? <div className="workspace-empty">Loading shift tasks…</div> :
       shown.length === 0 ? <div className="workspace-empty"><strong>No tasks here</strong><p>The queue is clear for this view.</p></div> :
       <div className="task-list">{shown.map((task: any) => {
+        const id = String(task.id);
         const status = String(task.status || "").toLowerCase();
-        const acknowledged = status.includes("ignored") || status.includes("acknowledged");
-        const completed = status.includes("done") || status.includes("completed");
+        const acknowledged = optimisticAcknowledgedIds.includes(id) ||
+          status.includes("ignored") || status.includes("acknowledged");
+        const completed = optimisticDoneIds.includes(id) ||
+          status.includes("done") || status.includes("completed");
         const closed = acknowledged || completed;
         const urgent = ["high","urgent","critical"].includes(String(task.priority || "").toLowerCase());
         const emailTask = String(task.source || "").toLowerCase().includes("email");
-        const id = String(task.id);
         const checked = selectedIds.includes(id);
         const label = acknowledged ? "Acknowledged" : completed ? "Done" : urgent ? "Urgent" : "Pending";
         const chip = acknowledged ? "amber" : completed ? "green" : urgent ? "red" : "amber";
