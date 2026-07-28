@@ -18,8 +18,9 @@ import PropertiesWorkspace from "../components/properties/PropertiesWorkspace";
 import ComingSoonWorkspace from "../components/shared/ComingSoonWorkspace";
 import RosterWorkspace from "../components/roster/RosterWorkspace";
 import MobileWorkspaceMenu from "../components/mobile/MobileWorkspaceMenu";
+import TeamBreakWorkspace from "../components/team-break/TeamBreakWorkspace";
 
-export type WorkspaceView = "home" | "tasks" | "whatsapp" | "sms" | "scheduled" | "properties" | "roster" | "calendar" | "faq";
+export type WorkspaceView = "home" | "tasks" | "whatsapp" | "sms" | "scheduled" | "properties" | "roster" | "calendar" | "faq" | "team-break";
 
 const nav: Array<{ key: WorkspaceView; label: string; short: string }> = [
   { key: "home", label: "Home", short: "Home" },
@@ -31,6 +32,7 @@ const nav: Array<{ key: WorkspaceView; label: string; short: string }> = [
   { key: "roster", label: "Roster", short: "Roster" },
   { key: "calendar", label: "Calendars", short: "Calendar" },
   { key: "faq", label: "Hotel FAQ", short: "FAQ" },
+  { key: "team-break", label: "Team Break", short: "Break" },
 ];
 
 export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession; onLogout: () => void }) {
@@ -160,6 +162,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
           {view === "roster" && <RosterWorkspace />}
           {view === "calendar" && <ComingSoonWorkspace title="Calendars" description="Operational events, reminders and property schedules will appear here." />}
           {view === "faq" && <ComingSoonWorkspace title="Hotel FAQ" description="Search approved answers across every active property profile." />}
+          {view === "team-break" && <TeamBreakWorkspace staffName={staff.name} />}
         </div>
       </section>
 
