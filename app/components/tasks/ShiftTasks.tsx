@@ -88,6 +88,13 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
       urgent,
       queueCleared: eligibleIds.length >= openTasks.length,
     });
+    window.dispatchEvent(new CustomEvent("nkh-pet-celebrate", {
+      detail: {
+        message: eligibleIds.length > 1
+          ? `Excellent teamwork — ${eligibleIds.length} tasks complete!`
+          : "Nice work — another task complete!",
+      },
+    }));
     try {
       setBusy(ids.length === 1 ? ids[0] : "bulk-done");
       setActionError("");

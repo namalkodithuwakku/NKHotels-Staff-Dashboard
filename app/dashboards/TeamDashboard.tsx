@@ -19,6 +19,7 @@ import ComingSoonWorkspace from "../components/shared/ComingSoonWorkspace";
 import RosterWorkspace from "../components/roster/RosterWorkspace";
 import MobileWorkspaceMenu from "../components/mobile/MobileWorkspaceMenu";
 import TeamBreakWorkspace from "../components/team-break/TeamBreakWorkspace";
+import NikoPet from "../components/pet/NikoPet";
 
 export type WorkspaceView = "home" | "tasks" | "whatsapp" | "sms" | "scheduled" | "properties" | "roster" | "calendar" | "faq" | "team-break";
 
@@ -170,6 +171,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
 
       <button className="staff-fab" onClick={() => setCreatorOpen(true)} aria-label="Create task">＋</button>
       <TaskCreatorModal open={creatorOpen} onClose={() => setCreatorOpen(false)} staff={staff} shift={shift} onCreated={refreshAll} />
+      <NikoPet staffName={staff.name} compact={view === "tasks" || view === "whatsapp" || view === "sms"} />
     </main>
   );
 }

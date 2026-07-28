@@ -15,6 +15,7 @@ import ComingSoonWorkspace from "../components/shared/ComingSoonWorkspace";
 import MobileWorkspaceMenu from "../components/mobile/MobileWorkspaceMenu";
 import TaskCreatorModal from "../components/tasks/TaskCreatorModal";
 import TeamBreakWorkspace from "../components/team-break/TeamBreakWorkspace";
+import NikoPet from "../components/pet/NikoPet";
 
 type MasterView = "overview" | "tasks" | "properties" | "staff" | "roster" | "whatsapp" | "sms" | "team-break" | "reports" | "settings";
 const navigation: Array<{ key: MasterView; label: string }> = [
@@ -72,5 +73,5 @@ export default function MasterDashboard({ staff, onLogout }: { staff: StaffSessi
     {view === "whatsapp" && <WhatsAppInbox staff={staff} onCreate={() => setCreatorOpen(true)} />}
     {view === "sms" && <SmsCenter staff={staff} />}{view === "reports" && <ComingSoonWorkspace title="Reports" description="Company performance, roster coverage and service reports will appear here." />}{view === "settings" && <ComingSoonWorkspace title="Settings" description="Company-wide integrations, access rules and operational defaults will appear here." />}
     {view === "team-break" && <TeamBreakWorkspace staffName={staff.name} />}
-  </div></section><MobileWorkspaceMenu items={navigation} primaryKeys={["overview","tasks","whatsapp","roster"]} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as MasterView)} onLogout={onLogout} /><button className="staff-fab" onClick={() => setCreatorOpen(true)}>＋</button><TaskCreatorModal open={creatorOpen} onClose={() => setCreatorOpen(false)} staff={staff} shift={shift} onCreated={refreshAll} /></main>;
+  </div></section><MobileWorkspaceMenu items={navigation} primaryKeys={["overview","tasks","whatsapp","roster"]} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as MasterView)} onLogout={onLogout} /><button className="staff-fab" onClick={() => setCreatorOpen(true)}>＋</button><TaskCreatorModal open={creatorOpen} onClose={() => setCreatorOpen(false)} staff={staff} shift={shift} onCreated={refreshAll} /><NikoPet staffName={staff.name} compact={view === "tasks" || view === "whatsapp" || view === "sms"} /></main>;
 }

@@ -81,6 +81,15 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
       }));
       setState(next);
       setResult(next.result || null);
+      if (next.result?.correct) {
+        window.dispatchEvent(new CustomEvent("nkh-pet-celebrate", {
+          detail: {
+            message: next.progress.complete
+              ? "Amazing! Today’s challenge is complete!"
+              : "Great answer! Niko is cheering for you.",
+          },
+        }));
+      }
       if (next.progress.complete) {
         setCompletedBurst(true);
         window.setTimeout(() => setCompletedBurst(false), 2200);
