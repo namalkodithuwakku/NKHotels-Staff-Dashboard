@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from "react";
 import { Check, CheckSquare2, MinusSquare, Square } from "lucide-react";
-import { updateTaskStatus } from "../../lib/api";
+import { ignoreTasks, updateTaskStatus } from "../../lib/api";
 
 export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, error, onCreate, onRefresh }: any) {
   const [filter, setFilter] = useState("open");
@@ -13,7 +13,7 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
   const [actionError, setActionError] = useState("");
   const shown = useMemo(() => tasks.filter((task: any) => {
     const status = String(task.status || "").toLowerCase();
-    const done = status.includes("done") || status.includes("completed");
+    const done = status.includes("done") || status.includes("completed") || status.includes("ignored");
     const active = status.includes("progress");
     const filterOk = filter === "all" || (filter === "open" && !done) || (filter === "active" && active) || (filter === "done" && done);
     return filterOk && [task.subject, task.notes, task.property, task.type].join(" ").toLowerCase().includes(search.toLowerCase());
@@ -77,6 +77,19 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
     }
   }
 
+  async function ignoreSelected(ids: string[]) {
+    const reason = window.prompt("Why should similar emails be ignored?", "No action required");
+    if (reason === null || !ids.length) return;
+    try {
+      setBusy("bulk-ignore"); setActionError("");
+      await ignoreTasks(ids, reason);
+      setSelectedIds(current => current.filter(id => !ids.includes(id)));
+      await onRefresh();
+    } catch (error: any) {
+      setActionError(error?.message || "Unable to ignore tasks.");
+    } finally { setBusy(""); }
+  }
+
   return <div className="tasks-workspace">
     <div className="workspace-tools"><div className="segmented">{[["open","Open"],["active","In Progress"],["done","Done"],["all","All"]].map(([key,label]) => <button className={filter === key ? "active" : ""} key={key} onClick={() => setFilter(key)}>{label}</button>)}</div><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks or properties"/><button className="primary-action" onClick={onCreate}>＋ Create Task</button></div>
     <div className="task-bulk-toolbar">
@@ -84,12 +97,12 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
         {allVisibleSelected ? <CheckSquare2 size={16}/> : someVisibleSelected ? <MinusSquare size={16}/> : <Square size={16}/>} Select visible
       </button>
       <span>{selectedIds.length ? `${selectedIds.length} selected` : "Select tasks for a bulk update"}</span>
-      {selectedIds.length > 0 && <><button type="button" onClick={() => setSelectedIds([])} disabled={busy !== ""}>Clear</button><button type="button" className="bulk-start" onClick={() => bulkChange("In Progress")} disabled={!canUseTasks || busy !== ""}>{busy === "bulk-start" ? "Starting…" : "Start selected"}</button><button type="button" className="bulk-done" onClick={() => bulkChange("Done")} disabled={!canUseTasks || busy !== ""}>{busy === "bulk-done" ? "Completing…" : "Mark selected done"}</button></>}
+      {selectedIds.length > 0 && <><button type="button" onClick={() => setSelectedIds([])} disabled={busy !== ""}>Clear</button><button type="button" onClick={() => ignoreSelected(selectedIds)} disabled={!canUseTasks || busy !== ""}>{busy === "bulk-ignore" ? "Ignoring…" : "Ignore selected"}</button><button type="button" className="bulk-start" onClick={() => bulkChange("In Progress")} disabled={!canUseTasks || busy !== ""}>{busy === "bulk-start" ? "Starting…" : "Start selected"}</button><button type="button" className="bulk-done" onClick={() => bulkChange("Done")} disabled={!canUseTasks || busy !== ""}>{busy === "bulk-done" ? "Completing…" : "Mark selected done"}</button></>}
     </div>
     {(error || actionError) && <p className="workspace-error">{actionError || error}</p>}
     {loading ? <div className="workspace-empty">Loading shift tasks…</div> : shown.length === 0 ? <div className="workspace-empty"><strong>No tasks here</strong><p>The queue is clear for this view.</p></div> : <div className="task-list">{shown.map((task: any) => {
-      const status = String(task.status || "").toLowerCase(); const done = status.includes("done") || status.includes("completed"); const active = status.includes("progress"); const urgent = ["high","urgent","critical"].includes(String(task.priority || "").toLowerCase());
+      const status = String(task.status || "").toLowerCase(); const done = status.includes("done") || status.includes("completed") || status.includes("ignored"); const active = status.includes("progress"); const urgent = ["high","urgent","critical"].includes(String(task.priority || "").toLowerCase());
       const id = String(task.id); const checked = selectedIds.includes(id);
-      return <article className={`shift-task ${urgent ? "urgent" : ""} ${checked ? "selected" : ""}`} key={task.id}><button type="button" className="task-select-box" onClick={() => toggleSelected(id)} aria-label={`${checked ? "Deselect" : "Select"} task`}>{checked ? <Check size={14}/> : null}</button><div className="task-state"><span className={done ? "done" : active ? "active" : "pending"}/></div><div className="task-main"><div><strong>{task.subject || task.type || "Operational task"}</strong><span className={`status-chip ${done ? "green" : active ? "blue" : urgent ? "red" : "amber"}`}>{done ? "Done" : active ? "In Progress" : urgent ? "Urgent" : "Pending"}</span></div><p>{task.property || "General"} · {task.type || task.source || "Manual"}</p><small>{task.notes || "No additional notes"}</small></div><div className="task-owner"><small>OWNER</small><strong>{task.assignedTo || "Unassigned"}</strong></div><div className="task-actions">{!done && !active && <button disabled={!canUseTasks || busy === task.id} onClick={() => change(task.id, "In Progress")}>Start</button>}{active && <button className="done-button" disabled={!canUseTasks || busy === task.id} onClick={() => change(task.id, "Done")}>Mark Done</button>}{done && <span>✓ Completed</span>}</div></article>})}</div>}
+      return <article className={`shift-task ${urgent ? "urgent" : ""} ${checked ? "selected" : ""}`} key={task.id}><button type="button" className="task-select-box" onClick={() => toggleSelected(id)} aria-label={`${checked ? "Deselect" : "Select"} task`}>{checked ? <Check size={14}/> : null}</button><div className="task-state"><span className={done ? "done" : active ? "active" : "pending"}/></div><div className="task-main"><div><strong>{task.subject || task.type || "Operational task"}</strong><span className={`status-chip ${done ? "green" : active ? "blue" : urgent ? "red" : "amber"}`}>{done ? "Done" : active ? "In Progress" : urgent ? "Urgent" : "Pending"}</span></div><p>{task.property || "General"} · {task.type || task.source || "Manual"}</p><small>{task.notes || "No additional notes"}</small></div><div className="task-owner"><small>OWNER</small><strong>{task.assignedTo || "Unassigned"}</strong></div><div className="task-actions">{!done && String(task.source || "").toLowerCase().includes("email") && <button disabled={!canUseTasks || busy !== ""} onClick={() => ignoreSelected([id])}>Ignore</button>}{!done && !active && <button disabled={!canUseTasks || busy === task.id} onClick={() => change(task.id, "In Progress")}>Start</button>}{active && <button className="done-button" disabled={!canUseTasks || busy === task.id} onClick={() => change(task.id, "Done")}>Mark Done</button>}{done && <span>✓ Completed</span>}</div></article>})}</div>}
   </div>;
 }

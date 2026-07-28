@@ -60,6 +60,17 @@ export async function updateTaskStatus(
   return data;
 }
 
+export async function ignoreTasks(taskIds: string[], reason: string) {
+  const response = await fetch("/api/tasks/ignore", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ taskIds, reason }),
+  });
+  const data = await response.json();
+  if (!response.ok || !data.success) throw new Error(data.error || "Unable to ignore tasks.");
+  return data;
+}
+
 export async function createTask(input: {
   taskType: string;
   source?: string;
