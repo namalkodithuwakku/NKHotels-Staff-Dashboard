@@ -39,10 +39,6 @@ async function payload(response: Response) {
   return value as ChallengeState;
 }
 
-function difficultyPoints(difficulty?: string) {
-  return difficulty === "Advanced" ? 30 : difficulty === "Medium" ? 20 : 10;
-}
-
 function initials(name: string) {
   return name.split(/\s+/).map(part => part[0]).join("").slice(0, 2).toUpperCase();
 }
@@ -149,7 +145,7 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
             <div className={`hospitality-question-image category-${state.current.category.toLowerCase().replace(/[^a-z]+/g, "-")}`}
               style={state.current.imageUrl ? { backgroundImage: `linear-gradient(180deg,transparent 55%,rgba(10,40,55,.35)),url("${state.current.imageUrl}")` } : undefined}>
               {!state.current.imageUrl && <><Hotel/><span>Hospitality visual preparing</span></>}
-              <div><span>{state.current.category}</span><b>{state.current.difficulty} · {difficultyPoints(state.current.difficulty)} points</b></div>
+              <div><span>{state.current.category}</span><b>{state.current.difficulty} · 10 points</b></div>
             </div>
             <div className="hospitality-question-copy">
               <small>QUESTION {state.current.questionNumber} OF {state.dailyLimit}</small>

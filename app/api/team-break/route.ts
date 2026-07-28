@@ -23,7 +23,7 @@ type Attempt = {
 };
 
 const DAILY_LIMIT = 10;
-const points = { Easy: 10, Medium: 20, Advanced: 30 } as const;
+const POINTS_PER_CORRECT_ANSWER = 10;
 
 function colomboDate() {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -135,13 +135,13 @@ async function buildState(staffName: string) {
   teamAttempts.forEach(item => {
     const key = item.staff_name.toLowerCase();
     const row = leaderboard.get(key) || { staffName: item.staff_name, points: 0, correct: 0, answered: 0 };
-    row.points += Number(item.points || 0);
+    row.points += item.correct ? POINTS_PER_CORRECT_ANSWER : 0;
     row.correct += item.correct ? 1 : 0;
     row.answered++;
     leaderboard.set(key, row);
   });
-  const score = myAttempts.reduce((total, item) => total + Number(item.points || 0), 0);
-  const maximum = selected.reduce((total, item) => total + points[item.difficulty], 0);
+  const score = myAttempts.reduce((total, item) => total + (item.correct ? POINTS_PER_CORRECT_ANSWER : 0), 0);
+  const maximum = DAILY_LIMIT * POINTS_PER_CORRECT_ANSWER;
   return {
     success: true,
     date,
@@ -169,7 +169,7 @@ async function buildState(staffName: string) {
         id: item.id,
         term: item.term,
         correct: attempt.correct,
-        points: attempt.points,
+        points: attempt.correct ? POINTS_PER_CORRECT_ANSWER : 0,
         selectedTerm: attempt.selected_term,
         category: item.category,
       };
@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
         question_id: question.id,
         selected_term: selectedTerm,
         correct,
-        points: correct ? points[question.difficulty] : 0,
+        points: correct ? POINTS_PER_CORRECT_ANSWER : 0,
       },
     });
     return NextResponse.json({
@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
         correct,
         correctTerm: question.term,
         explanation: question.definition,
-        points: correct ? points[question.difficulty] : 0,
+        points: correct ? POINTS_PER_CORRECT_ANSWER : 0,
       },
     });
   } catch (error) {
