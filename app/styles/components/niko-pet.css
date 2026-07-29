@@ -6,3 +6,42 @@
 .niko-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:7px 15px}.niko-actions button{min-height:42px;display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid #d9e5e8;border-radius:10px;background:#fff;color:#42616f;font-size:9px;font-weight:800}.niko-actions button:hover:not(:disabled){border-color:#77bba6;background:#edf8f3;color:#187653}.niko-actions button:disabled{opacity:.45}.niko-actions svg{width:14px}.niko-visits{margin:3px 15px 11px;color:#8b999f;font-size:8px;text-align:center}.niko-error{margin:4px 15px;padding:7px 9px;border-radius:8px;background:#fff0f0;color:#a63333;font-size:8px}.niko-outfit{display:grid;grid-template-columns:1fr 145px;align-items:center;gap:8px;margin:0 15px 12px;padding:9px;border:1px solid #e4e0f1;border-radius:10px;background:#f8f6fc}.niko-outfit>span{display:flex;align-items:center;gap:5px;color:#5e588e;font-size:8px;font-weight:800}.niko-outfit svg{width:13px}.niko-outfit select{height:31px;min-width:0;border:1px solid #dbd7ea;border-radius:8px;background:#fff;color:#4e5570;font-size:8px}.niko-panel>footer{min-height:40px;display:grid;grid-template-columns:18px auto 1fr;align-items:center;gap:5px;padding:8px 15px;border-top:1px solid #e5ecef;background:#fafcfc}.niko-panel footer svg{width:15px;color:#ed8a0a}.niko-panel footer span{color:#6f8089;font-size:8px}.niko-panel footer small{overflow:hidden;color:#98a3a8;font-size:7px;text-align:right;text-overflow:ellipsis;white-space:nowrap}
 @keyframes niko-panel-in{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:none}}@keyframes niko-speech-in{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:none}}@keyframes niko-ear{0%,85%,100%{transform:rotate(0)}90%{transform:rotate(-6deg)}95%{transform:rotate(4deg)}}@keyframes niko-blink{0%,43%,47%,100%{transform:scaleY(1)}45%{transform:scaleY(.08)}}@keyframes niko-trunk{0%,100%{transform:rotate(0)}50%{transform:rotate(5deg)}}@keyframes niko-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}@keyframes niko-hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-13px)}}@keyframes niko-wave{0%,100%{transform:rotate(0)}50%{transform:rotate(15deg)}}@keyframes niko-confetti{from{opacity:.45;transform:scale(.9)}to{opacity:1;transform:scale(1.08)}}
 @media(max-width:900px){.niko-pet{right:13px;bottom:84px}.niko-launcher{width:66px;height:66px;border-radius:22px}.niko-launcher .niko-svg{width:67px;height:64px}.niko-pet.compact .niko-launcher{width:55px;height:55px}.niko-pet.compact .niko-launcher .niko-svg{width:56px;height:53px}.niko-panel{width:min(348px,calc(100vw - 26px));max-height:calc(100vh - 105px);overflow-y:auto}.niko-speech{right:54px;bottom:48px;max-width:190px}}@media(max-width:430px){.niko-scene{height:172px}.niko-scene .niko-svg{width:185px;height:165px}.niko-panel>header{height:58px}}@media(prefers-reduced-motion:reduce){.niko-pet *{animation:none!important}}
+
+/* Niko living-animation upgrade */
+.niko-launcher .niko-svg{animation:niko-launcher-float 3.8s ease-in-out infinite}
+.niko-online{box-shadow:0 0 0 0 rgba(37,166,117,.42);animation:niko-online-pulse 2.5s ease-out infinite}
+.niko-character{transform-origin:122px 188px;animation:niko-breathe 3.4s ease-in-out infinite}
+.niko-body{transform-box:fill-box;transform-origin:center;animation:niko-body-breathe 3.4s ease-in-out infinite}
+.niko-ground{transform-box:fill-box;transform-origin:center;animation:niko-ground-breathe 3.4s ease-in-out infinite}
+.niko-tail,.niko-tail-tip{transform-origin:180px 138px;animation:niko-tail 2.8s ease-in-out infinite}
+.niko-brow{transform-box:fill-box;transform-origin:center}
+.niko-reaction-hearts{animation:niko-hearts 1.5s ease-out both}
+.niko-reaction-snack{transform-origin:196px 109px;animation:niko-snack 1.45s ease both}
+.niko-reaction-wave{animation:niko-wave-lines .75s ease-in-out 2}
+.niko-svg.motion-pat .niko-eyes{animation:niko-happy-eyes .5s ease-in-out 3}
+.niko-svg.motion-pat .niko-brow{animation:niko-happy-brow .5s ease-in-out 3}
+.niko-svg.motion-feed .niko-trunk{animation:niko-reach-snack .7s ease-in-out 2}
+.niko-svg.motion-feed .niko-smile{animation:niko-chew .28s ease-in-out 5}
+.niko-svg.motion-wave .niko-trunk{animation:niko-big-wave .45s ease-in-out 4}
+.niko-svg.motion-wave .niko-ear{animation:niko-ear-wave .45s ease-in-out 4}
+.niko-actions button{transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease}
+.niko-actions button:hover:not(:disabled),.niko-actions button.active{border-color:#77bba6;background:#edf8f3;color:#187653;box-shadow:0 5px 14px rgba(35,154,112,.12)}
+.niko-actions button.active{transform:translateY(-2px)}
+
+@keyframes niko-launcher-float{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-4px) rotate(1deg)}}
+@keyframes niko-online-pulse{0%{box-shadow:0 0 0 0 rgba(37,166,117,.42)}70%,100%{box-shadow:0 0 0 8px rgba(37,166,117,0)}}
+@keyframes niko-breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@keyframes niko-body-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.015,1.025)}}
+@keyframes niko-ground-breathe{0%,100%{transform:scaleX(1);opacity:.1}50%{transform:scaleX(.94);opacity:.075}}
+@keyframes niko-tail{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(10deg)}}
+@keyframes niko-hearts{0%{opacity:0;transform:translateY(16px) scale(.55)}35%{opacity:1}100%{opacity:0;transform:translateY(-28px) scale(1.08)}}
+@keyframes niko-snack{0%{opacity:0;transform:translateX(24px) rotate(18deg) scale(.6)}35%{opacity:1;transform:translateX(0) rotate(0) scale(1)}75%{opacity:1;transform:translateX(-28px) translateY(28px) scale(.72)}100%{opacity:0;transform:translateX(-45px) translateY(38px) scale(.25)}}
+@keyframes niko-wave-lines{0%,100%{opacity:0;transform:translateX(-4px)}50%{opacity:1;transform:translateX(3px)}}
+@keyframes niko-happy-eyes{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.22) translateY(4px)}}
+@keyframes niko-happy-brow{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes niko-reach-snack{0%,100%{transform:rotate(0)}50%{transform:rotate(-18deg) translate(8px,-5px)}}
+@keyframes niko-chew{0%,100%{transform:translateY(0)}50%{transform:translateY(2px)}}
+@keyframes niko-big-wave{0%,100%{transform:rotate(0)}50%{transform:rotate(24deg) translate(3px,-4px)}}
+@keyframes niko-ear-wave{0%,100%{transform:rotate(0)}50%{transform:rotate(10deg)}}
+
+@media(prefers-reduced-motion:reduce){.niko-pet *{animation:none!important}}

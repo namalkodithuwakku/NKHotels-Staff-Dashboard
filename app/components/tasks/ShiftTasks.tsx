@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, CheckSquare2, MinusSquare, Sparkles, Square, Zap } from "lucide-react";
+import { Check, CheckSquare2, Clock3, MinusSquare, Sparkles, Square, Zap } from "lucide-react";
 import { ignoreTasks, updateTaskStatus } from "../../lib/api";
 
 function sourceTone(source: unknown) {
@@ -12,6 +12,34 @@ function sourceTone(source: unknown) {
   if (value.includes("phone")) return "source-phone";
   if (value.includes("scheduled")) return "source-scheduled";
   return "source-manual";
+}
+
+function addedTimeLabel(value: unknown) {
+  if (!value) return "";
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return "";
+
+  const timeZone = "Asia/Colombo";
+  const day = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const time = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+
+  if (day.format(date) === day.format(new Date())) return `Added today · ${time}`;
+
+  const calendarDate = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    day: "numeric",
+    month: "short",
+  }).format(date);
+  return `Added ${calendarDate} · ${time}`;
 }
 
 export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, error, onCreate, onRefresh, onOptimisticClose }: any) {
@@ -115,22 +143,32 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
     }
   }
 
-  async function acknowledge(ids: string[]) {
-    if (!ids.length) return;
-    setOptimisticAcknowledgedIds(current => Array.from(new Set([...current, ...ids])));
-    setSelectedIds(current => current.filter(id => !ids.includes(id)));
-    onOptimisticClose?.(ids);
-    try {
-      setBusy(ids.length === 1 ? ids[0] : "bulk-acknowledge");
-      setActionError("");
-      await ignoreTasks(ids, "Reviewed — no further action");
-      await onRefresh();
-    } catch (reason: any) {
-      setOptimisticAcknowledgedIds(current => current.filter(id => !ids.includes(id)));
-      setActionError(reason?.message || "Unable to acknowledge tasks.");
-    } finally {
-      setBusy("");
-    }
+  function acknowledge(ids: string[]) {
+    const eligibleIds = shown
+      .filter((task: any) => ids.includes(String(task.id)))
+      .map((task: any) => String(task.id));
+    if (!eligibleIds.length) return;
+
+    // Close the cards immediately. Persistence and learning-filter work
+    // continue silently without blocking the task workspace.
+    setActionError("");
+    setOptimisticAcknowledgedIds(current =>
+      Array.from(new Set([...current, ...eligibleIds]))
+    );
+    setSelectedIds(current => current.filter(id => !eligibleIds.includes(id)));
+    onOptimisticClose?.(eligibleIds);
+
+    void ignoreTasks(eligibleIds, "Reviewed — no further action")
+      .then(() => {
+        window.setTimeout(() => void onRefresh(), 900);
+      })
+      .catch(async (reason: any) => {
+        setOptimisticAcknowledgedIds(current =>
+          current.filter(id => !eligibleIds.includes(id))
+        );
+        setActionError(reason?.message || "Unable to acknowledge tasks. The task has been restored.");
+        await onRefresh();
+      });
   }
 
   return <div className="tasks-workspace">
@@ -150,7 +188,7 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
       {selectedIds.length > 0 && <>
         <button type="button" onClick={() => setSelectedIds([])} disabled={busy !== ""}>Clear</button>
         <button type="button" className="nkh-button nkh-button-acknowledge" onClick={() => acknowledge(selectedIds)} disabled={!canUseTasks || busy !== ""}>
-          {busy === "bulk-acknowledge" ? "Acknowledging…" : "Acknowledge selected"}
+          Acknowledge selected
         </button>
         <button type="button" className="bulk-done nkh-button nkh-button-success" onClick={() => markDone(selectedIds)} disabled={!canUseTasks || busy !== ""}>
           {busy === "bulk-done" ? "Completing…" : "Mark selected done"}
@@ -174,6 +212,7 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
         const checked = selectedIds.includes(id);
         const label = acknowledged ? "Acknowledged" : completed ? "Done" : urgent ? "Urgent" : "Pending";
         const chip = acknowledged ? "amber" : completed ? "green" : urgent ? "red" : "amber";
+        const addedTime = addedTimeLabel(task.createdTime);
 
         return <article className={`shift-task ${sourceTone(task.source)} ${urgent && !closed ? "urgent" : ""} ${checked ? "selected" : ""}`} key={task.id}>
           <button type="button" className="task-select-box" onClick={() => toggleSelected(id)}
@@ -183,12 +222,15 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
             <div><strong>{task.subject || task.type || "Operational task"}</strong>
               <span className={`status-chip ${chip}`}>{label}</span></div>
             <p>{task.property || "General"} · {task.type || task.source || "Manual"}</p>
+            {addedTime && <time className="task-added-time" dateTime={String(task.createdTime)}>
+              <Clock3 size={12}/>{addedTime}
+            </time>}
             <small>{task.notes || "No additional notes"}</small>
           </div>
           <div className="task-owner"><small>OWNER</small><strong>{task.assignedTo || "Unassigned"}</strong></div>
           <div className="task-actions">
             {!closed && emailTask && <button className="acknowledge-button" disabled={!canUseTasks || busy !== ""} onClick={() => acknowledge([id])}>
-              {busy === id ? "Saving…" : "Acknowledge"}</button>}
+              Acknowledge</button>}
             {!closed && <button className="done-button" disabled={!canUseTasks || busy !== ""} onClick={() => markDone([id])}>
               <Check size={15}/>{busy === id ? "Completing…" : "Done"}</button>}
             {acknowledged && <span>✓ Acknowledged</span>}

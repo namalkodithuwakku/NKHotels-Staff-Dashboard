@@ -370,6 +370,24 @@ body,
   font-size: 11px;
 }
 
+.staff-os .task-added-time {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: max-content;
+  margin: 4px 0 5px;
+  color: #758894;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .01em;
+}
+
+.staff-os .task-added-time svg {
+  flex: 0 0 auto;
+  color: var(--nkh-blue);
+  stroke-width: 2;
+}
+
 .staff-os .task-main > small {
   color: #455965;
   font-size: 11px;
