@@ -622,6 +622,31 @@ body,
   border-color: #dce5e8;
 }
 
+.property-task-email {
+  padding: 13px 14px;
+  border: 1px solid #b9dbe7;
+  border-radius: 12px;
+  background: linear-gradient(105deg, #f0f9fc, #fff);
+}
+
+.property-task-email small {
+  color: #657b87;
+  font-size: 10px;
+  font-weight: 550;
+  line-height: 1.4;
+}
+
+.profile-card-grid .property-email-card {
+  border-color: #b9dbe7;
+  background: linear-gradient(135deg, #f1fafc, #fff);
+}
+
+.profile-card-grid .property-email-card h3 {
+  overflow-wrap: anywhere;
+  color: #236886;
+  font-size: 14px;
+}
+
 .property-list > button.active {
   color: var(--nkh-blue-strong);
   background: linear-gradient(90deg, var(--nkh-blue-soft), #fff);
