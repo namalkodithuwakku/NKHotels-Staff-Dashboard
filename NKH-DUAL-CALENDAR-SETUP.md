@@ -46,7 +46,8 @@ Only a verified Master session can change it; the API enforces the same rule.
 ## Calendar workspace
 
 - 42-day rolling view keeps Today in the centre and continues into next month.
-- Month selection and seven-day navigation are separate.
+- Month selection uses a consistent premium month grid with year navigation;
+  seven-day navigation remains separate.
 - Vertical zoom changes room-row height from approximately 30% to 160%
   without shrinking date columns.
 - Fullscreen mode is available.
@@ -64,6 +65,11 @@ Only a verified Master session can change it; the API enforces the same rule.
   requests are cancelled, and late responses are accepted only when both the
   property and visible date range still match. This prevents an older Sheet
   refresh from replacing the property currently being viewed.
+- In Dashboard calendar mode, saving room types or individual room names
+  immediately reconciles the calendar inventory. Existing saved profiles are
+  also checked once in the background when their calendar opens. Active
+  bookings follow safe room renames; rooms with active bookings are retained
+  instead of being silently removed.
 - Cancelling preserves operational history. Permanent deletion is restricted
   to Master access.
 

@@ -21,6 +21,7 @@ const sourceClass: Record<string, string> = {
 };
 const DAY = 86_400_000;
 const LAST_PROPERTY_KEY = "nkh-calendar-property";
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 function monthValue(date = new Date()) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`; }
 function dateKey(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
 function localDate(value: string) { const [year, month, day] = value.split("-").map(Number); return new Date(year, month - 1, day, 12); }
@@ -45,17 +46,21 @@ export default function CalendarWorkspace() {
   const [rowHeight, setRowHeight] = useState(64);
   const [zoomTouched, setZoomTouched] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [pickerYear, setPickerYear] = useState(Number(month.slice(0, 4)));
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [backgroundSyncing, setBackgroundSyncing] = useState(false);
   const [propertyReady, setPropertyReady] = useState(false);
   const [error, setError] = useState("");
   const calendarRef = useRef<HTMLElement>(null);
+  const monthPickerRef = useRef<HTMLDivElement>(null);
   const selectedPropertyRef = useRef("");
   const activeLoadRef = useRef<AbortController | null>(null);
   const loadSequenceRef = useRef(0);
   const activeViewRef = useRef("");
   const backgroundSyncRef = useRef(new Set<string>());
+  const inventorySyncRef = useRef(new Set<string>());
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const today = useMemo(() => new Date(), []);
   const currentMonth = month === monthValue(today);
@@ -93,6 +98,25 @@ export default function CalendarWorkspace() {
     }
   }, [reloadCache]);
 
+  const refreshNativeInventoryInBackground = useCallback(async (requestedProperty: string, requestedMonth: string, from: Date, to: Date) => {
+    if (!requestedProperty || selectedPropertyRef.current !== requestedProperty || inventorySyncRef.current.has(requestedProperty)) return;
+    inventorySyncRef.current.add(requestedProperty);
+    try {
+      const response = await fetch("/api/calendar/rooms/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ propertyId: requestedProperty }),
+      });
+      if (!response.ok) throw new Error("Room inventory refresh failed.");
+      if (selectedPropertyRef.current === requestedProperty) {
+        await reloadCache(requestedProperty, requestedMonth, from, to);
+      }
+    } catch (reason) {
+      inventorySyncRef.current.delete(requestedProperty);
+      console.error("Background room inventory refresh failed.", reason);
+    }
+  }, [reloadCache]);
+
   const load = useCallback(async (requestedProperty = propertyId, requestedMonth = month) => {
     const sequence = ++loadSequenceRef.current;
     activeViewRef.current = `${requestedProperty}|${requestedMonth}|${dateKey(viewStart)}|${dateKey(viewEnd)}`;
@@ -123,6 +147,8 @@ export default function CalendarWorkspace() {
       setData(payload);
       if (payload.property?.calendar_source_mode === "google_sheet" && payload.property.calendar_sheet_code) {
         void refreshSourceInBackground(payload.property.id, requestedMonth, viewStart, viewEnd);
+      } else if (payload.property?.calendar_source_mode === "supabase") {
+        void refreshNativeInventoryInBackground(payload.property.id, requestedMonth, viewStart, viewEnd);
       }
     } catch (reason) {
       if (reason instanceof DOMException && reason.name === "AbortError") return;
@@ -130,7 +156,7 @@ export default function CalendarWorkspace() {
     } finally {
       if (sequence === loadSequenceRef.current) setLoading(false);
     }
-  }, [month, propertyId, refreshSourceInBackground, viewStart, viewEnd]);
+  }, [month, propertyId, refreshNativeInventoryInBackground, refreshSourceInBackground, viewStart, viewEnd]);
 
   useEffect(() => {
     const remembered = window.localStorage.getItem(LAST_PROPERTY_KEY) || "";
@@ -144,6 +170,13 @@ export default function CalendarWorkspace() {
     const handler = () => setFullscreen(document.fullscreenElement === calendarRef.current);
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+  useEffect(() => {
+    const closePicker = (event: PointerEvent) => {
+      if (monthPickerRef.current && !monthPickerRef.current.contains(event.target as Node)) setMonthPickerOpen(false);
+    };
+    document.addEventListener("pointerdown", closePicker);
+    return () => document.removeEventListener("pointerdown", closePicker);
   }, []);
 
   const roomNames = useMemo(() => {
@@ -166,7 +199,10 @@ export default function CalendarWorkspace() {
     if (document.fullscreenElement) await document.exitFullscreen();
     else await calendarRef.current.requestFullscreen();
   }
-  function chooseMonth(value: string) { activeViewRef.current = ""; setMonth(value); setWeekOffset(0); }
+  function chooseMonth(value: string) {
+    activeViewRef.current = "";
+    setMonth(value); setPickerYear(Number(value.slice(0, 4))); setWeekOffset(0); setMonthPickerOpen(false);
+  }
   function chooseProperty(value: string) {
     selectedPropertyRef.current = value;
     activeViewRef.current = "";
@@ -282,7 +318,22 @@ export default function CalendarWorkspace() {
     </header>
 
     <div className="calendar-navigation">
-      <label className="calendar-month-picker"><span>Month</span><input type="month" value={month} onChange={event => chooseMonth(event.target.value)}/></label>
+      <div className="calendar-month-picker" ref={monthPickerRef}>
+        <span>Month</span>
+        <button type="button" className="calendar-month-trigger" aria-haspopup="dialog" aria-expanded={monthPickerOpen} onClick={() => { setPickerYear(Number(month.slice(0, 4))); setMonthPickerOpen(value => !value); }}>
+          <CalendarDays size={16}/><strong>{new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</strong><ChevronRight size={15}/>
+        </button>
+        {monthPickerOpen && <div className="premium-month-popover" role="dialog" aria-label="Choose calendar month">
+          <header><button type="button" onClick={() => setPickerYear(value => value - 1)} aria-label="Previous year"><ChevronLeft size={17}/></button><strong>{pickerYear}</strong><button type="button" onClick={() => setPickerYear(value => value + 1)} aria-label="Next year"><ChevronRight size={17}/></button></header>
+          <div>{MONTH_NAMES.map((name, index) => {
+            const value = `${pickerYear}-${String(index + 1).padStart(2, "0")}`;
+            const active = value === month;
+            const current = value === monthValue(today);
+            return <button type="button" key={value} className={`${active ? "active" : ""} ${current ? "current" : ""}`} onClick={() => chooseMonth(value)}>{name}</button>;
+          })}</div>
+          <footer><button type="button" onClick={() => chooseMonth(monthValue(today))}>Go to current month</button></footer>
+        </div>}
+      </div>
       <div className="calendar-week-skipper"><button onClick={() => shiftWeek(-1)}><ChevronLeft size={17}/> Previous week</button><button className="calendar-today" onClick={goToday}>Today</button><button onClick={() => shiftWeek(1)}>Next week <ChevronRight size={17}/></button></div>
       <div className="calendar-view-tools"><span>Vertical zoom</span><button onClick={() => { setZoomTouched(true); setRowHeight(value => Math.max(19, value - 4)); }} aria-label="Zoom out vertically"><Minus size={16}/></button><b>{Math.round((rowHeight / 64) * 100)}%</b><button onClick={() => { setZoomTouched(true); setRowHeight(value => Math.min(104, value + 4)); }} aria-label="Zoom in vertically"><Plus size={16}/></button><button onClick={() => void toggleFullscreen()} aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}>{fullscreen ? <Minimize2 size={17}/> : <Maximize2 size={17}/>}</button></div>
     </div>

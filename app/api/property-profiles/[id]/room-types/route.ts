@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { canManageProperties, readServerSession } from "../../../../lib/serverSession";
+import { syncSupabaseCalendarRooms } from "../../../../lib/calendarRoomInventory";
 
 type Context = { params: Promise<{ id: string }> };
 
@@ -47,7 +48,8 @@ export async function POST(request: NextRequest, context: Context) {
         display_order: Number(input.display_order || 0),
       },
     });
-    return NextResponse.json(rows[0], { status: 201 });
+    const calendarSync = await syncSupabaseCalendarRooms(id);
+    return NextResponse.json({ roomType: rows[0], calendarSync }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to add room type." }, { status: 500 });
   }
@@ -60,8 +62,11 @@ export async function PATCH(request: NextRequest, context: Context) {
     const input = await request.json();
     const roomTypeId = String(input.id || "");
     if (!roomTypeId) return NextResponse.json({ error: "Room type is required." }, { status: 400 });
-    const allowed = ["room_name", "description", "room_count", "max_adults", "max_children", "max_occupancy", "bed_configuration", "display_order", "is_active"];
+    const allowed = ["room_code", "room_name", "description", "room_count", "max_adults", "max_children", "max_occupancy", "bed_configuration", "display_order", "is_active"];
     const body = Object.fromEntries(allowed.filter(key => Object.prototype.hasOwnProperty.call(input, key)).map(key => [key, input[key] === "" ? null : input[key]]));
+    if (Object.prototype.hasOwnProperty.call(body, "room_code")) {
+      body.room_code = String(body.room_code || "").trim().toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+    }
     if (Object.prototype.hasOwnProperty.call(input, "room_names")) {
       const roomNames = String(input.room_names || "").split(/\r?\n|,/).map(value => value.trim()).filter(Boolean);
       const roomCount = Math.max(0, Number(input.room_count || roomNames.length || 0));
@@ -74,7 +79,8 @@ export async function PATCH(request: NextRequest, context: Context) {
       `nkh_room_types?id=eq.${encodeURIComponent(roomTypeId)}&property_id=eq.${encodeURIComponent(id)}`,
       { method: "PATCH", prefer: "return=representation", body }
     );
-    return NextResponse.json(rows[0] || null);
+    const calendarSync = await syncSupabaseCalendarRooms(id);
+    return NextResponse.json({ roomType: rows[0] || null, calendarSync });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to update room type." }, { status: 500 });
   }
@@ -90,7 +96,8 @@ export async function DELETE(request: NextRequest, context: Context) {
       `nkh_room_types?id=eq.${encodeURIComponent(roomTypeId)}&property_id=eq.${encodeURIComponent(id)}`,
       { method: "DELETE", prefer: "return=minimal" }
     );
-    return NextResponse.json({ success: true });
+    const calendarSync = await syncSupabaseCalendarRooms(id);
+    return NextResponse.json({ success: true, calendarSync });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to delete room type." }, { status: 500 });
   }
