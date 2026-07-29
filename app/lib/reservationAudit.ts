@@ -38,14 +38,14 @@ const date = (value: unknown) => clean(value).slice(0, 10);
 const sourceKey = (value: unknown) => key(value).replace("com", "");
 const NAME_TITLES = new Set(["mr", "mrs", "ms", "miss", "dr", "rev", "prof", "sir", "madam", "mstr"]);
 const CANCELLATION_WORDS = ["cancel", "cancelled", "canceled", "void", "voided", "no show", "noshow", "rejected"];
-const ACTIVE_WORDS = ["confirmed", "active", "booked", "reserved", "modified", "amended"];
+const ACTIVE_WORDS = ["confirmed", "active", "booked", "reserved", "modified", "amended", "ok", "valid"];
 
 function statusFamily(value: unknown) {
   const text = clean(value).toLowerCase().replace(/[_-]+/g, " ");
   if (CANCELLATION_WORDS.some(word => text.includes(word))) return "cancelled";
   if (text.includes("pending") || text.includes("request")) return "pending";
   if (ACTIVE_WORDS.some(word => text.includes(word))) return "active";
-  return key(text);
+  return "unknown";
 }
 
 function nameTokens(value: unknown) {
@@ -97,11 +97,21 @@ function groupBookings(rows: CalendarBooking[]) {
 
 function score(ota: OtaReservation, rows: CalendarBooking[]) {
   const first = rows[0];
+  const referenceMatch = Boolean(key(ota.reference)) && key(ota.reference) === key(first.booking_reference);
+  const guestMatch = nameMatch(ota.guestName, first.guest_name);
+  const arrivalMatch = date(ota.checkIn) === date(first.check_in);
+  const departureMatch = date(ota.checkOut) === date(first.check_out);
+  /*
+   * Dates alone are never enough: unrelated guests regularly share the same
+   * arrival/departure dates. Require an exact OTA reference, or a meaningful
+   * guest-name match supported by at least one stay date.
+   */
+  if (!referenceMatch && !(guestMatch.equivalent && (arrivalMatch || departureMatch))) return -1;
   let value = 0;
-  if (key(ota.reference) && key(ota.reference) === key(first.booking_reference)) value += 70;
-  if (date(ota.checkIn) === date(first.check_in)) value += 10;
-  if (date(ota.checkOut) === date(first.check_out)) value += 10;
-  value += nameMatch(ota.guestName, first.guest_name).score;
+  if (referenceMatch) value += 70;
+  if (arrivalMatch) value += 10;
+  if (departureMatch) value += 10;
+  value += guestMatch.score;
   if (Math.max(1, ota.roomCount) === rows.length) value += 2;
   return value;
 }
@@ -114,7 +124,9 @@ function compare(ota: OtaReservation, rows: CalendarBooking[]) {
   if (Math.max(1, ota.roomCount) !== rows.length) differences.push(`Rooms: OTA ${Math.max(1, ota.roomCount)}; Dashboard ${rows.length}`);
   if (!nameMatch(ota.guestName, first.guest_name).equivalent) differences.push(`Guest: OTA ${ota.guestName}; Dashboard ${first.guest_name}`);
   const otaStatus = statusFamily(ota.status), dashboardStatus = statusFamily(first.booking_status);
-  if (otaStatus && dashboardStatus && otaStatus !== dashboardStatus) {
+  const statusCanBeCompared = otaStatus !== "unknown" && dashboardStatus !== "unknown";
+  const cancellationMustBeChecked = otaStatus === "cancelled" || dashboardStatus === "cancelled";
+  if ((statusCanBeCompared || cancellationMustBeChecked) && otaStatus !== dashboardStatus) {
     if (otaStatus === "cancelled" && dashboardStatus !== "cancelled") {
       differences.push(`CANCELLATION NOT APPLIED: OTA is ${ota.status}; Dashboard is ${first.booking_status}`);
     } else if (otaStatus !== "cancelled" && dashboardStatus === "cancelled") {
@@ -147,14 +159,23 @@ export function runReservationAudit(otaRows: OtaReservation[], calendarRows: Cal
     });
     if (bestIndex < 0 || bestScore < 20) {
       const cancelled = statusFamily(ota.status) === "cancelled";
+      if (cancelled) {
+        findings.push({
+          type: "matched",
+          severity: "ok",
+          ota,
+          dashboard: null,
+          differences: [],
+          matchScore: Math.max(0, bestScore),
+        });
+        return;
+      }
       findings.push({
         type: "missing_dashboard",
-        severity: cancelled ? "warning" : "critical",
+        severity: "critical",
         ota,
         dashboard: null,
-        differences: [cancelled
-          ? "OTA cancellation found, but no matching Dashboard reservation history exists. Verify the reference before acknowledging."
-          : "Reservation exists in the OTA list but not in the Dashboard calendar."],
+        differences: ["Reservation exists in the OTA list but not in the Dashboard calendar."],
         matchScore: Math.max(0, bestScore),
       });
       return;
