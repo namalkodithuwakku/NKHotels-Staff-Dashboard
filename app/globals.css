@@ -51,5 +51,6 @@
 @import "./styles/components/operations-calendar.css";
 @import "./styles/components/reservation-tools.css";
 @import "./styles/components/reservation-audit-cancellation.css";
+@import "./styles/components/nkh-tools.css";
 @import "./styles/pwa-mobile.css";
 @import "./styles/nkh-premium-ui.css";

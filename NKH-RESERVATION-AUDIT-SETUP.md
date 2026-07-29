@@ -1,6 +1,10 @@
 # NKH Reservation Audit — setup
 
-This update adds a Master-only **Reservation Tools → OTA booking audit** page.
+This update adds a Master-only **NKH Tools** page with:
+
+- OTA Booking Audit
+- AI Revenue Planner
+- A scalable internal tool selector for future tools
 
 ## 1. Paste the package
 
@@ -14,6 +18,12 @@ In Supabase → SQL Editor, run:
 
 This stores audit history and report findings. Uploaded OTA documents are not stored.
 
+Then run:
+
+`supabase/migrations/20260729071000_ai_revenue_planner.sql`
+
+This stores generated advisory revenue plans. It does not change live rates.
+
 ## 3. Vercel variables
 
 The existing `OPENAI_API_KEY` is used to read PDF, CSV and Excel exports.
@@ -22,12 +32,14 @@ Optional:
 
 `OPENAI_OTA_AUDIT_MODEL=gpt-5.6-luna`
 
+`OPENAI_REVENUE_MODEL=gpt-5.6-terra`
+
 Redeploy after changing Vercel variables.
 
 ## 4. First test
 
 1. Sign in as Master.
-2. Open **Reservation Tools**.
+2. Open **NKH Tools**.
 3. Select one property and the correct OTA.
 4. Upload one OTA reservation export for a known date range.
 5. Run the audit.

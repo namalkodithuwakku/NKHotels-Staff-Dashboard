@@ -25,7 +25,7 @@ const navigation: Array<{ key: MasterView; label: string }> = [
   { key: "overview", label: "Overview" }, { key: "tasks", label: "Company Tasks" },
   { key: "scheduled", label: "Scheduled Tasks" }, { key: "properties", label: "Properties" },
   { key: "staff", label: "Staff Profiles" }, { key: "roster", label: "Roster" },
-  { key: "calendar", label: "Calendars" }, { key: "reservation-tools", label: "Reservation Tools" },
+  { key: "calendar", label: "Calendars" }, { key: "reservation-tools", label: "NKH Tools" },
   { key: "whatsapp", label: "WhatsApp Inbox" }, { key: "sms", label: "SMS Center" },
   { key: "team-break", label: "NKH Academy" }, { key: "reports", label: "Reports" },
   { key: "settings", label: "Settings" },
