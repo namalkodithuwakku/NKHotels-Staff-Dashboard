@@ -47,7 +47,8 @@ Only a verified Master session can change it; the API enforces the same rule.
 
 - 42-day rolling view keeps Today in the centre and continues into next month.
 - Month selection and seven-day navigation are separate.
-- Vertical zoom changes room-row height without shrinking date columns.
+- Vertical zoom changes room-row height from approximately 30% to 160%
+  without shrinking date columns.
 - Fullscreen mode is available.
 - Reservation details show all stored guest, stay, contact, occupancy, payment,
   reference, note and audit information.
@@ -57,7 +58,8 @@ Only a verified Master session can change it; the API enforces the same rule.
 - One reservation can allocate several rooms. Collision checks run before save.
 - Drag a booking to another room on desktop. On mobile, hold the booking for
   about one second and then tap the destination room name.
-- Click a room name to update housekeeping status.
+- Room-status controls are retained in the backend but temporarily hidden from
+  the calendar so the room rows stay compact.
 - Cancelling preserves operational history. Permanent deletion is restricted
   to Master access.
 
