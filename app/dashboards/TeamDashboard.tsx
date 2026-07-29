@@ -33,7 +33,7 @@ const nav: Array<{ key: WorkspaceView; label: string; short: string }> = [
   { key: "roster", label: "Roster", short: "Roster" },
   { key: "calendar", label: "Calendars", short: "Calendar" },
   { key: "faq", label: "Hotel FAQ", short: "FAQ" },
-  { key: "team-break", label: "Team Break", short: "Break" },
+  { key: "team-break", label: "NKH Academy", short: "Academy" },
 ];
 
 export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession; onLogout: () => void }) {

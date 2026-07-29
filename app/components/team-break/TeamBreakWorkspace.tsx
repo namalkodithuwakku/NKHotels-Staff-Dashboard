@@ -9,6 +9,27 @@ import {
 type ChallengeState = {
   date: string;
   catalogueSize: number;
+  academyTarget: number;
+  course: {
+    id: string;
+    name: string;
+    shortName: string;
+    description: string;
+    categories: string[];
+    tone: string;
+    questionCount: number;
+    questionTarget: number;
+  };
+  courses: Array<{
+    id: string;
+    name: string;
+    shortName: string;
+    description: string;
+    tone: string;
+    questionCount: number;
+    questionTarget: number;
+    imagesReady: number;
+  }>;
   dailyLimit: number;
   progress: { answered: number; correct: number; score: number; maximum: number; complete: boolean };
   current: null | {
@@ -52,18 +73,19 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
   const [completedBurst, setCompletedBurst] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [imageError, setImageError] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState("reservations");
 
   const load = useCallback(async (quiet = false) => {
     try {
       if (!quiet) setLoading(true);
-      setState(await payload(await fetch("/api/team-break", { cache: "no-store" })));
+      setState(await payload(await fetch(`/api/team-break?course=${encodeURIComponent(selectedCourse)}`, { cache: "no-store" })));
       setError("");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to load the challenge.");
     } finally {
       if (!quiet) setLoading(false);
     }
-  }, []);
+  }, [selectedCourse]);
 
   useEffect(() => {
     void load();
@@ -79,7 +101,7 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
       const next = await payload(await fetch("/api/team-break", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questionId: state.current.id, answer: selected }),
+        body: JSON.stringify({ questionId: state.current.id, answer: selected, courseId: state.course.id }),
       }));
       setState(next);
       setResult(next.result || null);
@@ -101,6 +123,14 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
     } finally {
       setAnswering("");
     }
+  }
+
+  function chooseCourse(courseId: string) {
+    if (courseId === selectedCourse) return;
+    setResult(null);
+    setImageError("");
+    setGeneratingImage(false);
+    setSelectedCourse(courseId);
   }
 
   async function generateCurrentImage() {
@@ -149,21 +179,44 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
   return <div className="hospitality-challenge">
     <section className="hospitality-hero">
       <div className="hospitality-hero-copy">
-        <small>NKH TEAM BREAK</small>
-        <h2>Hospitality Knowledge Challenge</h2>
-        <p>Ten fresh questions every day. Learn something useful without rushing.</p>
+        <small>NKH ACADEMY</small>
+        <h2>Hospitality learning, made enjoyable</h2>
+        <p>Choose a course and complete ten calm, useful questions at your own pace.</p>
       </div>
-      <div className="hospitality-hero-metric"><BookOpenCheck/><div><strong>{state?.catalogueSize || 0}</strong><span>hospitality concepts</span></div></div>
+      <div className="hospitality-hero-metric"><BookOpenCheck/><div><strong>{state?.catalogueSize || 0}</strong><span>of {state?.academyTarget || 2400} concepts</span></div></div>
       <div className="hospitality-hero-metric"><Star/><div><strong>{state?.progress.score || 0}</strong><span>your points today</span></div></div>
       <Sparkles className="hospitality-hero-spark"/>
     </section>
 
     {error && <div className="hospitality-error">{error}<button onClick={() => void load()}>Try again</button></div>}
 
+    {state?.courses.length ? <section className="academy-course-library">
+      <header>
+        <div><small>COURSE LIBRARY</small><h3>Choose what you want to learn</h3></div>
+        <span>{state.catalogueSize} of {state.academyTarget} concepts prepared</span>
+      </header>
+      <div className="academy-course-grid">
+        {state.courses.map(course => {
+          const active = course.id === state.course.id;
+          const visualPercent = course.questionCount
+            ? Math.round(course.imagesReady / course.questionCount * 100)
+            : 0;
+          return <button type="button" key={course.id}
+            className={`academy-course-card tone-${course.tone} ${active ? "active" : ""}`}
+            onClick={() => chooseCourse(course.id)}>
+            <span>{course.shortName.slice(0, 2).toUpperCase()}</span>
+            <div><strong>{course.name}</strong><small>{course.description}</small></div>
+            <em>{course.questionCount}/{course.questionTarget} questions · {visualPercent}% visuals</em>
+            {active && <Check size={16}/>}
+          </button>;
+        })}
+      </div>
+    </section> : null}
+
     <div className="hospitality-layout">
       <main className="hospitality-game">
         <header className="hospitality-progress-header">
-          <div><span>DAILY CHALLENGE</span><strong>{state?.progress.answered || 0} of {state?.dailyLimit || 10} answered</strong></div>
+          <div><span>{state?.course.shortName.toUpperCase() || "DAILY COURSE"}</span><strong>{state?.progress.answered || 0} of {state?.dailyLimit || 10} answered</strong></div>
           <div className="hospitality-progress-track"><span style={{ width: `${progressPercent}%` }}/></div>
           <b>{Math.round(progressPercent)}%</b>
         </header>
@@ -178,11 +231,11 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
           </button>
         </section> : state?.progress.complete ? <section className="hospitality-complete">
           <div className="hospitality-complete-trophy"><Trophy/></div>
-          <small>DAILY CHALLENGE COMPLETE</small>
+          <small>{state.course.shortName.toUpperCase()} COMPLETE</small>
           <h3>Excellent work, {staffName}!</h3>
           <p>You answered {state.progress.correct} of {state.dailyLimit} correctly and earned <b>{state.progress.score} points</b>.</p>
           <div><span><strong>{state.progress.score}</strong>score</span><span><strong>{state.progress.correct}</strong>correct</span><span><strong>#{myRank || "–"}</strong>team rank</span></div>
-          <small className="come-back">A new random challenge will be ready tomorrow.</small>
+          <small className="come-back">Choose another Academy course, or return tomorrow for a fresh set.</small>
         </section> : state?.current ? <>
           <section className="hospitality-question">
             <div className={`hospitality-question-image category-${state.current.category.toLowerCase().replace(/[^a-z]+/g, "-")}`}
@@ -210,7 +263,7 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
               <span>{String.fromCharCode(65 + index)}</span><strong>{option}</strong><ChevronRight/>
             </button>)}
           </div>
-          <p className="hospitality-calm-note">No timer. Choose carefully and enjoy the break.</p>
+          <p className="hospitality-calm-note">No timer. Learn carefully and enjoy the course.</p>
         </> : null}
       </main>
 
@@ -235,7 +288,7 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
         </section>
 
         <section className="hospitality-image-status">
-          <ImageIcon/><div><strong>Visual library</strong><span>{state?.imageProgress.ready || 0} of {state?.imageProgress.total || 0} prepared · {imagePercent}%</span></div>
+          <ImageIcon/><div><strong>{state?.course.shortName || "Course"} visual library</strong><span>{state?.imageProgress.ready || 0} of {state?.imageProgress.total || 0} prepared · {imagePercent}%</span></div>
         </section>
       </aside>
     </div>

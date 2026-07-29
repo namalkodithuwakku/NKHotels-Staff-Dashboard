@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  ACADEMY_QUESTION_TARGET_PER_COURSE,
+  ACADEMY_TOTAL_QUESTION_TARGET,
+  academyCourse,
+  academyCourses,
+} from "../../lib/academyCourses";
 import { hospitalityQuestionBank } from "../../lib/hospitalityQuestionBank";
 import { readServerSession } from "../../lib/serverSession";
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
@@ -51,16 +57,32 @@ function seeded<T>(values: T[], key: (value: T) => string, seed: string) {
   );
 }
 
+async function pagedRows<T>(path: string, pageSize = 1000) {
+  const rows: T[] = [];
+  let offset = 0;
+  while (true) {
+    const separator = path.includes("?") ? "&" : "?";
+    const page = await supabaseAdmin<T[]>(
+      `${path}${separator}limit=${pageSize}&offset=${offset}`
+    );
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+    offset += pageSize;
+  }
+}
+
 async function ensureCatalogue() {
-  const existing = await supabaseAdmin<Array<{ id: string }>>(
-    "nkh_hospitality_questions?select=id&limit=1"
+  const existing = await pagedRows<{ slug: string }>(
+    "nkh_hospitality_questions?select=slug&order=slug.asc"
   );
-  if (existing.length) return;
-  for (let index = 0; index < hospitalityQuestionBank.length; index += 50) {
+  const known = new Set(existing.map(item => item.slug));
+  const missing = hospitalityQuestionBank.filter(item => !known.has(item.slug));
+  if (!missing.length) return;
+  for (let index = 0; index < missing.length; index += 50) {
     await supabaseAdmin("nkh_hospitality_questions?on_conflict=slug", {
       method: "POST",
       prefer: "resolution=merge-duplicates,return=minimal",
-      body: hospitalityQuestionBank.slice(index, index + 50).map(item => ({
+      body: missing.slice(index, index + 50).map(item => ({
         ...item,
         image_prompt: [
           "Create a friendly, relaxing, polished hospitality learning image in the approachable visual language of a premium vocabulary picture card for adults.",
@@ -80,8 +102,8 @@ async function ensureCatalogue() {
 
 async function allQuestions() {
   await ensureCatalogue();
-  return supabaseAdmin<Question[]>(
-    "nkh_hospitality_questions?select=id,slug,term,definition,category,difficulty,image_url&active=eq.true&order=category.asc,term.asc&limit=1000"
+  return pagedRows<Question>(
+    "nkh_hospitality_questions?select=id,slug,term,definition,category,difficulty,image_url&active=eq.true&order=category.asc,term.asc"
   );
 }
 
@@ -117,22 +139,27 @@ function optionsFor(question: Question, questions: Question[], date: string, sta
   return seeded([question.term, ...distractors], value => value, `${question.slug}|${staffName}|${date}|order`);
 }
 
-async function buildState(staffName: string) {
+async function buildState(staffName: string, courseId: string) {
   const date = colomboDate();
   const questions = await allQuestions();
-  const selected = dailyQuestions(questions, date, staffName);
+  const course = academyCourse(courseId);
+  const courseQuestions = questions.filter(question => course.categories.includes(question.category));
+  const selected = dailyQuestions(courseQuestions, date, `${staffName}|${course.id}`);
   const [myAttempts, teamAttempts] = await Promise.all([
-    supabaseAdmin<Attempt[]>(
+    pagedRows<Attempt>(
       `nkh_hospitality_quiz_attempts?select=question_id,staff_name,selected_term,correct,points,answered_at&play_date=eq.${date}&staff_name=ilike.${encodeURIComponent(staffName)}&order=answered_at.asc`
     ),
-    supabaseAdmin<Attempt[]>(
-      `nkh_hospitality_quiz_attempts?select=question_id,staff_name,selected_term,correct,points,answered_at&play_date=eq.${date}&order=answered_at.asc&limit=1000`
+    pagedRows<Attempt>(
+      `nkh_hospitality_quiz_attempts?select=question_id,staff_name,selected_term,correct,points,answered_at&play_date=eq.${date}&order=answered_at.asc`
     ),
   ]);
-  const answered = new Map(myAttempts.map(item => [item.question_id, item]));
+  const courseQuestionIds = new Set(courseQuestions.map(question => question.id));
+  const courseMyAttempts = myAttempts.filter(item => courseQuestionIds.has(item.question_id));
+  const courseTeamAttempts = teamAttempts.filter(item => courseQuestionIds.has(item.question_id));
+  const answered = new Map(courseMyAttempts.map(item => [item.question_id, item]));
   const current = selected.find(item => !answered.has(item.id)) || null;
   const leaderboard = new Map<string, { staffName: string; points: number; correct: number; answered: number }>();
-  teamAttempts.forEach(item => {
+  courseTeamAttempts.forEach(item => {
     const key = item.staff_name.toLowerCase();
     const row = leaderboard.get(key) || { staffName: item.staff_name, points: 0, correct: 0, answered: 0 };
     row.points += item.correct ? POINTS_PER_CORRECT_ANSWER : 0;
@@ -140,19 +167,34 @@ async function buildState(staffName: string) {
     row.answered++;
     leaderboard.set(key, row);
   });
-  const score = myAttempts.reduce((total, item) => total + (item.correct ? POINTS_PER_CORRECT_ANSWER : 0), 0);
+  const score = courseMyAttempts.reduce((total, item) => total + (item.correct ? POINTS_PER_CORRECT_ANSWER : 0), 0);
   const maximum = DAILY_LIMIT * POINTS_PER_CORRECT_ANSWER;
   return {
     success: true,
     date,
     catalogueSize: questions.length,
+    academyTarget: ACADEMY_TOTAL_QUESTION_TARGET,
+    course: {
+      ...course,
+      questionCount: courseQuestions.length,
+      questionTarget: ACADEMY_QUESTION_TARGET_PER_COURSE,
+    },
+    courses: academyCourses.map(item => {
+      const items = questions.filter(question => item.categories.includes(question.category));
+      return {
+        ...item,
+        questionCount: items.length,
+        questionTarget: ACADEMY_QUESTION_TARGET_PER_COURSE,
+        imagesReady: items.filter(question => Boolean(question.image_url)).length,
+      };
+    }),
     dailyLimit: DAILY_LIMIT,
     progress: {
-      answered: myAttempts.length,
-      correct: myAttempts.filter(item => item.correct).length,
+      answered: courseMyAttempts.length,
+      correct: courseMyAttempts.filter(item => item.correct).length,
       score,
       maximum,
-      complete: myAttempts.length >= DAILY_LIMIT,
+      complete: courseMyAttempts.length >= DAILY_LIMIT,
     },
     current: current ? {
       id: current.id,
@@ -160,8 +202,8 @@ async function buildState(staffName: string) {
       category: current.category,
       difficulty: current.difficulty,
       imageUrl: current.image_url || null,
-      options: optionsFor(current, questions, date, staffName),
-      questionNumber: myAttempts.length + 1,
+      options: optionsFor(current, courseQuestions, date, `${staffName}|${course.id}`),
+      questionNumber: courseMyAttempts.length + 1,
     } : null,
     recentAnswers: selected.filter(item => answered.has(item.id)).map(item => {
       const attempt = answered.get(item.id)!;
@@ -178,8 +220,8 @@ async function buildState(staffName: string) {
       .sort((left, right) => right.points - left.points || right.correct - left.correct || left.staffName.localeCompare(right.staffName))
       .slice(0, 12),
     imageProgress: {
-      ready: questions.filter(item => Boolean(item.image_url)).length,
-      total: questions.length,
+      ready: courseQuestions.filter(item => Boolean(item.image_url)).length,
+      total: courseQuestions.length,
     },
   };
 }
@@ -188,7 +230,7 @@ export async function GET(request: NextRequest) {
   try {
     const session = readServerSession(request);
     if (!session) return NextResponse.json({ success: false, error: "Staff access required." }, { status: 401 });
-    return NextResponse.json(await buildState(session.name));
+    return NextResponse.json(await buildState(session.name, request.nextUrl.searchParams.get("course") || ""));
   } catch (error) {
     return NextResponse.json({
       success: false,
@@ -204,9 +246,11 @@ export async function POST(request: NextRequest) {
     const input = await request.json();
     const questionId = String(input.questionId || "");
     const selectedTerm = String(input.answer || "").trim().slice(0, 100);
+    const course = academyCourse(input.courseId);
     const date = colomboDate();
     const questions = await allQuestions();
-    const selected = dailyQuestions(questions, date, session.name);
+    const courseQuestions = questions.filter(question => course.categories.includes(question.category));
+    const selected = dailyQuestions(courseQuestions, date, `${session.name}|${course.id}`);
     const question = selected.find(item => item.id === questionId);
     if (!question || !selectedTerm) {
       return NextResponse.json({ success: false, error: "That question is not part of today’s challenge." }, { status: 400 });
@@ -231,7 +275,7 @@ export async function POST(request: NextRequest) {
       },
     });
     return NextResponse.json({
-      ...(await buildState(session.name)),
+      ...(await buildState(session.name, course.id)),
       result: {
         correct,
         correctTerm: question.term,

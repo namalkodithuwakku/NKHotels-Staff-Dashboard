@@ -186,4 +186,6 @@ export const hospitalityQuestionBank: HospitalityQuestionSeed[] = [
     ["Estimated arrival time", "The approximate time at which the guest expects to reach the property."],
     ["In-house guest", "A registered guest who is currently staying at the property."],
   ]),
+  ...advancedHospitalityQuestionBank,
 ];
+import { advancedHospitalityQuestionBank } from "./hospitalityQuestionBankAdvanced";

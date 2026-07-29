@@ -23,7 +23,7 @@ const navigation: Array<{ key: MasterView; label: string }> = [
   { key: "properties", label: "Properties" }, { key: "staff", label: "Staff Profiles" },
   { key: "roster", label: "Roster" },
   { key: "whatsapp", label: "WhatsApp Inbox" }, { key: "sms", label: "SMS Center" },
-  { key: "team-break", label: "Team Break" },
+  { key: "team-break", label: "NKH Academy" },
   { key: "reports", label: "Reports" }, { key: "settings", label: "Settings" },
 ];
 
