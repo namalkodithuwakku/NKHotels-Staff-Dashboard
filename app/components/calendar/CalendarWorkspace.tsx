@@ -10,8 +10,10 @@ type Booking = {
   booking_source: string; booking_status: string; check_in: string; check_out: string; booking_reference: string | null;
   phone?: string | null; email?: string | null; adults?: number; children?: number; total_amount?: number | null;
   received_amount?: number | null; currency_code?: string; notes: string | null; created_at?: string; updated_at?: string;
+  meal_plan?: string | null; payment_status?: string; children_ages?: number[]; voucher_sent?: boolean;
 };
-type Payload = { properties: Property[]; property: Property | null; rooms: Room[]; bookings: Booking[]; sync: { last_completed_at?: string; last_status?: string; last_error?: string; rooms_synced?: number; bookings_synced?: number } | null; month: string; error?: string };
+type Payload = { properties: Property[]; property: Property | null; rooms: Room[]; bookings: Booking[]; sync: { last_completed_at?: string; last_status?: string; last_error?: string; rooms_synced?: number; bookings_synced?: number } | null; permissions?: { canDelete?: boolean }; month: string; error?: string };
+type BookingDraft = { roomNames: string[]; checkIn: string; checkOut: string; action: "add" | "block" };
 
 const sourceClass: Record<string, string> = {
   "Booking.com": "booking", Expedia: "expedia", Airbnb: "airbnb", Agoda: "agoda",
@@ -34,7 +36,14 @@ export default function CalendarWorkspace() {
   const [data, setData] = useState<Payload>({ properties: [], property: null, rooms: [], bookings: [], sync: null, month });
   const [selected, setSelected] = useState<Booking | null>(null);
   const [editing, setEditing] = useState<Booking | "new" | null>(null);
+  const [draft, setDraft] = useState<BookingDraft | null>(null);
+  const [selectedCells, setSelectedCells] = useState<{ room: string; date: string }[]>([]);
+  const [movingBooking, setMovingBooking] = useState<Booking | null>(null);
+  const [statusRoom, setStatusRoom] = useState<Room | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Booking | null>(null);
   const [rowHeight, setRowHeight] = useState(64);
+  const [zoomTouched, setZoomTouched] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -42,6 +51,7 @@ export default function CalendarWorkspace() {
   const [error, setError] = useState("");
   const calendarRef = useRef<HTMLElement>(null);
   const backgroundSyncRef = useRef(false);
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const today = useMemo(() => new Date(), []);
   const currentMonth = month === monthValue(today);
   const timelineDays = 42;
@@ -103,6 +113,10 @@ export default function CalendarWorkspace() {
     .filter(booking => (booking.booking_group_key || booking.id) === (selected.booking_group_key || selected.id))
     .map(booking => booking.room_name).filter((room, index, rooms) => rooms.indexOf(room) === index) : [], [data.bookings, selected]);
   const nativeMode = data.property?.calendar_source_mode === "supabase";
+  useEffect(() => {
+    if (zoomTouched) return;
+    setRowHeight(roomNames.length <= 6 ? 72 : roomNames.length <= 15 ? 64 : roomNames.length <= 25 ? 56 : 48);
+  }, [roomNames.length, zoomTouched]);
 
   async function toggleFullscreen() {
     if (!calendarRef.current) return;
@@ -110,34 +124,95 @@ export default function CalendarWorkspace() {
     else await calendarRef.current.requestFullscreen();
   }
   function chooseMonth(value: string) { setMonth(value); setWeekOffset(0); }
-  function goToday() { setMonth(monthValue(today)); setWeekOffset(0); }
+  function goToday() { setMonth(monthValue(today)); setWeekOffset(0); setSelectedCells([]); }
+  function datesForRange(start: string, end: string) {
+    const result: string[] = [];
+    for (let date = localDate(start); date <= localDate(end); date = addDays(date, 1)) result.push(dateKey(date));
+    return result;
+  }
+  function cellOccupied(room: string, date: string) {
+    return data.bookings.some(booking => booking.room_name === room && date >= booking.check_in && date < booking.check_out);
+  }
+  function selectCalendarCell(room: string, date: string) {
+    if (!nativeMode || cellOccupied(room, date)) return;
+    const sameRoom = selectedCells.filter(cell => cell.room === room);
+    if (!sameRoom.length || selectedCells.some(cell => cell.room !== room)) {
+      setSelectedCells([{ room, date }]); return;
+    }
+    const start = sameRoom.map(cell => cell.date).sort()[0], end = date < start ? start : date;
+    const first = date < start ? date : start;
+    const range = datesForRange(first, end);
+    if (range.some(day => cellOccupied(room, day))) { setError("The selected range contains an occupied date."); return; }
+    setSelectedCells(range.map(day => ({ room, date: day })));
+  }
+  function openSelection(action: "add" | "block") {
+    if (!selectedCells.length) return;
+    const dates = selectedCells.map(cell => cell.date).sort();
+    setDraft({ roomNames: [...new Set(selectedCells.map(cell => cell.room))], checkIn: dates[0], checkOut: dateKey(addDays(localDate(dates[dates.length - 1]), 1)), action });
+    setEditing("new"); setSelectedCells([]);
+  }
+  async function moveBooking(booking: Booking, targetRoom: string) {
+    if (!data.property || booking.room_name === targetRoom) { setMovingBooking(null); return; }
+    setSaving(true); setError("");
+    try {
+      const response = await fetch("/api/calendar/bookings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "move", id: booking.id, property_id: data.property.id, target_room: targetRoom }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to move booking.");
+      setMovingBooking(null); setSelected(null);
+      await reloadCache(data.property.id, month, viewStart, viewEnd);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to move booking."); }
+    finally { setSaving(false); }
+  }
+  async function updateRoomStatus(status: string) {
+    if (!data.property || !statusRoom) return;
+    setSaving(true); setError("");
+    try {
+      const response = await fetch("/api/calendar/rooms", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ property_id: data.property.id, id: statusRoom.id, room_status: status }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to update room status.");
+      setStatusRoom(null); await reloadCache(data.property.id, month, viewStart, viewEnd);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to update room status."); }
+    finally { setSaving(false); }
+  }
+  async function cancelBooking(reason: string) {
+    if (!data.property || !cancelTarget) return;
+    setSaving(true); setError("");
+    try {
+      const response = await fetch("/api/calendar/bookings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancel", id: cancelTarget.id, property_id: data.property.id, reason }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to cancel booking.");
+      setCancelTarget(null); setSelected(null); await reloadCache(data.property.id, month, viewStart, viewEnd);
+    } catch (reasonValue) { setError(reasonValue instanceof Error ? reasonValue.message : "Unable to cancel booking."); }
+    finally { setSaving(false); }
+  }
 
   async function saveBooking(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!data.property) return;
-    const values = Object.fromEntries(new FormData(event.currentTarget));
+    const form = new FormData(event.currentTarget);
+    const values = { ...Object.fromEntries(form), room_names: form.getAll("room_names") };
     setSaving(true); setError("");
     try {
       const response = await fetch("/api/calendar/bookings", {
         method: editing === "new" ? "POST" : "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, property_id: data.property.id, ...(editing !== "new" && editing ? { id: editing.id } : {}) }),
+        body: JSON.stringify({ ...values, action: editing === "new" ? draft?.action || "add" : "edit", property_id: data.property.id, ...(editing !== "new" && editing ? { id: editing.id } : {}) }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Unable to save booking.");
-      setEditing(null); setSelected(null);
+      setEditing(null); setDraft(null); setSelected(null);
       await reloadCache(data.property.id, month, viewStart, viewEnd);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save booking."); }
     finally { setSaving(false); }
   }
 
   async function deleteBooking() {
-    if (!data.property || !selected) return;
+    if (!data.property || !deleteTarget) return;
     setSaving(true); setError("");
     try {
-      const response = await fetch("/api/calendar/bookings", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ property_id: data.property.id, id: selected.id }) });
+      const response = await fetch("/api/calendar/bookings", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ property_id: data.property.id, id: deleteTarget.id }) });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Unable to delete booking.");
-      setSelected(null);
+      setDeleteTarget(null); setSelected(null);
       await reloadCache(data.property.id, month, viewStart, viewEnd);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to delete booking."); }
     finally { setSaving(false); }
@@ -153,7 +228,7 @@ export default function CalendarWorkspace() {
       <div><small>LIVE PROPERTY COVERAGE</small><h2>Reservation calendar</h2><p>{nativeMode ? "Live booking calendar managed directly in NKH Dashboard." : "Read-only booking view copied from the property Google Sheet."}</p></div>
       <div className="calendar-controls">
         <select value={propertyId} onChange={event => setPropertyId(event.target.value)} aria-label="Property">{data.properties.map(property => <option key={property.id} value={property.id}>{property.property_name}</option>)}</select>
-        {nativeMode && <button className="calendar-add-booking" onClick={() => setEditing("new")}><Plus size={16}/> Add booking</button>}
+        {nativeMode && <button className="calendar-add-booking" onClick={() => { setDraft(null); setEditing("new"); }}><Plus size={16}/> Add booking</button>}
         {!nativeMode && <button className={`calendar-refresh ${backgroundSyncing ? "syncing" : ""}`} onClick={() => void refreshSourceInBackground(propertyId, month, viewStart, viewEnd)} disabled={loading || backgroundSyncing} aria-label="Refresh calendar"><RefreshCw size={17}/></button>}
       </div>
     </header>
@@ -161,7 +236,7 @@ export default function CalendarWorkspace() {
     <div className="calendar-navigation">
       <label className="calendar-month-picker"><span>Month</span><input type="month" value={month} onChange={event => chooseMonth(event.target.value)}/></label>
       <div className="calendar-week-skipper"><button onClick={() => setWeekOffset(value => value - 1)}><ChevronLeft size={17}/> Previous week</button><button className="calendar-today" onClick={goToday}>Today</button><button onClick={() => setWeekOffset(value => value + 1)}>Next week <ChevronRight size={17}/></button></div>
-      <div className="calendar-view-tools"><span>Vertical zoom</span><button onClick={() => setRowHeight(value => Math.max(46, value - 8))} aria-label="Zoom out vertically"><Minus size={16}/></button><b>{Math.round((rowHeight / 64) * 100)}%</b><button onClick={() => setRowHeight(value => Math.min(104, value + 8))} aria-label="Zoom in vertically"><Plus size={16}/></button><button onClick={() => void toggleFullscreen()} aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}>{fullscreen ? <Minimize2 size={17}/> : <Maximize2 size={17}/>}</button></div>
+      <div className="calendar-view-tools"><span>Vertical zoom</span><button onClick={() => { setZoomTouched(true); setRowHeight(value => Math.max(46, value - 8)); }} aria-label="Zoom out vertically"><Minus size={16}/></button><b>{Math.round((rowHeight / 64) * 100)}%</b><button onClick={() => { setZoomTouched(true); setRowHeight(value => Math.min(104, value + 8)); }} aria-label="Zoom in vertically"><Plus size={16}/></button><button onClick={() => void toggleFullscreen()} aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}>{fullscreen ? <Minimize2 size={17}/> : <Maximize2 size={17}/>}</button></div>
     </div>
 
     <div className="calendar-status-row">
@@ -185,22 +260,28 @@ export default function CalendarWorkspace() {
             const room = data.rooms.find(item => item.room_name === roomName);
             const rowBookings = data.bookings.filter(item => item.room_name === roomName);
             return <div className="calendar-room-row" key={roomName} style={{ gridColumn: `1 / span ${timelineDays + 1}`, gridRow: roomIndex + 2 }}>
-              <div className="calendar-room"><strong>{roomName}</strong><small>{room?.room_type || rowBookings[0]?.room_type || "Room"}</small></div>
+              <button className={`calendar-room ${movingBooking ? "move-target" : ""}`} onClick={() => movingBooking ? void moveBooking(movingBooking, roomName) : nativeMode && room ? setStatusRoom(room) : undefined} onDragOver={event => { if (movingBooking) event.preventDefault(); }} onDrop={event => { event.preventDefault(); if (movingBooking) void moveBooking(movingBooking, roomName); }}><strong>{roomName}</strong><small>{room?.room_type || rowBookings[0]?.room_type || "Room"}</small>{room?.room_status && <em className={`room-status ${room.room_status.toLowerCase().replaceAll(" ","-")}`}>{room.room_status}</em>}</button>
               <div className="calendar-room-days">
-                {viewDates.map(date => <span key={dateKey(date)} className={dateKey(date) === dateKey(today) ? "today" : ""}/>)}
+                {viewDates.map(date => {
+                  const key = dateKey(date), selectedCell = selectedCells.some(cell => cell.room === roomName && cell.date === key);
+                  return <button key={key} type="button" aria-label={`${roomName} ${key}`} onClick={() => selectCalendarCell(roomName, key)} onDoubleClick={() => { if (nativeMode && !cellOccupied(roomName, key)) { setDraft({ roomNames: [roomName], checkIn: key, checkOut: dateKey(addDays(localDate(key), 1)), action: "add" }); setEditing("new"); setSelectedCells([]); } }} className={`${key === dateKey(today) ? "today" : ""} ${selectedCell ? "selected" : ""} ${nativeMode && !cellOccupied(roomName, key) ? "selectable" : ""}`}/>;
+                })}
                 {rowBookings.map(booking => {
                   const bookingStart = localDate(booking.check_in), bookingEnd = localDate(booking.check_out);
                   const start = Math.max(0, daysBetween(viewStart, bookingStart));
                   const end = Math.min(timelineDays, daysBetween(viewStart, bookingEnd));
                   if (end <= 0 || start >= timelineDays) return null;
                   const source = sourceClass[booking.booking_source] || "fit";
-                  return <button key={booking.id} className={`calendar-booking ${source}`} style={{ left: `${(start / timelineDays) * 100}%`, width: `${(Math.max(1, end - start) / timelineDays) * 100}%` }} onClick={() => setSelected(booking)} title={`${booking.guest_name} · ${booking.check_in} to ${booking.check_out}`}><strong>{booking.guest_name}</strong><small>{booking.booking_source}</small></button>;
+                  return <button key={booking.id} draggable={nativeMode} onDragStart={() => setMovingBooking(booking)} onDragEnd={() => setMovingBooking(null)} onPointerDown={event => { if (event.pointerType !== "touch" || !nativeMode) return; longPressRef.current = setTimeout(() => setMovingBooking(booking), 900); }} onPointerUp={() => { if (longPressRef.current) clearTimeout(longPressRef.current); }} onPointerCancel={() => { if (longPressRef.current) clearTimeout(longPressRef.current); }} className={`calendar-booking ${source} ${movingBooking?.id === booking.id ? "moving" : ""}`} style={{ left: `${(start / timelineDays) * 100}%`, width: `${(Math.max(1, end - start) / timelineDays) * 100}%` }} onClick={() => { if (!movingBooking) setSelected(booking); }} title={`${booking.guest_name} · ${booking.check_in} to ${booking.check_out}`}><strong>{booking.guest_name}</strong><small>{booking.booking_source}</small></button>;
                 })}
               </div>
             </div>;
           })}
         </div>
       </div>}
+
+    {selectedCells.length > 0 && <div className="calendar-selection-bar"><div><strong>{selectedCells[0].room}</strong><span>{selectedCells.map(cell => cell.date).sort()[0]} → {dateKey(addDays(localDate(selectedCells.map(cell => cell.date).sort().at(-1) || selectedCells[0].date), 1))}</span></div><button onClick={() => setSelectedCells([])}>Clear</button><button className="block-action" onClick={() => openSelection("block")}>Block dates</button><button className="primary-action" onClick={() => openSelection("add")}>Add booking</button></div>}
+    {movingBooking && <div className="calendar-move-banner"><strong>Moving {movingBooking.guest_name}</strong><span>Click or tap the destination room name.</span><button onClick={() => setMovingBooking(null)}>Cancel</button></div>}
 
     <div className="calendar-legend">{["Booking.com","Expedia","Airbnb","Agoda","Travel Agent","Direct","FIT","Blocked"].map(source => <span key={source}><i className={sourceClass[source]}/>{source}</span>)}</div>
 
@@ -215,13 +296,20 @@ export default function CalendarWorkspace() {
       <div><dt>Phone</dt><dd>{selected.phone || "Not added"}</dd></div>
       <div><dt>Email</dt><dd>{selected.email || "Not added"}</dd></div>
       <div><dt>Guests</dt><dd>{selected.adults ?? 1} adults · {selected.children ?? 0} children</dd></div>
+      <div><dt>Child ages</dt><dd>{selected.children_ages?.length ? selected.children_ages.join(", ") : "Not added"}</dd></div>
+      <div><dt>Meal plan</dt><dd>{selected.meal_plan || "Not added"}</dd></div>
       <div><dt>Total</dt><dd>{money(selected.total_amount, currency)}</dd></div>
       <div><dt>Received</dt><dd>{money(selected.received_amount, currency)}</dd></div>
       <div><dt>Balance</dt><dd>{money(balance, currency)}</dd></div>
+      <div><dt>Payment</dt><dd>{selected.payment_status || "Not paid"}</dd></div>
+      <div><dt>Voucher</dt><dd>{selected.voucher_sent ? "Sent" : "Not sent"}</dd></div>
       {selected.created_at && <div><dt>Added</dt><dd>{new Date(selected.created_at).toLocaleString()}</dd></div>}
       {selected.updated_at && <div><dt>Updated</dt><dd>{new Date(selected.updated_at).toLocaleString()}</dd></div>}
-    </dl>{selected.notes && <section className="reservation-notes"><small>NOTES</small><p>{selected.notes}</p></section>}{nativeMode ? <footer className="calendar-booking-actions"><button onClick={() => setEditing(selected)}>Edit booking</button><button className="danger" disabled={saving} onClick={deleteBooking}>Delete</button></footer> : <em>{selectedRooms.length > 1 ? `${selectedRooms.length} room allocations · ` : ""}Read-only Sheet view</em>}</article></div>}
+    </dl>{selected.notes && <section className="reservation-notes"><small>NOTES</small><p>{selected.notes}</p></section>}{nativeMode ? <><div className="reservation-quick-actions">{selected.phone && <a href={`tel:${selected.phone}`}>Call guest</a>}{selected.phone && <a href={`https://wa.me/${selected.phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer">WhatsApp</a>}{selected.booking_reference && <button onClick={() => void navigator.clipboard?.writeText(selected.booking_reference || "")}>Copy reference</button>}<button onClick={() => { setMovingBooking(selected); setSelected(null); }}>Move room</button></div><footer className="calendar-booking-actions"><button onClick={() => { setDraft(null); setEditing(selected); }}>Edit booking</button><button className="cancel-action" onClick={() => setCancelTarget(selected)}>Cancel booking</button>{data.permissions?.canDelete && <button className="danger" disabled={saving} onClick={() => setDeleteTarget(selected)}>Delete permanently</button>}</footer></> : <em>{selectedRooms.length > 1 ? `${selectedRooms.length} room allocations · ` : ""}Read-only Sheet view</em>}</article></div>}
 
-    {editing && data.property && <div className="calendar-detail-backdrop"><form className="calendar-booking-form" onSubmit={saveBooking}><button type="button" className="modal-close" onClick={() => setEditing(null)}>×</button><small>SUPABASE CALENDAR</small><h3>{editing === "new" ? "Add booking" : "Edit booking"}</h3><div className="booking-form-grid"><label>Guest name<input name="guest_name" defaultValue={editing === "new" ? "" : editing.guest_name} required/></label><label>Room<select name="room_name" defaultValue={editing === "new" ? "" : editing.room_name} required><option value="">Select room</option>{roomNames.map(room => <option key={room}>{room}</option>)}</select></label><label>Check-in<input name="check_in" type="date" defaultValue={editing === "new" ? "" : editing.check_in} required/></label><label>Check-out<input name="check_out" type="date" defaultValue={editing === "new" ? "" : editing.check_out} required/></label><label>Source<select name="booking_source" defaultValue={editing === "new" ? "Direct" : editing.booking_source}>{["Direct","Booking.com","Agoda","Expedia","Airbnb","Travel Agent","FIT","Blocked"].map(value => <option key={value}>{value}</option>)}</select></label><label>Status<select name="booking_status" defaultValue={editing === "new" ? "Confirmed" : editing.booking_status}>{["Confirmed","Pending","Checked In","Checked Out","Cancelled","Blocked"].map(value => <option key={value}>{value}</option>)}</select></label><label>Reference<input name="booking_reference" defaultValue={editing === "new" ? "" : editing.booking_reference || ""}/></label><label>Phone<input name="phone" defaultValue={editing === "new" ? "" : editing.phone || ""}/></label><label>Email<input name="email" type="email" defaultValue={editing === "new" ? "" : editing.email || ""}/></label><label>Adults<input name="adults" type="number" min="0" defaultValue={editing === "new" ? 1 : editing.adults || 1}/></label><label>Children<input name="children" type="number" min="0" defaultValue={editing === "new" ? 0 : editing.children || 0}/></label><label>Total amount<input name="total_amount" type="number" min="0" step="0.01" defaultValue={editing === "new" ? "" : editing.total_amount ?? ""}/></label><label>Received<input name="received_amount" type="number" min="0" step="0.01" defaultValue={editing === "new" ? "" : editing.received_amount ?? ""}/></label><label>Currency<input name="currency_code" maxLength={3} defaultValue={editing === "new" ? data.property.currency_code || "LKR" : editing.currency_code || "LKR"}/></label><label className="wide">Notes<textarea name="notes" defaultValue={editing === "new" ? "" : editing.notes || ""}/></label></div><footer><button type="button" onClick={() => setEditing(null)}>Cancel</button><button className="primary-action" disabled={saving}>{saving ? "Saving…" : "Save booking"}</button></footer></form></div>}
+    {editing && data.property && <div className="calendar-detail-backdrop"><form className="calendar-booking-form" onSubmit={saveBooking}><button type="button" className="modal-close" onClick={() => { setEditing(null); setDraft(null); }}>×</button><small>SUPABASE CALENDAR</small><h3>{draft?.action === "block" ? "Block room dates" : editing === "new" ? "Add booking" : "Edit booking"}</h3><div className="booking-form-grid"><label>Guest name<input name="guest_name" defaultValue={draft?.action === "block" ? "Blocked" : editing === "new" ? "" : editing.guest_name} required/></label><fieldset className="wide booking-room-selector"><legend>Room allocation</legend>{roomNames.map(room => { const checked = editing === "new" ? Boolean(draft?.roomNames.includes(room)) : selectedRooms.includes(room); return <label key={room}><input name="room_names" type="checkbox" value={room} defaultChecked={checked}/><span>{room}</span></label>; })}</fieldset><label>Check-in<input name="check_in" type="date" defaultValue={editing === "new" ? draft?.checkIn || "" : editing.check_in} required/></label><label>Check-out<input name="check_out" type="date" defaultValue={editing === "new" ? draft?.checkOut || "" : editing.check_out} required/></label><label>Source<select name="booking_source" defaultValue={draft?.action === "block" ? "Blocked" : editing === "new" ? "Direct" : editing.booking_source}>{["Direct","Booking.com","Agoda","Expedia","Airbnb","Travel Agent","FIT","Blocked"].map(value => <option key={value}>{value}</option>)}</select></label><label>Status<select name="booking_status" defaultValue={draft?.action === "block" ? "Blocked" : editing === "new" ? "Confirmed" : editing.booking_status}>{["Confirmed","Pending","Checked In","Checked Out","Blocked"].map(value => <option key={value}>{value}</option>)}</select></label><label>Reference<input name="booking_reference" defaultValue={editing === "new" ? "" : editing.booking_reference || ""}/></label><label>Phone<input name="phone" defaultValue={editing === "new" ? "" : editing.phone || ""}/></label><label>Email<input name="email" type="email" defaultValue={editing === "new" ? "" : editing.email || ""}/></label><label>Adults<input name="adults" type="number" min="0" defaultValue={editing === "new" ? 1 : editing.adults || 1}/></label><label>Children<input name="children" type="number" min="0" defaultValue={editing === "new" ? 0 : editing.children || 0}/></label><label>Children ages<input name="children_ages" defaultValue={editing === "new" ? "" : editing.children_ages?.join(", ") || ""} placeholder="4, 8"/></label><label>Meal plan<input name="meal_plan" defaultValue={editing === "new" ? "" : editing.meal_plan || ""} placeholder="Room only / Breakfast"/></label><label>Total amount<input name="total_amount" type="number" min="0" step="0.01" defaultValue={editing === "new" ? "" : editing.total_amount ?? ""}/></label><label>Received<input name="received_amount" type="number" min="0" step="0.01" defaultValue={editing === "new" ? "" : editing.received_amount ?? ""}/></label><label>Currency<input name="currency_code" maxLength={3} defaultValue={editing === "new" ? data.property.currency_code || "LKR" : editing.currency_code || "LKR"}/></label><label className="voucher-check"><input name="voucher_sent" type="checkbox" defaultChecked={editing !== "new" && editing.voucher_sent}/><span>Voucher sent</span></label><label className="wide">Notes<textarea name="notes" defaultValue={editing === "new" ? "" : editing.notes || ""}/></label></div><footer><button type="button" onClick={() => { setEditing(null); setDraft(null); }}>Cancel</button><button className="primary-action" disabled={saving}>{saving ? "Saving…" : draft?.action === "block" ? "Block dates" : "Save booking"}</button></footer></form></div>}
+    {statusRoom && <div className="calendar-detail-backdrop"><article className="room-status-modal"><button onClick={() => setStatusRoom(null)}>×</button><small>ROOM STATUS</small><h3>{statusRoom.room_name}</h3><p>Current status: <strong>{statusRoom.room_status}</strong></p><div>{["Available","Ready","Occupied","Dirty","Cleaning","Not Available","Maintenance"].map(status => <button key={status} className={statusRoom.room_status === status ? "active" : ""} disabled={saving} onClick={() => void updateRoomStatus(status)}>{status}</button>)}</div></article></div>}
+    {cancelTarget && <div className="calendar-detail-backdrop"><form className="calendar-cancel-form" onSubmit={event => { event.preventDefault(); const reason = String(new FormData(event.currentTarget).get("reason") || ""); void cancelBooking(reason); }}><button type="button" className="modal-close" onClick={() => setCancelTarget(null)}>×</button><small>PRESERVE BOOKING HISTORY</small><h3>Cancel {cancelTarget.guest_name}?</h3><p>The reservation will leave the active calendar, but its history will remain available for reporting and auditing.</p><label>Cancellation reason<textarea name="reason" required placeholder="Guest request, duplicate booking, payment issue…"/></label><footer><button type="button" onClick={() => setCancelTarget(null)}>Keep booking</button><button className="danger" disabled={saving}>{saving ? "Cancelling…" : "Cancel reservation"}</button></footer></form></div>}
+    {deleteTarget && <div className="calendar-detail-backdrop"><form className="calendar-cancel-form" onSubmit={event => { event.preventDefault(); void deleteBooking(); }}><button type="button" className="modal-close" onClick={() => setDeleteTarget(null)}>×</button><small>MASTER ACCESS · PERMANENT ACTION</small><h3>Delete {deleteTarget.guest_name} permanently?</h3><p>This removes every room allocation in this reservation group and cannot be undone. Use Cancel reservation instead when history must be preserved.</p><footer><button type="button" onClick={() => setDeleteTarget(null)}>Keep booking</button><button className="danger" disabled={saving}>{saving ? "Deleting…" : "Delete permanently"}</button></footer></form></div>}
   </section>;
 }

@@ -12,6 +12,8 @@
    `supabase/migrations/20260729060000_dual_mode_calendar.sql`
    If you already ran the earlier dual-calendar migration, also run:
    `supabase/migrations/20260729061000_room_type_room_names.sql`
+   Then run the operational calendar upgrade:
+   `supabase/migrations/20260729062000_calendar_operations.sql`
 3. Push the project:
 
 ```powershell
@@ -49,3 +51,20 @@ Only a verified Master session can change it; the API enforces the same rule.
 - Fullscreen mode is available.
 - Reservation details show all stored guest, stay, contact, occupancy, payment,
   reference, note and audit information.
+- Click an available date cell to select a stay range; double-click a cell to
+  open a one-night booking immediately.
+- Use **Add booking** or **Block dates** from the selection bar.
+- One reservation can allocate several rooms. Collision checks run before save.
+- Drag a booking to another room on desktop. On mobile, hold the booking for
+  about one second and then tap the destination room name.
+- Click a room name to update housekeeping status.
+- Cancelling preserves operational history. Permanent deletion is restricted
+  to Master access.
+
+## Important mode rules
+
+- Sheet mode is read-only. Its existing background refresh remains active.
+- Dashboard mode writes directly to Supabase and does not write back to the
+  Google Sheet.
+- Never switch a live property away from Sheet mode until its room types,
+  individual room names and counts have been checked.

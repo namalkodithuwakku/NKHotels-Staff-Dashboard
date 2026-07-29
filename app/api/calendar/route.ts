@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
-import { readServerSession } from "../../lib/serverSession";
+import { isMasterSession, readServerSession } from "../../lib/serverSession";
 
 type Property = { id: string; client_code: string; property_name: string; calendar_sheet_code: string | null; calendar_source_mode: "google_sheet" | "supabase"; currency_code: string | null };
 type Room = { id: string; property_id: string; source_key: string; room_name: string; room_type: string | null; room_status: string; sort_order: number };
@@ -17,7 +17,8 @@ function validMonth(value: string | null) {
 
 export async function GET(request: NextRequest) {
   try {
-    if (!readServerSession(request)) {
+    const session = readServerSession(request);
+    if (!session) {
       return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
     }
     const month = validMonth(request.nextUrl.searchParams.get("month"));
@@ -40,10 +41,10 @@ export async function GET(request: NextRequest) {
     const propertyId = encodeURIComponent(property.id);
     const [rooms, bookings, syncRows] = await Promise.all([
       supabaseAdmin<Room[]>(`nkh_calendar_rooms?property_id=eq.${propertyId}&select=*&order=sort_order.asc,room_name.asc`),
-      supabaseAdmin<Booking[]>(`nkh_calendar_bookings?property_id=eq.${propertyId}&check_in=lt.${to}&check_out=gt.${from}&select=*&order=check_in.asc,room_name.asc`),
+      supabaseAdmin<Booking[]>(`nkh_calendar_bookings?property_id=eq.${propertyId}&booking_status=neq.Cancelled&check_in=lt.${to}&check_out=gt.${from}&select=*&order=check_in.asc,room_name.asc`),
       supabaseAdmin<unknown[]>(`nkh_calendar_sync_state?property_id=eq.${propertyId}&select=*`),
     ]);
-    return NextResponse.json({ properties, property, rooms, bookings, sync: syncRows[0] || null, month });
+    return NextResponse.json({ properties, property, rooms, bookings, sync: syncRows[0] || null, month, permissions: { canDelete: isMasterSession(session) } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load calendar." }, { status: 500 });
   }
