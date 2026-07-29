@@ -1,17 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
-import { hasChannelAccess, isMasterSession, readServerSession } from "../../../lib/serverSession";
+import { canManageProperties, hasChannelAccess, isMasterSession, readServerSession } from "../../../lib/serverSession";
 
 const normalize = (value: string) => value.replace(/\D/g, "");
+function propertyContext(request: NextRequest) {
+  return request.nextUrl.searchParams.get("context") === "property";
+}
+async function canAccessContacts(request: NextRequest) {
+  const session = readServerSession(request);
+  return propertyContext(request)
+    ? canManageProperties(session)
+    : hasChannelAccess(session, "whatsapp");
+}
 async function contactAudit(actor: string, role: string, action: string, id: string, details: Record<string, unknown> = {}) {
   try { await supabaseAdmin("inbox_audit_logs", { method: "POST", prefer: "return=minimal", body: { actor_role: role.toUpperCase(), action, entity_type: "contact", entity_id: id, details: { actor, ...details } } }); } catch { /* Keep contact operation usable if the older audit constraint lacks contact. */ }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    if (!await hasChannelAccess(readServerSession(request), "whatsapp")) return NextResponse.json({ error: "WhatsApp Inbox access is not enabled for this profile." }, { status: 403 });
+    if (!await canAccessContacts(request)) {
+      return NextResponse.json({
+        error: propertyContext(request)
+          ? "Property profile access is not enabled for this session."
+          : "WhatsApp Inbox access is not enabled for this profile.",
+      }, { status: 403 });
+    }
+    const propertyId = String(request.nextUrl.searchParams.get("propertyId") || "").trim();
+    const contactFilter = propertyContext(request) && propertyId
+      ? `&property_id=eq.${encodeURIComponent(propertyId)}`
+      : "";
     const [contacts, properties] = await Promise.all([
-      supabaseAdmin<unknown[]>("wa_contacts?select=id,wa_id,phone,profile_name,property_name,property_id,contact_name,name_prefix,job_position,is_active,client_status,notes,created_at&order=property_name.asc.nullslast,contact_name.asc.nullslast"),
+      supabaseAdmin<unknown[]>(`wa_contacts?select=id,wa_id,phone,profile_name,property_name,property_id,contact_name,name_prefix,job_position,is_active,client_status,notes,created_at${contactFilter}&order=property_name.asc.nullslast,contact_name.asc.nullslast`),
       supabaseAdmin<unknown[]>("nkh_properties?select=id,client_code,property_name,client_status&order=property_name.asc"),
     ]);
     return NextResponse.json({ contacts, properties });
@@ -19,7 +38,14 @@ export async function GET(request: NextRequest) {
 }
 
 async function save(request: NextRequest, update: boolean) {
-  const session = readServerSession(request); if (!await hasChannelAccess(session, "whatsapp")) return NextResponse.json({ error: "WhatsApp Inbox access is not enabled for this profile." }, { status: 403 });
+  const session = readServerSession(request);
+  if (!await canAccessContacts(request)) {
+    return NextResponse.json({
+      error: propertyContext(request)
+        ? "Property profile access is not enabled for this session."
+        : "WhatsApp Inbox access is not enabled for this profile.",
+    }, { status: 403 });
+  }
   const input = await request.json(), waId = normalize(String(input.phone || input.wa_id || ""));
   if (waId.length < 8 || waId.length > 15) return NextResponse.json({ error: "Use a valid number with country code, for example +94771234567." }, { status: 400 });
   if (update && !input.id) return NextResponse.json({ error: "Contact ID is required." }, { status: 400 });

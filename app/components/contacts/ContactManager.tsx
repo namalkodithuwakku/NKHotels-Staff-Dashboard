@@ -81,11 +81,14 @@ export default function ContactManager({
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const contactsEndpoint = propertyId
+    ? `/api/whatsapp/contacts?context=property&propertyId=${encodeURIComponent(propertyId)}`
+    : "/api/whatsapp/contacts";
 
   const load = useCallback(async () => {
     try {
       setError("");
-      const response = await fetch("/api/whatsapp/contacts", { cache: "no-store" });
+      const response = await fetch(contactsEndpoint, { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to load contacts.");
       setContacts(data.contacts || []);
@@ -95,7 +98,7 @@ export default function ContactManager({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [contactsEndpoint]);
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
@@ -124,7 +127,7 @@ export default function ContactManager({
     setSaving(true);
     setError("");
     try {
-      const response = await fetch("/api/whatsapp/contacts", {
+      const response = await fetch(contactsEndpoint, {
         method: form.id ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, property_id: propertyId || form.property_id }),
