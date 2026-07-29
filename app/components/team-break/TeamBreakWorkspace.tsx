@@ -50,6 +50,8 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
   const [error, setError] = useState("");
   const [result, setResult] = useState<ChallengeState["result"] | null>(null);
   const [completedBurst, setCompletedBurst] = useState(false);
+  const [generatingImage, setGeneratingImage] = useState(false);
+  const [imageError, setImageError] = useState("");
 
   const load = useCallback(async (quiet = false) => {
     try {
@@ -98,6 +100,38 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
       setError(reason instanceof Error ? reason.message : "Unable to save your answer.");
     } finally {
       setAnswering("");
+    }
+  }
+
+  async function generateCurrentImage() {
+    if (!state?.current || state.current.imageUrl || generatingImage) return;
+    try {
+      setGeneratingImage(true);
+      setImageError("");
+      const response = await fetch("/api/cron/team-break-images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId: state.current.id }),
+      });
+      const value = await response.json();
+      if (!response.ok || !value.success || !value.imageUrl) {
+        throw new Error(value.error || "Unable to prepare this hospitality visual.");
+      }
+      setState(current => current?.current ? {
+        ...current,
+        current: { ...current.current, imageUrl: value.imageUrl },
+        imageProgress: {
+          ...current.imageProgress,
+          ready: Math.min(current.imageProgress.total, current.imageProgress.ready + (value.alreadyReady ? 0 : 1)),
+        },
+      } : current);
+      window.dispatchEvent(new CustomEvent("nkh-pet-celebrate", {
+        detail: { message: "A new hospitality visual is ready!" },
+      }));
+    } catch (reason) {
+      setImageError(reason instanceof Error ? reason.message : "Unable to prepare this visual.");
+    } finally {
+      setGeneratingImage(false);
     }
   }
 
@@ -153,7 +187,15 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
           <section className="hospitality-question">
             <div className={`hospitality-question-image category-${state.current.category.toLowerCase().replace(/[^a-z]+/g, "-")}`}
               style={state.current.imageUrl ? { backgroundImage: `linear-gradient(180deg,transparent 55%,rgba(10,40,55,.35)),url("${state.current.imageUrl}")` } : undefined}>
-              {!state.current.imageUrl && <><Hotel/><span>Hospitality visual preparing</span></>}
+              {!state.current.imageUrl && <section className="hospitality-image-generator">
+                {generatingImage ? <RefreshCw className="hospitality-image-spinner"/> : <Hotel/>}
+                <strong>{generatingImage ? "Creating your visual…" : "This visual is ready to be created"}</strong>
+                <span>{generatingImage ? "Please keep this page open for a moment." : "Help build the shared NKH learning library."}</span>
+                <button type="button" disabled={generatingImage} onClick={() => void generateCurrentImage()}>
+                  {generatingImage ? "Generating…" : <><Sparkles size={15}/> Generate image</>}
+                </button>
+                {imageError && <small>{imageError}</small>}
+              </section>}
               <div><span>{state.current.category}</span><b>{state.current.difficulty} · 10 points</b></div>
             </div>
             <div className="hospitality-question-copy">

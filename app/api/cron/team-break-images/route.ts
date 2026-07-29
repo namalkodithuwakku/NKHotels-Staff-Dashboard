@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readServerSession } from "../../../lib/serverSession";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 
 export const maxDuration = 300;
@@ -11,6 +12,8 @@ type ImageQuestion = {
   category: string;
   image_prompt?: string | null;
   image_attempts: number;
+  image_url?: string | null;
+  image_status?: string;
 };
 
 function authorised(request: NextRequest) {
@@ -107,4 +110,60 @@ export async function GET(request: NextRequest) {
   }
   await Promise.all([worker(), worker()]);
   return NextResponse.json({ success: true, requested: queue.length, generated, errors });
+}
+
+export async function POST(request: NextRequest) {
+  const session = readServerSession(request);
+  if (!session) {
+    return NextResponse.json(
+      { success: false, error: "Staff access required." },
+      { status: 401 }
+    );
+  }
+
+  try {
+    const input = await request.json();
+    const questionId = String(input.questionId || "").trim();
+    if (!questionId) {
+      return NextResponse.json(
+        { success: false, error: "Question ID is required." },
+        { status: 400 }
+      );
+    }
+
+    const rows = await supabaseAdmin<ImageQuestion[]>(
+      `nkh_hospitality_questions?select=id,slug,term,definition,category,image_prompt,image_attempts,image_url,image_status&id=eq.${encodeURIComponent(questionId)}&active=eq.true&limit=1`
+    );
+    const question = rows[0];
+    if (!question) {
+      return NextResponse.json(
+        { success: false, error: "Hospitality question was not found." },
+        { status: 404 }
+      );
+    }
+    if (question.image_url) {
+      return NextResponse.json({
+        success: true,
+        alreadyReady: true,
+        id: question.id,
+        imageUrl: question.image_url,
+      });
+    }
+    if (question.image_status === "Generating") {
+      return NextResponse.json(
+        { success: false, error: "This visual is already being prepared." },
+        { status: 409 }
+      );
+    }
+
+    const result = await generate(question);
+    return NextResponse.json({
+      success: true,
+      generatedBy: session.name,
+      ...result,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to generate this visual.";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  }
 }

@@ -1,10 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "nextjs",
-  "crons": [
-    {
-      "path": "/api/cron/team-break-images",
-      "schedule": "35 22 * * *"
-    }
-  ]
+  "framework": "nextjs"
 }
