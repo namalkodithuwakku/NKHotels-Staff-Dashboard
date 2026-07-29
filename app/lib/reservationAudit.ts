@@ -36,6 +36,44 @@ const clean = (value: unknown) => String(value || "").trim();
 const key = (value: unknown) => clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
 const date = (value: unknown) => clean(value).slice(0, 10);
 const sourceKey = (value: unknown) => key(value).replace("com", "");
+const NAME_TITLES = new Set(["mr", "mrs", "ms", "miss", "dr", "rev", "prof", "sir", "madam", "mstr"]);
+
+function nameTokens(value: unknown) {
+  return clean(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(/\s+/)
+    .filter(token => token && !NAME_TITLES.has(token));
+}
+
+function nameMatch(left: unknown, right: unknown) {
+  const a = nameTokens(left), b = nameTokens(right);
+  if (!a.length || !b.length) return { equivalent: false, score: 0 };
+  if (a.join("") === b.join("")) return { equivalent: true, score: 10 };
+
+  const longer = a.length >= b.length ? a : b;
+  const shorter = a.length >= b.length ? b : a;
+  let matched = 0;
+  for (const token of shorter) {
+    const found = longer.some(candidate => {
+      if (token === candidate) return true;
+      if (token.length >= 3 && candidate.startsWith(token)) return true;
+      if (candidate.length >= 3 && token.startsWith(candidate)) return true;
+      return token.length === 1 && candidate.startsWith(token);
+    });
+    if (found) matched++;
+  }
+
+  const coverage = matched / shorter.length;
+  const hasReliableToken = shorter.some(token =>
+    token.length >= 3 && longer.some(candidate => candidate === token || candidate.startsWith(token) || token.startsWith(candidate))
+  );
+  const equivalent = hasReliableToken && (
+    coverage === 1 ||
+    (shorter.length >= 2 && coverage >= 0.67)
+  );
+  return { equivalent, score: equivalent ? Math.max(5, Math.round(coverage * 10)) : 0 };
+}
 
 function groupBookings(rows: CalendarBooking[]) {
   const groups = new Map<string, CalendarBooking[]>();
@@ -53,8 +91,7 @@ function score(ota: OtaReservation, rows: CalendarBooking[]) {
   if (key(ota.reference) && key(ota.reference) === key(first.booking_reference)) value += 70;
   if (date(ota.checkIn) === date(first.check_in)) value += 10;
   if (date(ota.checkOut) === date(first.check_out)) value += 10;
-  if (key(ota.guestName) === key(first.guest_name)) value += 8;
-  else if (key(first.guest_name).includes(key(ota.guestName)) || key(ota.guestName).includes(key(first.guest_name))) value += 5;
+  value += nameMatch(ota.guestName, first.guest_name).score;
   if (Math.max(1, ota.roomCount) === rows.length) value += 2;
   return value;
 }
@@ -65,7 +102,7 @@ function compare(ota: OtaReservation, rows: CalendarBooking[]) {
   if (date(ota.checkIn) !== date(first.check_in)) differences.push(`Check-in: OTA ${ota.checkIn}; Dashboard ${first.check_in}`);
   if (date(ota.checkOut) !== date(first.check_out)) differences.push(`Check-out: OTA ${ota.checkOut}; Dashboard ${first.check_out}`);
   if (Math.max(1, ota.roomCount) !== rows.length) differences.push(`Rooms: OTA ${Math.max(1, ota.roomCount)}; Dashboard ${rows.length}`);
-  if (key(ota.guestName) !== key(first.guest_name)) differences.push(`Guest: OTA ${ota.guestName}; Dashboard ${first.guest_name}`);
+  if (!nameMatch(ota.guestName, first.guest_name).equivalent) differences.push(`Guest: OTA ${ota.guestName}; Dashboard ${first.guest_name}`);
   if (key(ota.status) && key(ota.status) !== key(first.booking_status)) differences.push(`Status: OTA ${ota.status}; Dashboard ${first.booking_status}`);
   const otaTypes = ota.roomTypes.map(key).filter(Boolean);
   const dashboardTypes = rows.map(row => key(row.room_type)).filter(Boolean);
