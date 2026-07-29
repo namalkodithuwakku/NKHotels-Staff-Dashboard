@@ -15,6 +15,18 @@ type Result = { planId: string; property: { property_name: string; city?: string
 
 function dateKey(date: Date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`; }
 function futureDate(days: number) { const value = new Date(); value.setDate(value.getDate() + days); return dateKey(value); }
+async function responsePayload(response: Response) {
+  const text = await response.text();
+  if (!text) return {};
+  try { return JSON.parse(text); }
+  catch {
+    return {
+      error: response.ok
+        ? "The planner returned an unreadable response. Please try again."
+        : `The planner service is temporarily unavailable (HTTP ${response.status}).`,
+    };
+  }
+}
 
 export default function RevenuePlannerTool() {
   const [properties, setProperties] = useState<Property[]>([]), [propertyId, setPropertyId] = useState("");
@@ -23,7 +35,7 @@ export default function RevenuePlannerTool() {
   const [result, setResult] = useState<Result | null>(null), [loading, setLoading] = useState(false), [error, setError] = useState("");
   useEffect(() => {
     fetch("/api/reservation-tools/revenue-plan", { cache: "no-store" }).then(async response => {
-      const payload = await response.json();
+      const payload = await responsePayload(response);
       if (!response.ok) throw new Error(payload.error || "Unable to load properties.");
       setProperties(payload.properties || []); setPropertyId(payload.properties?.[0]?.id || "");
     }).catch(reason => setError(reason instanceof Error ? reason.message : "Unable to load properties."));
@@ -38,7 +50,7 @@ export default function RevenuePlannerTool() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ propertyId, from, to, objective }),
       });
-      const payload = await response.json();
+      const payload = await responsePayload(response);
       if (!response.ok) throw new Error(payload.error || "Unable to generate the plan.");
       setResult(payload);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to generate the plan."); }

@@ -48,6 +48,50 @@ function outputText(payload: Record<string, unknown>) {
   }
   throw new Error("AI Revenue Planner returned no readable plan.");
 }
+
+function parsePlanText(value: string) {
+  const cleaned = value
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "");
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    throw new Error(
+      cleaned
+        ? `AI returned an incomplete revenue plan: ${cleaned.slice(0, 180)}`
+        : "AI returned an empty revenue plan.",
+    );
+  }
+}
+
+async function requestRevenuePlan(key: string, context: Record<string, unknown>, retry = false) {
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: process.env.OPENAI_REVENUE_MODEL || "gpt-5.4-mini",
+      store: false,
+      reasoning: { effort: "low" },
+      tools: retry ? undefined : [{ type: "web_search" }],
+      input: `You are the cautious revenue analyst for NKH Dashboard. ${retry ? "Use only the supplied operational context and return the required JSON plan immediately. " : "Research the exact property destination for the requested period. "}Identify verifiable seasonality, public holidays, destination events and attractions that could affect room demand. Use the supplied live property, inventory, occupancy, booking and rate data. Produce specific, achievable actions for the selected period. Never invent an event, rate or competitor fact. Mark uncertain external information with Low confidence. Recommendations are advisory and require Master approval. Do not recommend closing every OTA when occupancy is low. Return only the structured plan requested by the schema. Property data:\n${JSON.stringify(context)}`,
+      text: { format: { type: "json_schema", name: "nkh_revenue_plan", strict: true, schema: planSchema } },
+    }),
+  });
+  const raw = await response.text();
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    throw new Error(`AI service returned an unreadable response (HTTP ${response.status}). Please try again.`);
+  }
+  if (!response.ok) {
+    const apiError = payload.error as Record<string, unknown> | undefined;
+    throw new Error(String(apiError?.message || `AI revenue planning failed (HTTP ${response.status}).`));
+  }
+  return parsePlanText(outputText(payload));
+}
+
 function localDate(value: string) { const [y,m,d] = value.split("-").map(Number); return new Date(y, m - 1, d, 12); }
 function dateKey(value: Date) { return `${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,"0")}-${String(value.getDate()).padStart(2,"0")}`; }
 function buildOccupancy(from: string, to: string, capacity: number, bookings: Booking[]) {
@@ -96,20 +140,13 @@ export async function POST(request: NextRequest) {
     const key = process.env.OPENAI_API_KEY;
     if (!key) throw new Error("OPENAI_API_KEY is not configured in Vercel.");
     const context = { property, planningPeriod: { from, to, objective }, inventory, roomTypes, occupancy, bookings, ratePlans, ratePrices, rateRanges };
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: process.env.OPENAI_REVENUE_MODEL || "gpt-5.6-terra",
-        store: false,
-        tools: [{ type: "web_search" }],
-        input: `You are the cautious revenue analyst for NKH Dashboard. Research the exact property destination for the requested period. Identify verifiable seasonality, public holidays, destination events and attractions that could affect room demand. Use the supplied live property, inventory, occupancy, booking and rate data. Produce specific, achievable actions for the selected period. Never invent an event, rate or competitor fact. Mark uncertain external information with Low confidence. Recommendations are advisory and require Master approval. Do not recommend closing every OTA when occupancy is low. Property data:\n${JSON.stringify(context)}`,
-        text: { format: { type: "json_schema", name: "nkh_revenue_plan", strict: true, schema: planSchema } },
-      }),
-    });
-    const payload = await response.json() as Record<string, unknown>;
-    if (!response.ok) throw new Error(`AI revenue planning failed: ${JSON.stringify(payload).slice(0, 600)}`);
-    const plan = JSON.parse(outputText(payload));
+    let plan;
+    try {
+      plan = await requestRevenuePlan(key, context);
+    } catch (firstError) {
+      console.warn("Revenue planner structured response failed; retrying once.", firstError);
+      plan = await requestRevenuePlan(key, context, true);
+    }
     const saved = await supabaseAdmin<Array<{ id: string }>>("nkh_revenue_plans", {
       method: "POST", prefer: "return=representation",
       body: { property_id: propertyId, period_start: from, period_end: to, objective, generated_by: session?.name, inventory_snapshot: { totalRooms: inventory, roomTypes, occupancy }, plan },
