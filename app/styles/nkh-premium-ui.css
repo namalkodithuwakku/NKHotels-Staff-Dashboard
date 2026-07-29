@@ -532,6 +532,19 @@ body,
   box-shadow: 0 14px 35px rgba(237, 138, 10, .27), 0 0 0 12px rgba(237, 138, 10, .07);
 }
 
+.task-celebration.acknowledge-win {
+  border-color: rgba(237, 138, 10, .23);
+  background:
+    radial-gradient(circle at 50% 22%, rgba(255, 207, 115, .24), transparent 38%),
+    linear-gradient(150deg, #fff, #fff9ee);
+}
+
+.task-celebration.acknowledge-win .celebration-check {
+  border-color: rgba(237, 138, 10, .25);
+  background: linear-gradient(145deg, #ffad2f, var(--nkh-amber));
+  box-shadow: 0 14px 35px rgba(237, 138, 10, .25), 0 0 0 12px rgba(237, 138, 10, .07);
+}
+
 .task-celebration.queue-win {
   border-color: rgba(52, 120, 185, .23);
   background:

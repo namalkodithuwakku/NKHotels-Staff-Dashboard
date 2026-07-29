@@ -51,6 +51,7 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
   const [optimisticDoneIds, setOptimisticDoneIds] = useState<string[]>([]);
   const [optimisticAcknowledgedIds, setOptimisticAcknowledgedIds] = useState<string[]>([]);
   const [celebration, setCelebration] = useState<{
+    kind: "done" | "acknowledged";
     count: number;
     urgent: boolean;
     queueCleared: boolean;
@@ -112,6 +113,7 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
     setSelectedIds(current => current.filter(id => !eligibleIds.includes(id)));
     onOptimisticClose?.(eligibleIds);
     setCelebration({
+      kind: "done",
       count: eligibleIds.length,
       urgent,
       queueCleared: eligibleIds.length >= openTasks.length,
@@ -144,10 +146,16 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
   }
 
   function acknowledge(ids: string[]) {
-    const eligibleIds = shown
-      .filter((task: any) => ids.includes(String(task.id)))
+    const eligible = shown
+      .filter((task: any) => ids.includes(String(task.id)));
+    const eligibleIds = eligible
       .map((task: any) => String(task.id));
     if (!eligibleIds.length) return;
+    const openTasks = tasks.filter((task: any) => {
+      const status = String(task.status || "").toLowerCase();
+      return !status.includes("done") && !status.includes("completed") &&
+        !status.includes("ignored") && !status.includes("acknowledged");
+    });
 
     // Close the cards immediately. Persistence and learning-filter work
     // continue silently without blocking the task workspace.
@@ -157,6 +165,19 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
     );
     setSelectedIds(current => current.filter(id => !eligibleIds.includes(id)));
     onOptimisticClose?.(eligibleIds);
+    setCelebration({
+      kind: "acknowledged",
+      count: eligibleIds.length,
+      urgent: false,
+      queueCleared: eligibleIds.length >= openTasks.length,
+    });
+    window.dispatchEvent(new CustomEvent("nkh-pet-celebrate", {
+      detail: {
+        message: eligibleIds.length > 1
+          ? `${eligibleIds.length} items reviewed and acknowledged.`
+          : "Reviewed and acknowledged!",
+      },
+    }));
 
     void ignoreTasks(eligibleIds, "Reviewed — no further action")
       .then(() => {
@@ -239,14 +260,25 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
         </article>;
       })}</div>}
     {celebration && <div className="task-celebration-layer" role="status" aria-live="polite" onClick={() => setCelebration(null)}>
-      <div className={`task-celebration ${celebration.urgent ? "urgent-win" : ""} ${celebration.queueCleared ? "queue-win" : ""}`}>
+      <div className={`task-celebration ${celebration.kind === "acknowledged" ? "acknowledge-win" : ""} ${celebration.urgent ? "urgent-win" : ""} ${celebration.queueCleared ? "queue-win" : ""}`}>
         <div className="celebration-orbit"><span/><span/><span/></div>
-        <div className="celebration-check">{celebration.urgent ? <Zap size={39}/> : <Check size={42}/>}</div>
+        <div className="celebration-check">{celebration.kind === "acknowledged"
+          ? <CheckSquare2 size={39}/>
+          : celebration.urgent ? <Zap size={39}/> : <Check size={42}/>}</div>
         <Sparkles className="celebration-spark left" size={23}/>
         <Sparkles className="celebration-spark right" size={18}/>
-        <small>{celebration.queueCleared ? "QUEUE CLEARED" : celebration.urgent ? "URGENT WORK RESOLVED" : "TASK COMPLETED"}</small>
-        <h2>{celebration.count > 1 ? `${celebration.count} tasks completed!` : `Great work, ${staffName}!`}</h2>
-        <p>{celebration.queueCleared ? "Everything is under control." : "Another guest operation handled beautifully."}</p>
+        <small>{celebration.queueCleared
+          ? "QUEUE CLEARED"
+          : celebration.kind === "acknowledged" ? "REVIEW COMPLETE"
+          : celebration.urgent ? "URGENT WORK RESOLVED" : "TASK COMPLETED"}</small>
+        <h2>{celebration.kind === "acknowledged"
+          ? celebration.count > 1 ? `${celebration.count} items acknowledged` : "Acknowledged"
+          : celebration.count > 1 ? `${celebration.count} tasks completed!` : `Great work, ${staffName}!`}</h2>
+        <p>{celebration.queueCleared
+          ? "Everything is under control."
+          : celebration.kind === "acknowledged"
+            ? "Reviewed and safely cleared from your active queue."
+            : "Another guest operation handled beautifully."}</p>
       </div>
     </div>}
   </div>;
