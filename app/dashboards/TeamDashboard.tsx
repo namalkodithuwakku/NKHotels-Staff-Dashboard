@@ -20,6 +20,7 @@ import RosterWorkspace from "../components/roster/RosterWorkspace";
 import MobileWorkspaceMenu from "../components/mobile/MobileWorkspaceMenu";
 import TeamBreakWorkspace from "../components/team-break/TeamBreakWorkspace";
 import NikoPet from "../components/pet/NikoPet";
+import CalendarWorkspace from "../components/calendar/CalendarWorkspace";
 
 export type WorkspaceView = "home" | "tasks" | "whatsapp" | "sms" | "scheduled" | "properties" | "roster" | "calendar" | "faq" | "team-break";
 
@@ -167,7 +168,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
           {view === "properties" && <PropertiesWorkspace access={staff.access} />}
           {view === "sms" && <SmsCenter staff={staff} />}
           {view === "roster" && <RosterWorkspace />}
-          {view === "calendar" && <ComingSoonWorkspace title="Calendars" description="Operational events, reminders and property schedules will appear here." />}
+          {view === "calendar" && <CalendarWorkspace />}
           {view === "faq" && <ComingSoonWorkspace title="Hotel FAQ" description="Search approved answers across every active property profile." />}
           {view === "team-break" && <TeamBreakWorkspace staffName={staff.name} />}
         </div>

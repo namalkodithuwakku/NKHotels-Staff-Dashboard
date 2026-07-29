@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { canManageProperties, readServerSession } from "../../../lib/serverSession";
 import { savePropertyIdentificationEmail } from "../../../lib/propertyIdentificationEmail";
+import { normalizeGoogleSheetCode } from "../../../lib/googleSheetCode";
 
-const allowed = ["property_name", "legal_name", "preferred_language", "client_status", "package_name", "notes", "description", "address_line_1", "address_line_2", "city", "country", "timezone", "currency_code", "check_in_time", "check_out_time", "total_rooms", "website_url", "map_url", "logo_url"];
+const allowed = ["property_name", "legal_name", "preferred_language", "client_status", "package_name", "notes", "description", "address_line_1", "address_line_2", "city", "country", "timezone", "currency_code", "check_in_time", "check_out_time", "total_rooms", "website_url", "map_url", "logo_url", "calendar_sheet_code"];
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
@@ -11,6 +12,9 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     const { id } = await context.params;
     const input = await request.json();
     const update = Object.fromEntries(allowed.filter(key => Object.prototype.hasOwnProperty.call(input, key)).map(key => [key, input[key] === "" ? null : input[key]]));
+    if (Object.prototype.hasOwnProperty.call(update, "calendar_sheet_code")) {
+      update.calendar_sheet_code = normalizeGoogleSheetCode(update.calendar_sheet_code);
+    }
     const hasTaskEmail = Object.prototype.hasOwnProperty.call(input, "task_email");
     if (!Object.keys(update).length && !hasTaskEmail) return NextResponse.json({ error: "No supported fields were supplied." }, { status: 400 });
     const data = Object.keys(update).length
