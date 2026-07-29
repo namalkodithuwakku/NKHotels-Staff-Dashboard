@@ -5,6 +5,7 @@ import { readServerSession } from "../../lib/serverSession";
 type Property = { id: string; client_code: string; property_name: string; calendar_sheet_code: string | null; calendar_source_mode: "google_sheet" | "supabase"; currency_code: string | null };
 type Room = { id: string; property_id: string; source_key: string; room_name: string; room_type: string | null; room_status: string; sort_order: number };
 type Booking = { id: string; property_id: string; source_key: string; booking_group_key: string | null; booking_reference: string | null; guest_name: string; room_name: string; room_type: string | null; booking_source: string; booking_status: string; check_in: string; check_out: string; notes: string | null };
+function validDate(value: string | null) { return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null; }
 
 function validMonth(value: string | null) {
   if (!value || !/^\d{4}-\d{2}$/.test(value)) {
@@ -31,9 +32,11 @@ export async function GET(request: NextRequest) {
     if (!property) return NextResponse.json({ properties: [], property: null, rooms: [], bookings: [], sync: null, month });
 
     const [year, monthNumber] = month.split("-").map(Number);
-    const from = `${month}-01`;
+    const requestedFrom = validDate(request.nextUrl.searchParams.get("from"));
+    const requestedTo = validDate(request.nextUrl.searchParams.get("to"));
+    const from = requestedFrom || `${month}-01`;
     const toDate = new Date(Date.UTC(year, monthNumber, 1));
-    const to = `${toDate.getUTCFullYear()}-${String(toDate.getUTCMonth() + 1).padStart(2, "0")}-01`;
+    const to = requestedTo || `${toDate.getUTCFullYear()}-${String(toDate.getUTCMonth() + 1).padStart(2, "0")}-01`;
     const propertyId = encodeURIComponent(property.id);
     const [rooms, bookings, syncRows] = await Promise.all([
       supabaseAdmin<Room[]>(`nkh_calendar_rooms?property_id=eq.${propertyId}&select=*&order=sort_order.asc,room_name.asc`),

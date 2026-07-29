@@ -40,3 +40,12 @@ Sheet sync replaces the Supabase calendar copy.
 
 The calendar source switch is intentionally hidden from operational users.
 Only a verified Master session can change it; the API enforces the same rule.
+
+## Calendar workspace
+
+- 42-day rolling view keeps Today in the centre and continues into next month.
+- Month selection and seven-day navigation are separate.
+- Vertical zoom changes room-row height without shrinking date columns.
+- Fullscreen mode is available.
+- Reservation details show all stored guest, stay, contact, occupancy, payment,
+  reference, note and audit information.
