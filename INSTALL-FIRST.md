@@ -11,7 +11,8 @@
 - Finishing the assignment automatically completes its linked dashboard task.
 - The result sheet shows every question, the staff answer, the correct answer, and the explanation.
 - Empty question visuals retain the manual **Generate image** action.
-- Academy automatically enters a focused desktop layout by folding the main operations menu.
+- Every desktop workspace uses a focused full-width layout with a slim left-center menu clip.
+- Hovering over the clip slides the complete dashboard menu into view; moving away folds it automatically.
 - The course library appears as a readable left-side navigator.
 - Questions, definitions, answers, timers, and result sheets use a larger eye-friendly learning layout.
 
