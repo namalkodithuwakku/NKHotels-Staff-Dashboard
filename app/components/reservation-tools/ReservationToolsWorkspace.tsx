@@ -12,7 +12,7 @@ type Finding = {
   differences: string[];
   matchScore: number;
 };
-type Result = { auditId: string; summary: { total: number; matched: number; differences: number; missingDashboard: number; missingOta: number; from: string; to: string }; findings: Finding[] };
+type Result = { auditId: string; summary: { total: number; matched: number; differences: number; cancellationIssues: number; missingDashboard: number; missingOta: number; from: string; to: string }; findings: Finding[] };
 const labels = { matched: "Matched", difference: "Different", missing_dashboard: "Missing in Dashboard", missing_ota: "Missing in OTA" };
 function csvValue(value: unknown) { return `"${String(value ?? "").replaceAll("\"", "\"\"")}"`; }
 
@@ -68,10 +68,11 @@ export default function ReservationToolsWorkspace() {
     {!result && !running && <div className="audit-empty"><FileSearch/><h3>Ready for the first OTA audit</h3><p>Export a reservation list for one property and date range. The file is read for this audit and is not retained.</p></div>}
     {running && <div className="audit-processing"><i/><h3>Building the reservation groups</h3><p>Reading references, guests, dates, room allocations and statuses, then checking the calendar.</p></div>}
     {result && <div className="audit-results">
-      <div className="audit-scorecards">
+      <div className="audit-scorecards audit-scorecards-five">
         <article className="total"><small>OTA RESERVATIONS</small><strong>{result.summary.total}</strong><span>{result.summary.from} → {result.summary.to}</span></article>
         <article className="good"><small>FULLY MATCHED</small><strong>{result.summary.matched}</strong><span>No difference found</span></article>
         <article className="warn"><small>DETAIL DIFFERENCES</small><strong>{result.summary.differences}</strong><span>Dates, rooms or status</span></article>
+        <article className="cancel bad"><small>CANCELLATION ALERTS</small><strong>{result.summary.cancellationIssues || 0}</strong><span>Needs immediate verification</span></article>
         <article className="bad"><small>MISSING</small><strong>{result.summary.missingDashboard + result.summary.missingOta}</strong><span>One side only</span></article>
       </div>
       <nav className="audit-filters">{(["all","difference","missing_dashboard","missing_ota","matched"] as const).map(value => <button key={value} className={filter === value ? "active" : ""} onClick={() => setFilter(value)}>{value === "all" ? "All results" : labels[value]}</button>)}</nav>

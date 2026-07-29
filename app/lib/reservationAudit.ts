@@ -37,6 +37,16 @@ const key = (value: unknown) => clean(value).toLowerCase().replace(/[^a-z0-9]/g,
 const date = (value: unknown) => clean(value).slice(0, 10);
 const sourceKey = (value: unknown) => key(value).replace("com", "");
 const NAME_TITLES = new Set(["mr", "mrs", "ms", "miss", "dr", "rev", "prof", "sir", "madam", "mstr"]);
+const CANCELLATION_WORDS = ["cancel", "cancelled", "canceled", "void", "voided", "no show", "noshow", "rejected"];
+const ACTIVE_WORDS = ["confirmed", "active", "booked", "reserved", "modified", "amended"];
+
+function statusFamily(value: unknown) {
+  const text = clean(value).toLowerCase().replace(/[_-]+/g, " ");
+  if (CANCELLATION_WORDS.some(word => text.includes(word))) return "cancelled";
+  if (text.includes("pending") || text.includes("request")) return "pending";
+  if (ACTIVE_WORDS.some(word => text.includes(word))) return "active";
+  return key(text);
+}
 
 function nameTokens(value: unknown) {
   return clean(value)
@@ -103,7 +113,16 @@ function compare(ota: OtaReservation, rows: CalendarBooking[]) {
   if (date(ota.checkOut) !== date(first.check_out)) differences.push(`Check-out: OTA ${ota.checkOut}; Dashboard ${first.check_out}`);
   if (Math.max(1, ota.roomCount) !== rows.length) differences.push(`Rooms: OTA ${Math.max(1, ota.roomCount)}; Dashboard ${rows.length}`);
   if (!nameMatch(ota.guestName, first.guest_name).equivalent) differences.push(`Guest: OTA ${ota.guestName}; Dashboard ${first.guest_name}`);
-  if (key(ota.status) && key(ota.status) !== key(first.booking_status)) differences.push(`Status: OTA ${ota.status}; Dashboard ${first.booking_status}`);
+  const otaStatus = statusFamily(ota.status), dashboardStatus = statusFamily(first.booking_status);
+  if (otaStatus && dashboardStatus && otaStatus !== dashboardStatus) {
+    if (otaStatus === "cancelled" && dashboardStatus !== "cancelled") {
+      differences.push(`CANCELLATION NOT APPLIED: OTA is ${ota.status}; Dashboard is ${first.booking_status}`);
+    } else if (otaStatus !== "cancelled" && dashboardStatus === "cancelled") {
+      differences.push(`STATUS CONFLICT: OTA is ${ota.status}; Dashboard is ${first.booking_status}`);
+    } else {
+      differences.push(`Status: OTA ${ota.status}; Dashboard ${first.booking_status}`);
+    }
+  }
   const otaTypes = ota.roomTypes.map(key).filter(Boolean);
   const dashboardTypes = rows.map(row => key(row.room_type)).filter(Boolean);
   if (otaTypes.length && !otaTypes.every(type => dashboardTypes.some(candidate => candidate.includes(type) || type.includes(candidate)))) {
@@ -127,15 +146,26 @@ export function runReservationAudit(otaRows: OtaReservation[], calendarRows: Cal
       if (candidate > bestScore) { bestScore = candidate; bestIndex = index; }
     });
     if (bestIndex < 0 || bestScore < 20) {
-      findings.push({ type: "missing_dashboard", severity: "critical", ota, dashboard: null, differences: ["Reservation exists in the OTA list but not in the Dashboard calendar."], matchScore: Math.max(0, bestScore) });
+      const cancelled = statusFamily(ota.status) === "cancelled";
+      findings.push({
+        type: "missing_dashboard",
+        severity: cancelled ? "warning" : "critical",
+        ota,
+        dashboard: null,
+        differences: [cancelled
+          ? "OTA cancellation found, but no matching Dashboard reservation history exists. Verify the reference before acknowledging."
+          : "Reservation exists in the OTA list but not in the Dashboard calendar."],
+        matchScore: Math.max(0, bestScore),
+      });
       return;
     }
     used.add(bestIndex);
     const dashboard = groups[bestIndex];
     const differences = compare(ota, dashboard);
+    const cancellationConflict = differences.some(value => value.startsWith("CANCELLATION NOT APPLIED") || value.startsWith("STATUS CONFLICT"));
     findings.push({
       type: differences.length ? "difference" : "matched",
-      severity: differences.length ? "warning" : "ok",
+      severity: cancellationConflict ? "critical" : differences.length ? "warning" : "ok",
       ota, dashboard, differences, matchScore: bestScore,
     });
   });

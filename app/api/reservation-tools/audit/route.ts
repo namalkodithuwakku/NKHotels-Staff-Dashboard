@@ -53,7 +53,7 @@ async function extract(file: File, otaSource: string): Promise<OtaReservation[]>
         role: "user",
         content: [
           { type: "input_file", filename: file.name, file_data: `data:${mime};base64,${base64}`, detail: mime === "application/pdf" ? "low" : undefined },
-          { type: "input_text", text: `Extract every ${otaSource} hotel reservation. One result must represent the complete reservation, even when it contains multiple rooms or nights. Use ISO YYYY-MM-DD dates. Preserve the OTA confirmation/reference. roomCount is the total number of rooms; roomTypes lists each booked type. Do not invent missing information.` },
+          { type: "input_text", text: `Extract every ${otaSource} hotel reservation, including confirmed, modified, cancelled/canceled, rejected, no-show and pending reservations. One result must represent the complete reservation, even when it contains multiple rooms or nights. Use ISO YYYY-MM-DD dates. Preserve the OTA confirmation/reference exactly. roomCount is the total number of rooms; roomTypes lists each booked type. Set status to the operational state clearly stated in the file—especially Cancellation/Cancelled—and never infer Confirmed when the document says cancelled. Do not invent missing information.` },
         ],
       }],
       text: { format: { type: "json_schema", name: "ota_reservations", strict: true, schema } },
@@ -88,13 +88,18 @@ export async function POST(request: NextRequest) {
     const from = otaRows.map(row => row.checkIn).sort()[0];
     const to = otaRows.map(row => row.checkOut).sort().at(-1);
     const bookings = await supabaseAdmin<CalendarBooking[]>(
-      `nkh_calendar_bookings?select=*&property_id=eq.${encodeURIComponent(propertyId)}&check_in=lt.${encodeURIComponent(to || from)}&check_out=gt.${encodeURIComponent(from)}&booking_status=not.in.(Cancelled,Canceled)`,
+      `nkh_calendar_bookings?select=*&property_id=eq.${encodeURIComponent(propertyId)}&check_in=lt.${encodeURIComponent(to || from)}&check_out=gt.${encodeURIComponent(from)}`,
     );
     const findings = runReservationAudit(otaRows, bookings, otaSource);
     const summary = {
       total: otaRows.length,
       matched: findings.filter(item => item.type === "matched").length,
       differences: findings.filter(item => item.type === "difference").length,
+      cancellationIssues: findings.filter(item => item.differences.some(value =>
+        value.startsWith("CANCELLATION NOT APPLIED") ||
+        value.startsWith("STATUS CONFLICT") ||
+        value.startsWith("OTA cancellation found")
+      )).length,
       missingDashboard: findings.filter(item => item.type === "missing_dashboard").length,
       missingOta: findings.filter(item => item.type === "missing_ota").length,
       from, to,

@@ -1,0 +1,26 @@
+.audit-scorecards.audit-scorecards-five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.audit-finding.critical .audit-finding-main em {
+  color: #b4232f;
+  font-weight: 800;
+}
+
+@media (max-width: 1120px) {
+  .audit-scorecards.audit-scorecards-five {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .audit-scorecards.audit-scorecards-five {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 430px) {
+  .audit-scorecards.audit-scorecards-five {
+    grid-template-columns: 1fr;
+  }
+}

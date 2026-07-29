@@ -50,5 +50,6 @@
 @import "./styles/components/niko-pet.css";
 @import "./styles/components/operations-calendar.css";
 @import "./styles/components/reservation-tools.css";
+@import "./styles/components/reservation-audit-cancellation.css";
 @import "./styles/pwa-mobile.css";
 @import "./styles/nkh-premium-ui.css";
