@@ -8,6 +8,9 @@
 - Daily learning: 10 questions in 20 minutes.
 - Monthly exam: 40 questions in 60 minutes.
 - The exam is assigned on the staff member's final scheduled working day of the month.
+- Master and Team dashboards include a live **Scheduled Tasks** page.
+- Academy schedules are prepared from the roster through the end of the following month.
+- Future lessons and exams remain in Scheduled Tasks and become Shift Tasks only on their scheduled date.
 - Finishing the assignment automatically completes its linked dashboard task.
 - The result sheet shows every question, the staff answer, the correct answer, and the explanation.
 - Empty question visuals retain the manual **Generate image** action.

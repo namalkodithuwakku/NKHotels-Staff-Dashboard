@@ -19,6 +19,12 @@ function colomboDate() {
   return `${value("year")}-${value("month")}-${value("day")}`;
 }
 
+function scheduleEnd(date: string) {
+  const [year, month] = date.split("-").map(Number);
+  const end = new Date(Date.UTC(year, month + 1, 0));
+  return end.toISOString().slice(0, 10);
+}
+
 function hash(value: string) {
   let result = 2166136261;
   for (let index = 0; index < value.length; index++) {
@@ -103,26 +109,29 @@ async function createTask(
 
 export async function runAcademyAssignmentEngine() {
   const date = colomboDate();
-  const [year, month, day] = date.split("-").map(Number);
-  const monthEnd = new Date(year, month, 0);
-  const lastDate = `${year}-${String(month).padStart(2, "0")}-${String(monthEnd.getDate()).padStart(2, "0")}`;
-  const [shifts, futureShifts, questions] = await Promise.all([
+  const endDate = scheduleEnd(date);
+  const [rawShifts, questions] = await Promise.all([
     supabaseAdmin<Shift[]>(
-      `nkh_roster_entries?select=staff_id,shift_date,start_time,end_time,staff:nkh_staff(id,display_name)&shift_date=eq.${date}&status=eq.Scheduled`
+      `nkh_roster_entries?select=staff_id,shift_date,start_time,end_time,staff:nkh_staff(id,display_name)&shift_date=gte.${date}&shift_date=lte.${endDate}&status=eq.Scheduled&order=shift_date.asc`
     ),
-    day >= 25
-      ? supabaseAdmin<Array<{ staff_id: string }>>(
-          `nkh_roster_entries?select=staff_id&shift_date=gt.${date}&shift_date=lte.${lastDate}&status=eq.Scheduled`
-        )
-      : Promise.resolve([]),
     pagedQuestions(),
   ]);
-  const staffWithFutureShift = new Set(futureShifts.map(item => item.staff_id));
+  const shifts = Array.from(
+    new Map(rawShifts.map(shift => [`${shift.staff_id}|${shift.shift_date}`, shift])).values()
+  );
+  const finalShiftByStaffMonth = new Map<string, string>();
+  shifts.forEach(shift => {
+    const key = `${shift.staff_id}|${shift.shift_date.slice(0, 7)}`;
+    const current = finalShiftByStaffMonth.get(key);
+    if (!current || shift.shift_date > current) finalShiftByStaffMonth.set(key, shift.shift_date);
+  });
   const results: Array<Record<string, unknown>> = [];
 
   for (const shift of shifts) {
     if (!shift.staff) continue;
-    const examDay = day >= 25 && !staffWithFutureShift.has(shift.staff_id);
+    const [year, month, day] = shift.shift_date.split("-").map(Number);
+    const staffMonth = `${shift.staff_id}|${shift.shift_date.slice(0, 7)}`;
+    const examDay = day >= 25 && finalShiftByStaffMonth.get(staffMonth) === shift.shift_date;
     const type = examDay ? "Monthly Exam" : "Daily";
     const count = examDay ? 40 : 10;
     const duration = examDay ? 60 : 20;
@@ -165,8 +174,16 @@ export async function runAcademyAssignmentEngine() {
         if (!assignment) throw error;
       }
     }
-    const taskId = await createTask(assignment, shift, type, course?.name || null, count, duration);
-    results.push({ staff: shift.staff.display_name, status: "ready", type, taskId });
+    const taskId = shift.shift_date === date
+      ? await createTask(assignment, shift, type, course?.name || null, count, duration)
+      : assignment.task_id;
+    results.push({
+      staff: shift.staff.display_name,
+      date: shift.shift_date,
+      status: shift.shift_date === date ? "released" : "scheduled",
+      type,
+      taskId,
+    });
   }
-  return { success: true, date, assignments: results };
+  return { success: true, date, scheduledThrough: endDate, assignments: results };
 }
