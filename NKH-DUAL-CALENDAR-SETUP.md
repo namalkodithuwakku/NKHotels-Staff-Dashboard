@@ -60,6 +60,10 @@ Only a verified Master session can change it; the API enforces the same rule.
   about one second and then tap the destination room name.
 - Room-status controls are retained in the backend but temporarily hidden from
   the calendar so the room rows stay compact.
+- The selected property is remembered on that device. Superseded calendar
+  requests are cancelled, and late responses are accepted only when both the
+  property and visible date range still match. This prevents an older Sheet
+  refresh from replacing the property currently being viewed.
 - Cancelling preserves operational history. Permanent deletion is restricted
   to Master access.
 

@@ -20,6 +20,7 @@ const sourceClass: Record<string, string> = {
   "Travel Agent": "agent", Blocked: "blocked", Direct: "direct", FIT: "fit",
 };
 const DAY = 86_400_000;
+const LAST_PROPERTY_KEY = "nkh-calendar-property";
 function monthValue(date = new Date()) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`; }
 function dateKey(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
 function localDate(value: string) { const [year, month, day] = value.split("-").map(Number); return new Date(year, month - 1, day, 12); }
@@ -47,9 +48,14 @@ export default function CalendarWorkspace() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [backgroundSyncing, setBackgroundSyncing] = useState(false);
+  const [propertyReady, setPropertyReady] = useState(false);
   const [error, setError] = useState("");
   const calendarRef = useRef<HTMLElement>(null);
-  const backgroundSyncRef = useRef(false);
+  const selectedPropertyRef = useRef("");
+  const activeLoadRef = useRef<AbortController | null>(null);
+  const loadSequenceRef = useRef(0);
+  const activeViewRef = useRef("");
+  const backgroundSyncRef = useRef(new Set<string>());
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const today = useMemo(() => new Date(), []);
   const currentMonth = month === monthValue(today);
@@ -62,40 +68,78 @@ export default function CalendarWorkspace() {
   const viewDates = useMemo(() => Array.from({ length: timelineDays }, (_, index) => addDays(viewStart, index)), [viewStart]);
 
   const reloadCache = useCallback(async (requestedProperty: string, requestedMonth: string, from: Date, to: Date) => {
+    const requestedView = `${requestedProperty}|${requestedMonth}|${dateKey(from)}|${dateKey(to)}`;
+    if (!requestedProperty || selectedPropertyRef.current !== requestedProperty || activeViewRef.current !== requestedView) return;
     const params = new URLSearchParams({ month: requestedMonth, propertyId: requestedProperty, from: dateKey(from), to: dateKey(to) });
     const response = await fetch(`/api/calendar?${params}`, { cache: "no-store" });
     const payload = await response.json() as Payload;
-    if (response.ok) setData(payload);
+    if (response.ok && selectedPropertyRef.current === requestedProperty && activeViewRef.current === requestedView && payload.property?.id === requestedProperty) {
+      setData(payload);
+    }
   }, []);
 
   const refreshSourceInBackground = useCallback(async (requestedProperty: string, requestedMonth: string, from: Date, to: Date) => {
-    if (!requestedProperty || backgroundSyncRef.current) return;
-    backgroundSyncRef.current = true; setBackgroundSyncing(true);
+    if (!requestedProperty || selectedPropertyRef.current !== requestedProperty || backgroundSyncRef.current.has(requestedProperty)) return;
+    backgroundSyncRef.current.add(requestedProperty); setBackgroundSyncing(true);
     try {
       const response = await fetch("/api/calendar/refresh", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ propertyId: requestedProperty }) });
-      if (response.ok) await reloadCache(requestedProperty, requestedMonth, from, to);
+      if (response.ok && selectedPropertyRef.current === requestedProperty) {
+        await reloadCache(requestedProperty, requestedMonth, from, to);
+      }
     } catch (reason) { console.error("Background calendar refresh failed.", reason); }
-    finally { backgroundSyncRef.current = false; setBackgroundSyncing(false); }
+    finally {
+      backgroundSyncRef.current.delete(requestedProperty);
+      setBackgroundSyncing(backgroundSyncRef.current.size > 0);
+    }
   }, [reloadCache]);
 
   const load = useCallback(async (requestedProperty = propertyId, requestedMonth = month) => {
+    const sequence = ++loadSequenceRef.current;
+    activeViewRef.current = `${requestedProperty}|${requestedMonth}|${dateKey(viewStart)}|${dateKey(viewEnd)}`;
+    activeLoadRef.current?.abort();
+    const controller = new AbortController();
+    activeLoadRef.current = controller;
     setLoading(true); setError("");
     try {
       const params = new URLSearchParams({ month: requestedMonth, from: dateKey(viewStart), to: dateKey(viewEnd) });
       if (requestedProperty) params.set("propertyId", requestedProperty);
-      const response = await fetch(`/api/calendar?${params}`, { cache: "no-store" });
+      const response = await fetch(`/api/calendar?${params}`, { cache: "no-store", signal: controller.signal });
       const payload = await response.json() as Payload;
+      if (controller.signal.aborted || sequence !== loadSequenceRef.current) return;
       if (!response.ok) throw new Error(payload.error || "Unable to load calendar.");
+      if (requestedProperty && payload.property?.id !== requestedProperty) {
+        window.localStorage.removeItem(LAST_PROPERTY_KEY);
+        selectedPropertyRef.current = "";
+        setPropertyId("");
+        setData({ ...payload, property: null, rooms: [], bookings: [], sync: null });
+        return;
+      }
+      if (selectedPropertyRef.current && payload.property?.id !== selectedPropertyRef.current) return;
+      if (!selectedPropertyRef.current && payload.property?.id) {
+        selectedPropertyRef.current = payload.property.id;
+        window.localStorage.setItem(LAST_PROPERTY_KEY, payload.property.id);
+        setPropertyId(payload.property.id);
+      }
       setData(payload);
-      if (payload.property?.id) setPropertyId(payload.property.id);
       if (payload.property?.calendar_source_mode === "google_sheet" && payload.property.calendar_sheet_code) {
         void refreshSourceInBackground(payload.property.id, requestedMonth, viewStart, viewEnd);
       }
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to load calendar."); }
-    finally { setLoading(false); }
+    } catch (reason) {
+      if (reason instanceof DOMException && reason.name === "AbortError") return;
+      if (sequence === loadSequenceRef.current) setError(reason instanceof Error ? reason.message : "Unable to load calendar.");
+    } finally {
+      if (sequence === loadSequenceRef.current) setLoading(false);
+    }
   }, [month, propertyId, refreshSourceInBackground, viewStart, viewEnd]);
 
-  useEffect(() => { void load(propertyId, month); }, [month, propertyId, load]);
+  useEffect(() => {
+    const remembered = window.localStorage.getItem(LAST_PROPERTY_KEY) || "";
+    selectedPropertyRef.current = remembered;
+    if (remembered) setPropertyId(remembered);
+    setPropertyReady(true);
+    return () => activeLoadRef.current?.abort();
+  }, []);
+  useEffect(() => { if (propertyReady) void load(propertyId, month); }, [month, propertyId, propertyReady, load]);
   useEffect(() => {
     const handler = () => setFullscreen(document.fullscreenElement === calendarRef.current);
     document.addEventListener("fullscreenchange", handler);
@@ -122,8 +166,24 @@ export default function CalendarWorkspace() {
     if (document.fullscreenElement) await document.exitFullscreen();
     else await calendarRef.current.requestFullscreen();
   }
-  function chooseMonth(value: string) { setMonth(value); setWeekOffset(0); }
-  function goToday() { setMonth(monthValue(today)); setWeekOffset(0); setSelectedCells([]); }
+  function chooseMonth(value: string) { activeViewRef.current = ""; setMonth(value); setWeekOffset(0); }
+  function chooseProperty(value: string) {
+    selectedPropertyRef.current = value;
+    activeViewRef.current = "";
+    window.localStorage.setItem(LAST_PROPERTY_KEY, value);
+    activeLoadRef.current?.abort();
+    setPropertyId(value);
+    setSelected(null); setEditing(null); setDraft(null); setSelectedCells([]); setMovingBooking(null);
+    setData(previous => ({
+      ...previous,
+      property: previous.properties.find(property => property.id === value) || null,
+      rooms: [],
+      bookings: [],
+      sync: null,
+    }));
+  }
+  function shiftWeek(amount: number) { activeViewRef.current = ""; setWeekOffset(value => value + amount); }
+  function goToday() { activeViewRef.current = ""; setMonth(monthValue(today)); setWeekOffset(0); setSelectedCells([]); }
   function datesForRange(start: string, end: string) {
     const result: string[] = [];
     for (let date = localDate(start); date <= localDate(end); date = addDays(date, 1)) result.push(dateKey(date));
@@ -215,7 +275,7 @@ export default function CalendarWorkspace() {
     <header className="calendar-toolbar">
       <div><small>LIVE PROPERTY COVERAGE</small><h2>Reservation calendar</h2><p>{nativeMode ? "Live booking calendar managed directly in NKH Dashboard." : "Read-only booking view copied from the property Google Sheet."}</p></div>
       <div className="calendar-controls">
-        <select value={propertyId} onChange={event => setPropertyId(event.target.value)} aria-label="Property">{data.properties.map(property => <option key={property.id} value={property.id}>{property.property_name}</option>)}</select>
+        <select value={propertyId} onChange={event => chooseProperty(event.target.value)} aria-label="Property">{data.properties.map(property => <option key={property.id} value={property.id}>{property.property_name}</option>)}</select>
         {nativeMode && <button className="calendar-add-booking" onClick={() => { setDraft(null); setEditing("new"); }}><Plus size={16}/> Add booking</button>}
         {!nativeMode && <button className={`calendar-refresh ${backgroundSyncing ? "syncing" : ""}`} onClick={() => void refreshSourceInBackground(propertyId, month, viewStart, viewEnd)} disabled={loading || backgroundSyncing} aria-label="Refresh calendar"><RefreshCw size={17}/></button>}
       </div>
@@ -223,7 +283,7 @@ export default function CalendarWorkspace() {
 
     <div className="calendar-navigation">
       <label className="calendar-month-picker"><span>Month</span><input type="month" value={month} onChange={event => chooseMonth(event.target.value)}/></label>
-      <div className="calendar-week-skipper"><button onClick={() => setWeekOffset(value => value - 1)}><ChevronLeft size={17}/> Previous week</button><button className="calendar-today" onClick={goToday}>Today</button><button onClick={() => setWeekOffset(value => value + 1)}>Next week <ChevronRight size={17}/></button></div>
+      <div className="calendar-week-skipper"><button onClick={() => shiftWeek(-1)}><ChevronLeft size={17}/> Previous week</button><button className="calendar-today" onClick={goToday}>Today</button><button onClick={() => shiftWeek(1)}>Next week <ChevronRight size={17}/></button></div>
       <div className="calendar-view-tools"><span>Vertical zoom</span><button onClick={() => { setZoomTouched(true); setRowHeight(value => Math.max(19, value - 4)); }} aria-label="Zoom out vertically"><Minus size={16}/></button><b>{Math.round((rowHeight / 64) * 100)}%</b><button onClick={() => { setZoomTouched(true); setRowHeight(value => Math.min(104, value + 4)); }} aria-label="Zoom in vertically"><Plus size={16}/></button><button onClick={() => void toggleFullscreen()} aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}>{fullscreen ? <Minimize2 size={17}/> : <Maximize2 size={17}/>}</button></div>
     </div>
 
