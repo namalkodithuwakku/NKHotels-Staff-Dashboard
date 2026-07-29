@@ -162,6 +162,29 @@ function readNKHPropertyCalendar_(spreadsheetId) {
         details.guest ||
         "Guest"
       ).trim();
+      var bookingReference = String(
+        details.bookingRef ||
+        ""
+      ).trim();
+      var notes = String(
+        reservation.notes ||
+        details.notes ||
+        ""
+      ).trim();
+      var bookingSource = String(
+        reservation.source ||
+        details.source ||
+        "FIT"
+      ).trim();
+      var groupKey = bookingReference
+        ? "REF|" + bookingReference.toLowerCase()
+        : [
+            guestName.toLowerCase().replace(/\s+/g, " "),
+            bookingSource.toLowerCase(),
+            checkIn,
+            checkOut,
+            notes.toLowerCase().replace(/\s+/g, " ")
+          ].join("|");
 
       if (!roomName || !checkIn || !checkOut) return;
 
@@ -172,11 +195,8 @@ function readNKHPropertyCalendar_(spreadsheetId) {
           checkIn,
           checkOut
         ].join("|"),
-        bookingReference: String(
-          details.bookingRef ||
-          bookingId ||
-          ""
-        ).trim(),
+        groupKey: groupKey,
+        bookingReference: bookingReference || bookingId,
         guestName: guestName,
         roomName: roomName,
         roomType: String(
@@ -184,11 +204,7 @@ function readNKHPropertyCalendar_(spreadsheetId) {
           details.roomType ||
           ""
         ).trim(),
-        bookingSource: String(
-          reservation.source ||
-          details.source ||
-          "FIT"
-        ).trim(),
+        bookingSource: bookingSource,
         bookingStatus: String(
           reservation.status ||
           details.bookingStatus ||
@@ -196,11 +212,7 @@ function readNKHPropertyCalendar_(spreadsheetId) {
         ).trim(),
         checkIn: checkIn,
         checkOut: checkOut,
-        notes: String(
-          reservation.notes ||
-          details.notes ||
-          ""
-        ).trim()
+        notes: notes
       });
     });
   });

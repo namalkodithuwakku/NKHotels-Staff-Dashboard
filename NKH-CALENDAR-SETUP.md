@@ -11,6 +11,7 @@ format or recreate any source sheet.
 
 1. `supabase/migrations/20260729030000_property_calendar_sheet_code.sql`
 2. `supabase/migrations/20260729040000_read_only_property_calendar.sql`
+3. `supabase/migrations/20260729050000_calendar_booking_groups.sql`
 
 ## 2. Add the Vercel secret
 
@@ -86,4 +87,6 @@ from the client portal so its response can be mapped exactly.
 - Today and weekends are highlighted.
 - Booking bars use source colours.
 - Clicking a booking opens read-only details.
+- Matching multi-room allocations remain visible on every room row but are
+  counted and displayed as one logical booking.
 - The last successful sync and any sync error are shown above the calendar.

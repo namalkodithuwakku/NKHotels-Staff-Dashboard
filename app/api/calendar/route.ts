@@ -4,7 +4,7 @@ import { readServerSession } from "../../lib/serverSession";
 
 type Property = { id: string; client_code: string; property_name: string; calendar_sheet_code: string | null };
 type Room = { id: string; property_id: string; source_key: string; room_name: string; room_type: string | null; room_status: string; sort_order: number };
-type Booking = { id: string; property_id: string; source_key: string; booking_reference: string | null; guest_name: string; room_name: string; room_type: string | null; booking_source: string; booking_status: string; check_in: string; check_out: string; notes: string | null };
+type Booking = { id: string; property_id: string; source_key: string; booking_group_key: string | null; booking_reference: string | null; guest_name: string; room_name: string; room_type: string | null; booking_source: string; booking_status: string; check_in: string; check_out: string; notes: string | null };
 
 function validMonth(value: string | null) {
   if (!value || !/^\d{4}-\d{2}$/.test(value)) {

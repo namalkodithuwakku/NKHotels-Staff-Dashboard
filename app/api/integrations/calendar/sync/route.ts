@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 
 type RoomInput = { sourceKey?: string; roomName?: string; roomType?: string; roomStatus?: string; sortOrder?: number };
-type BookingInput = { sourceKey?: string; bookingReference?: string; guestName?: string; roomName?: string; roomType?: string; bookingSource?: string; bookingStatus?: string; checkIn?: string; checkOut?: string; notes?: string };
+type BookingInput = { sourceKey?: string; groupKey?: string; bookingReference?: string; guestName?: string; roomName?: string; roomType?: string; bookingSource?: string; bookingStatus?: string; checkIn?: string; checkOut?: string; notes?: string };
 
 function authorized(request: NextRequest) {
   const configured = String(process.env.NKH_CALENDAR_SYNC_SECRET || "");
@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       .map(booking => ({
         property_id: propertyId,
         source_key: text(booking.sourceKey, `${text(booking.roomName)}|${text(booking.checkIn)}|${text(booking.checkOut)}|${text(booking.guestName)}`),
+        booking_group_key: text(booking.groupKey, `${text(booking.guestName).toLowerCase()}|${text(booking.bookingSource, "FIT").toLowerCase()}|${text(booking.checkIn)}|${text(booking.checkOut)}|${text(booking.notes).toLowerCase()}`),
         booking_reference: text(booking.bookingReference) || null,
         guest_name: text(booking.guestName, "Guest"),
         room_name: text(booking.roomName),

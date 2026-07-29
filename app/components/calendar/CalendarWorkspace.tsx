@@ -5,7 +5,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react
 
 type Property = { id: string; client_code: string; property_name: string; calendar_sheet_code: string | null };
 type Room = { id: string; room_name: string; room_type: string | null; room_status: string; sort_order: number };
-type Booking = { id: string; guest_name: string; room_name: string; room_type: string | null; booking_source: string; booking_status: string; check_in: string; check_out: string; booking_reference: string | null; notes: string | null };
+type Booking = { id: string; booking_group_key: string | null; guest_name: string; room_name: string; room_type: string | null; booking_source: string; booking_status: string; check_in: string; check_out: string; booking_reference: string | null; notes: string | null };
 type Payload = { properties: Property[]; property: Property | null; rooms: Room[]; bookings: Booking[]; sync: { last_completed_at?: string; last_status?: string; last_error?: string; rooms_synced?: number; bookings_synced?: number } | null; month: string; error?: string };
 
 const sourceClass: Record<string, string> = {
@@ -80,6 +80,19 @@ export default function CalendarWorkspace() {
     data.bookings.forEach(booking => { if (!known.includes(booking.room_name)) known.push(booking.room_name); });
     return known;
   }, [data]);
+  const bookingCount = useMemo(
+    () => new Set(data.bookings.map(booking => booking.booking_group_key || booking.id)).size,
+    [data.bookings]
+  );
+  const selectedRooms = useMemo(
+    () => selected
+      ? data.bookings
+          .filter(booking => (booking.booking_group_key || booking.id) === (selected.booking_group_key || selected.id))
+          .map(booking => booking.room_name)
+          .filter((room, index, rooms) => rooms.indexOf(room) === index)
+      : [],
+    [data.bookings, selected]
+  );
 
   return <section className="operations-calendar">
     <header className="calendar-toolbar">
@@ -101,7 +114,7 @@ export default function CalendarWorkspace() {
     <div className="calendar-status-row">
       <span className={data.sync?.last_status === "Ready" ? "ready" : ""}><i />{backgroundSyncing ? "Checking source in background" : data.sync?.last_status || "Waiting for first sync"}</span>
       <span>{data.sync?.last_completed_at ? `Updated ${new Date(data.sync.last_completed_at).toLocaleString()}` : "No calendar copy received yet"}</span>
-      <span>{roomNames.length} rooms · {data.bookings.length} bookings this month</span>
+      <span>{roomNames.length} rooms · {bookingCount} bookings this month</span>
     </div>
 
     {error ? <div className="calendar-message error">{error}<button onClick={() => void load()}>Try again</button></div>
@@ -137,6 +150,6 @@ export default function CalendarWorkspace() {
       </div>}
 
     <div className="calendar-legend">{["Booking.com","Expedia","Airbnb","Agoda","Travel Agent","FIT","Blocked"].map(source => <span key={source}><i className={sourceClass[source]}/>{source}</span>)}</div>
-    {selected && <div className="calendar-detail-backdrop" onClick={() => setSelected(null)}><article onClick={event => event.stopPropagation()}><button onClick={() => setSelected(null)}>×</button><small>RESERVATION DETAILS</small><h3>{selected.guest_name}</h3><dl><div><dt>Room</dt><dd>{selected.room_name}</dd></div><div><dt>Stay</dt><dd>{selected.check_in} → {selected.check_out}</dd></div><div><dt>Source</dt><dd>{selected.booking_source}</dd></div><div><dt>Status</dt><dd>{selected.booking_status}</dd></div>{selected.booking_reference && <div><dt>Reference</dt><dd>{selected.booking_reference}</dd></div>}</dl>{selected.notes && <p>{selected.notes}</p>}<em>Read-only view</em></article></div>}
+    {selected && <div className="calendar-detail-backdrop" onClick={() => setSelected(null)}><article onClick={event => event.stopPropagation()}><button onClick={() => setSelected(null)}>×</button><small>RESERVATION DETAILS</small><h3>{selected.guest_name}</h3><dl><div><dt>{selectedRooms.length > 1 ? "Rooms" : "Room"}</dt><dd>{selectedRooms.join(", ") || selected.room_name}</dd></div><div><dt>Stay</dt><dd>{selected.check_in} → {selected.check_out}</dd></div><div><dt>Source</dt><dd>{selected.booking_source}</dd></div><div><dt>Status</dt><dd>{selected.booking_status}</dd></div>{selected.booking_reference && <div><dt>Reference</dt><dd>{selected.booking_reference}</dd></div>}</dl>{selected.notes && <p>{selected.notes}</p>}<em>{selectedRooms.length > 1 ? `${selectedRooms.length} room allocations · ` : ""}Read-only view</em></article></div>}
   </section>;
 }
