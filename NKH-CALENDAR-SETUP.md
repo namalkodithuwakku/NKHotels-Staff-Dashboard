@@ -20,6 +20,14 @@ Add this Production environment variable and redeploy:
 
 Use a long random value. Do not put this value in frontend code.
 
+For instant cached loading plus a silent background source check, also add:
+
+`NKH_CALENDAR_SCRIPT_URL`
+
+Its value is the deployed Master Apps Script Web App `/exec` URL. After adding
+the `doPost` handler from the calendar sync script, deploy a new Web App version
+before copying this URL to Vercel.
+
 ## 3. Add the Apps Script
 
 Copy `apps-script/NKH_Read_Only_Calendar_Sync.gs` into the central NKH Apps
@@ -37,6 +45,12 @@ and reports the number of rooms and bookings without saving anything.
 
 When the test is correct, run `runNKHCalendarSync` once. Then run
 `installNKHCalendarSyncTrigger` to refresh the copied calendar every 10 minutes.
+
+The dashboard always displays the Supabase copy first. When a user opens a
+connected property calendar, it requests a new Google Sheet read in the
+background and updates the calendar without refreshing the page. A shared
+two-minute cooldown prevents multiple staff sessions from repeating the same
+Google read.
 
 ## 4. Connect each property
 

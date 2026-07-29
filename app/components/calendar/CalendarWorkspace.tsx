@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 
 type Property = { id: string; client_code: string; property_name: string; calendar_sheet_code: string | null };
@@ -22,7 +22,35 @@ export default function CalendarWorkspace() {
   const [data, setData] = useState<Payload>({ properties: [], property: null, rooms: [], bookings: [], sync: null, month });
   const [selected, setSelected] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
+  const [backgroundSyncing, setBackgroundSyncing] = useState(false);
+  const backgroundSyncRef = useRef(false);
   const [error, setError] = useState("");
+
+  const reloadCache = useCallback(async (requestedProperty: string, requestedMonth: string) => {
+    const params = new URLSearchParams({ month: requestedMonth, propertyId: requestedProperty });
+    const response = await fetch(`/api/calendar?${params}`, { cache: "no-store" });
+    const payload = await response.json() as Payload;
+    if (response.ok) setData(payload);
+  }, []);
+
+  const refreshSourceInBackground = useCallback(async (requestedProperty: string, requestedMonth: string) => {
+    if (!requestedProperty || backgroundSyncRef.current) return;
+    backgroundSyncRef.current = true;
+    setBackgroundSyncing(true);
+    try {
+      const response = await fetch("/api/calendar/refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ propertyId: requestedProperty }),
+      });
+      if (response.ok) await reloadCache(requestedProperty, requestedMonth);
+    } catch (reason) {
+      console.error("Background calendar refresh failed.", reason);
+    } finally {
+      backgroundSyncRef.current = false;
+      setBackgroundSyncing(false);
+    }
+  }, [reloadCache]);
 
   const load = useCallback(async (requestedProperty = propertyId, requestedMonth = month) => {
     setLoading(true); setError("");
@@ -34,9 +62,12 @@ export default function CalendarWorkspace() {
       if (!response.ok) throw new Error(payload.error || "Unable to load calendar.");
       setData(payload);
       if (payload.property?.id) setPropertyId(payload.property.id);
+      if (payload.property?.calendar_sheet_code) {
+        void refreshSourceInBackground(payload.property.id, requestedMonth);
+      }
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to load calendar."); }
     finally { setLoading(false); }
-  }, [month, propertyId]);
+  }, [month, propertyId, refreshSourceInBackground]);
 
   useEffect(() => { void load(propertyId, month); }, [month, propertyId, load]);
 
@@ -63,12 +94,12 @@ export default function CalendarWorkspace() {
           <button onClick={() => setMonth(value => shiftMonth(value, 1))} aria-label="Next month"><ChevronRight size={17}/></button>
         </div>
         <button className="calendar-today" onClick={() => setMonth(monthValue())}>Today</button>
-        <button className="calendar-refresh" onClick={() => void load()} disabled={loading} aria-label="Refresh calendar"><RefreshCw size={17}/></button>
+        <button className={`calendar-refresh ${backgroundSyncing ? "syncing" : ""}`} onClick={() => void refreshSourceInBackground(propertyId, month)} disabled={loading || backgroundSyncing} aria-label="Refresh calendar"><RefreshCw size={17}/></button>
       </div>
     </header>
 
     <div className="calendar-status-row">
-      <span className={data.sync?.last_status === "Ready" ? "ready" : ""}><i />{data.sync?.last_status || "Waiting for first sync"}</span>
+      <span className={data.sync?.last_status === "Ready" ? "ready" : ""}><i />{backgroundSyncing ? "Checking source in background" : data.sync?.last_status || "Waiting for first sync"}</span>
       <span>{data.sync?.last_completed_at ? `Updated ${new Date(data.sync.last_completed_at).toLocaleString()}` : "No calendar copy received yet"}</span>
       <span>{roomNames.length} rooms · {data.bookings.length} bookings this month</span>
     </div>

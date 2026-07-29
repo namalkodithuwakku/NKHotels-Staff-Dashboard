@@ -30,107 +30,208 @@ function runNKHCalendarSync() {
   return result;
 }
 
+function doPost(e) {
+  try {
+    var request = JSON.parse(
+      e && e.postData && e.postData.contents || "{}"
+    );
+    if (String(request.action || "") !== "backgroundCalendarRefresh") {
+      return jsonNKHCalendarResponse_({
+        success: false,
+        error: "Unsupported calendar action."
+      });
+    }
+    var settings = getNKHCalendarSyncSettings_();
+    if (!request.secret || String(request.secret) !== settings.secret) {
+      return jsonNKHCalendarResponse_({
+        success: false,
+        error: "Unauthorized"
+      });
+    }
+    var propertyId = String(request.propertyId || "").trim();
+    var sources = fetchNKHCalendarSources_(settings);
+    var source = sources.find(function(item) {
+      return String(item.id || "") === propertyId;
+    });
+    if (!source) {
+      return jsonNKHCalendarResponse_({
+        success: false,
+        error: "Calendar property was not found."
+      });
+    }
+    var calendar = readNKHPropertyCalendar_(
+      source.calendar_sheet_code
+    );
+    var saved = sendNKHCalendarCopy_(settings, {
+      propertyId: source.id,
+      rooms: calendar.rooms,
+      bookings: calendar.bookings
+    });
+    return jsonNKHCalendarResponse_({
+      success: true,
+      property: source.property_name,
+      rooms: saved.rooms,
+      bookings: saved.bookings
+    });
+  } catch (error) {
+    return jsonNKHCalendarResponse_({
+      success: false,
+      error: String(error && error.message || error)
+    });
+  }
+}
+
+function jsonNKHCalendarResponse_(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
 function readNKHPropertyCalendar_(spreadsheetId) {
   var spreadsheet = SpreadsheetApp.openById(String(spreadsheetId || "").trim());
-  var rooms = [], bookings = [], errors = [];
-  spreadsheet.getSheets().forEach(function(sheet) {
-    var values = sheet.getDataRange().getDisplayValues();
-    if (!values.length) return;
-    var headerInfo = findNKHCalendarHeaders_(values);
-    if (!headerInfo) return;
+  var now = new Date();
+  var years = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1];
+  var rooms = [];
+  var bookings = [];
+  var foundYearSheets = 0;
+  var parsedYearSheets = 0;
+  var skippedYears = [];
+
+  /*
+   * Uses the existing client-portal Calendar Engine directly:
+   * - year-named sheets
+   * - Date row and room columns
+   * - cell text for guest/block
+   * - cell background for OTA source
+   * - NKHOTELS_BOOKING_V1 notes for booking details
+   *
+   * Calendar Engine.gs and Color Engine.gs must exist in this same
+   * Master Apps Script project.
+   */
+  years.forEach(function(year) {
+    var sheet = spreadsheet.getSheetByName(String(year));
+    if (!sheet) return;
+
+    foundYearSheets++;
+    var parsed;
+
     try {
-      var parsed = parseNKHCalendarTable_(sheet.getName(), values, headerInfo);
-      rooms = rooms.concat(parsed.rooms);
-      bookings = bookings.concat(parsed.bookings);
-    } catch (error) { errors.push(sheet.getName() + ": " + String(error)); }
+      parsed = parseCalendarSheet_(sheet, year, null);
+      parsedYearSheets++;
+    } catch (error) {
+      skippedYears.push(
+        String(year) + ": " + String(error && error.message || error)
+      );
+      return;
+    }
+
+    (parsed.rooms || []).forEach(function(room, index) {
+      rooms.push({
+        sourceKey: String(room.name || "").trim(),
+        roomName: String(room.name || "").trim(),
+        roomType: String(room.nickname || "").trim(),
+        roomStatus: String(room.status || "READY").trim(),
+        sortOrder: index
+      });
+    });
+
+    (parsed.reservations || []).forEach(function(reservation) {
+      var details = reservation.details || {};
+      var bookingId = String(
+        details.bookingId ||
+        reservation.id ||
+        ""
+      ).trim();
+      var roomName = String(
+        reservation.room ||
+        details.room ||
+        ""
+      ).trim();
+      var checkIn = String(
+        reservation.checkIn ||
+        details.checkIn ||
+        ""
+      ).trim();
+      var checkOut = String(
+        reservation.checkOut ||
+        details.checkOut ||
+        ""
+      ).trim();
+      var guestName = String(
+        reservation.guest ||
+        details.guest ||
+        "Guest"
+      ).trim();
+
+      if (!roomName || !checkIn || !checkOut) return;
+
+      bookings.push({
+        sourceKey: [
+          bookingId || guestName,
+          roomName,
+          checkIn,
+          checkOut
+        ].join("|"),
+        bookingReference: String(
+          details.bookingRef ||
+          bookingId ||
+          ""
+        ).trim(),
+        guestName: guestName,
+        roomName: roomName,
+        roomType: String(
+          reservation.roomType ||
+          details.roomType ||
+          ""
+        ).trim(),
+        bookingSource: String(
+          reservation.source ||
+          details.source ||
+          "FIT"
+        ).trim(),
+        bookingStatus: String(
+          reservation.status ||
+          details.bookingStatus ||
+          "Confirmed"
+        ).trim(),
+        checkIn: checkIn,
+        checkOut: checkOut,
+        notes: String(
+          reservation.notes ||
+          details.notes ||
+          ""
+        ).trim()
+      });
+    });
   });
+
+  if (!foundYearSheets) {
+    throw new Error(
+      "No calendar year sheet was found for " +
+      years.join(", ") +
+      "."
+    );
+  }
+
+  if (!parsedYearSheets) {
+    throw new Error(
+      "Calendar year sheets were found, but none matched the current " +
+      "calendar layout. " +
+      skippedYears.join(" | ")
+    );
+  }
+
   rooms = uniqueNKHCalendarItems_(rooms, "sourceKey");
   bookings = uniqueNKHCalendarItems_(bookings, "sourceKey");
-  if (!rooms.length && !bookings.length) {
-    throw new Error("No supported room or booking table was found. Expected headers such as Room, Guest, Check In and Check Out." + (errors.length ? " " + errors.join(" | ") : ""));
-  }
-  if (!rooms.length) {
-    bookings.forEach(function(booking, index) {
-      rooms.push({ sourceKey: booking.roomName, roomName: booking.roomName, roomType: booking.roomType || "", roomStatus: "Available", sortOrder: index });
-    });
-    rooms = uniqueNKHCalendarItems_(rooms, "sourceKey");
-  }
-  return { rooms: rooms, bookings: bookings };
-}
 
-function findNKHCalendarHeaders_(values) {
-  var aliases = nkhCalendarAliases_();
-  for (var row = 0; row < Math.min(values.length, 12); row++) {
-    var normalized = values[row].map(normalizeNKHCalendarHeader_);
-    var map = {};
-    Object.keys(aliases).forEach(function(field) {
-      var index = normalized.findIndex(function(header) { return aliases[field].indexOf(header) !== -1; });
-      if (index !== -1) map[field] = index;
-    });
-    if (map.room !== undefined && (map.guest !== undefined || map.roomType !== undefined || map.roomStatus !== undefined)) {
-      return { row: row, map: map };
-    }
-  }
-  return null;
-}
-
-function parseNKHCalendarTable_(sheetName, values, headerInfo) {
-  var map = headerInfo.map, rooms = [], bookings = [];
-  for (var row = headerInfo.row + 1; row < values.length; row++) {
-    var item = values[row];
-    var roomName = valueNKHCalendar_(item, map.room);
-    if (!roomName) continue;
-    var roomType = valueNKHCalendar_(item, map.roomType);
-    rooms.push({
-      sourceKey: sheetName + "|" + roomName,
-      roomName: roomName,
-      roomType: roomType,
-      roomStatus: valueNKHCalendar_(item, map.roomStatus) || "Available",
-      sortOrder: row
-    });
-    var checkIn = dateNKHCalendar_(valueNKHCalendar_(item, map.checkIn));
-    var checkOut = dateNKHCalendar_(valueNKHCalendar_(item, map.checkOut));
-    var guest = valueNKHCalendar_(item, map.guest);
-    if (!guest || !checkIn || !checkOut || checkOut <= checkIn) continue;
-    var reference = valueNKHCalendar_(item, map.reference);
-    bookings.push({
-      sourceKey: reference || [sheetName, roomName, checkIn, checkOut, guest].join("|"),
-      bookingReference: reference,
-      guestName: guest,
-      roomName: roomName,
-      roomType: roomType,
-      bookingSource: valueNKHCalendar_(item, map.source) || "FIT",
-      bookingStatus: valueNKHCalendar_(item, map.bookingStatus) || "Confirmed",
-      checkIn: checkIn,
-      checkOut: checkOut,
-      notes: valueNKHCalendar_(item, map.notes)
-    });
-  }
-  return { rooms: rooms, bookings: bookings };
-}
-
-function nkhCalendarAliases_() {
   return {
-    room: ["room","roomno","roomnumber","roomname","unit","unitno"],
-    roomType: ["roomtype","type","category","roomcategory","nickname"],
-    roomStatus: ["roomstatus","availability","operationalstatus"],
-    guest: ["guest","guestname","name","customer","customername"],
-    checkIn: ["checkin","arrival","arrivaldate","from","startdate"],
-    checkOut: ["checkout","departure","departuredate","to","enddate"],
-    source: ["source","bookingsource","channel","ota"],
-    bookingStatus: ["status","bookingstatus","reservationstatus"],
-    reference: ["bookingid","bookingreference","reservationid","confirmationcode","reference","ref"],
-    notes: ["notes","remark","remarks","comment","comments"]
+    rooms: rooms,
+    bookings: bookings,
+    parsedYears: parsedYearSheets,
+    skippedYears: skippedYears
   };
 }
-function normalizeNKHCalendarHeader_(value) { return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, ""); }
-function valueNKHCalendar_(row, index) { return index === undefined ? "" : String(row[index] || "").trim(); }
-function dateNKHCalendar_(value) {
-  if (!value) return "";
-  var parsed = new Date(value);
-  if (isNaN(parsed.getTime())) return "";
-  return Utilities.formatDate(parsed, "Asia/Colombo", "yyyy-MM-dd");
-}
+
 function uniqueNKHCalendarItems_(items, key) {
   var seen = {};
   return items.filter(function(item) { var value = String(item[key] || ""); if (!value || seen[value]) return false; seen[value] = true; return true; });
@@ -166,6 +267,12 @@ function testNKHCalendarSyncReadOnly() {
   var sources = fetchNKHCalendarSources_(settings);
   if (!sources.length) return { success: true, properties: 0 };
   var calendar = readNKHPropertyCalendar_(sources[0].calendar_sheet_code);
-  Logger.log(JSON.stringify({ property: sources[0].property_name, rooms: calendar.rooms.length, bookings: calendar.bookings.length }, null, 2));
+  Logger.log(JSON.stringify({
+    property: sources[0].property_name,
+    rooms: calendar.rooms.length,
+    bookings: calendar.bookings.length,
+    parsedYears: calendar.parsedYears,
+    skippedYears: calendar.skippedYears
+  }, null, 2));
   return { success: true, property: sources[0].property_name, rooms: calendar.rooms.length, bookings: calendar.bookings.length };
 }
