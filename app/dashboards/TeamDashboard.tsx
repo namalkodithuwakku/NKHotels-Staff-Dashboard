@@ -85,6 +85,12 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const openAcademy = () => setView("team-break");
+    window.addEventListener("nkh-open-academy", openAcademy);
+    return () => window.removeEventListener("nkh-open-academy", openAcademy);
+  }, []);
+
   const counts = useMemo(() => {
     let urgent = 0, pending = 0, active = 0, done = 0;
     last24Tasks.forEach((task: any) => {
@@ -113,7 +119,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
     : String((shift as any)?.activeStaffName || (shift as any)?.onShiftStaffName || "");
 
   return (
-    <main className="staff-os">
+    <main className={`staff-os ${view === "team-break" ? "academy-focus-mode" : ""}`}>
       <aside className="staff-rail">
         <div className="staff-brand"><span>NKH</span><strong><em>Dashboard</em></strong></div>
         <nav aria-label="Main workspace">

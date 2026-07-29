@@ -230,6 +230,7 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
         const closed = acknowledged || completed;
         const urgent = ["high","urgent","critical"].includes(String(task.priority || "").toLowerCase());
         const emailTask = String(task.source || "").toLowerCase().includes("email");
+        const academyTask = Boolean(task.academyAssignmentId);
         const checked = selectedIds.includes(id);
         const label = acknowledged ? "Acknowledged" : completed ? "Done" : urgent ? "Urgent" : "Pending";
         const chip = acknowledged ? "amber" : completed ? "green" : urgent ? "red" : "amber";
@@ -250,6 +251,10 @@ export default function ShiftTasks({ tasks, staffName, canUseTasks, loading, err
           </div>
           <div className="task-owner"><small>OWNER</small><strong>{task.assignedTo || "Unassigned"}</strong></div>
           <div className="task-actions">
+            {!closed && academyTask && <button className="academy-task-button" onClick={() => {
+              window.sessionStorage.setItem("nkh_academy_assignment_id", String(task.academyAssignmentId));
+              window.dispatchEvent(new CustomEvent("nkh-open-academy"));
+            }}>Open Academy</button>}
             {!closed && emailTask && <button className="acknowledge-button" disabled={!canUseTasks || busy !== ""} onClick={() => acknowledge([id])}>
               Acknowledge</button>}
             {!closed && <button className="done-button" disabled={!canUseTasks || busy !== ""} onClick={() => markDone([id])}>

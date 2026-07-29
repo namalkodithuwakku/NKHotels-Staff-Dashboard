@@ -43,6 +43,11 @@ export default function MasterDashboard({ staff, onLogout }: { staff: StaffSessi
     const timer = window.setInterval(loadNotificationCounts, 15000);
     return () => window.clearInterval(timer);
   }, []);
+  useEffect(() => {
+    const openAcademy = () => setView("team-break");
+    window.addEventListener("nkh-open-academy", openAcademy);
+    return () => window.removeEventListener("nkh-open-academy", openAcademy);
+  }, []);
   async function refreshAll() {
     await Promise.all([
       reload(),

@@ -447,6 +447,17 @@ body,
   box-shadow: 0 7px 16px rgba(52, 120, 185, .18);
 }
 
+.staff-os .shift-task .task-actions .academy-task-button {
+  min-width: 122px;
+  height: 40px;
+  border: 1px solid rgba(52, 120, 185, .2);
+  border-radius: 11px;
+  color: #fff;
+  background: linear-gradient(135deg, #3478b9, #239a70);
+  box-shadow: 0 9px 20px rgba(52, 120, 185, .18);
+  font-weight: 800;
+}
+
 .staff-os .shift-task .task-actions .done-button {
   min-width: 84px;
   color: #fff;

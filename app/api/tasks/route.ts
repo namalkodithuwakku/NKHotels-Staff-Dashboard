@@ -7,10 +7,10 @@ type TaskRow = {
   property_name_snapshot: string | null; booking_id: string | null; priority: string;
   assigned_name_snapshot: string | null; shift_label: string | null; created_at: string;
   started_at: string | null; completed_at: string | null; completed_by_name_snapshot: string | null;
-  subject: string; notes: string | null;
+  subject: string; notes: string | null; source_metadata: Record<string, unknown> | null;
 };
 
-const fields = "id,status,intent,task_type,source,property_name_snapshot,booking_id,priority,assigned_name_snapshot,shift_label,created_at,started_at,completed_at,completed_by_name_snapshot,subject,notes";
+const fields = "id,status,intent,task_type,source,property_name_snapshot,booking_id,priority,assigned_name_snapshot,shift_label,created_at,started_at,completed_at,completed_by_name_snapshot,subject,notes,source_metadata";
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
       completedBy: row.completed_by_name_snapshot || undefined,
       subject: row.subject,
       notes: row.notes || undefined,
+      academyAssignmentId: String(row.source_metadata?.academyAssignmentId || "") || undefined,
     }));
     return NextResponse.json({ success: true, tasks });
   } catch (error) {

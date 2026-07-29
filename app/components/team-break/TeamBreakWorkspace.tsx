@@ -5,6 +5,7 @@ import {
   Award, BookOpenCheck, Check, ChevronRight, Crown, Hotel,
   ImageIcon, RefreshCw, Sparkles, Star, Trophy, Users, X,
 } from "lucide-react";
+import AcademyAssignment from "./AcademyAssignment";
 
 type ChallengeState = {
   date: string;
@@ -74,6 +75,11 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
   const [generatingImage, setGeneratingImage] = useState(false);
   const [imageError, setImageError] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("reservations");
+  const [assignmentId, setAssignmentId] = useState("");
+
+  useEffect(() => {
+    setAssignmentId(window.sessionStorage.getItem("nkh_academy_assignment_id") || "");
+  }, []);
 
   const load = useCallback(async (quiet = false) => {
     try {
@@ -176,6 +182,11 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
 
   if (loading) return <div className="hospitality-loading"><RefreshCw/><strong>Preparing today’s hospitality challenge…</strong></div>;
 
+  if (assignmentId) return <AcademyAssignment assignmentId={assignmentId} onBack={() => {
+    window.sessionStorage.removeItem("nkh_academy_assignment_id");
+    setAssignmentId("");
+  }}/>;
+
   return <div className="hospitality-challenge">
     <section className="hospitality-hero">
       <div className="hospitality-hero-copy">
@@ -190,9 +201,10 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
 
     {error && <div className="hospitality-error">{error}<button onClick={() => void load()}>Try again</button></div>}
 
-    {state?.courses.length ? <section className="academy-course-library">
+    <div className="academy-focus-layout">
+    {state?.courses.length ? <section className="academy-course-library academy-course-sidebar">
       <header>
-        <div><small>COURSE LIBRARY</small><h3>Choose what you want to learn</h3></div>
+        <div><small>COURSE LIBRARY</small><h3>Choose your course</h3></div>
         <span>{state.catalogueSize} of {state.academyTarget} concepts prepared</span>
       </header>
       <div className="academy-course-grid">
@@ -291,6 +303,7 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
           <ImageIcon/><div><strong>{state?.course.shortName || "Course"} visual library</strong><span>{state?.imageProgress.ready || 0} of {state?.imageProgress.total || 0} prepared · {imagePercent}%</span></div>
         </section>
       </aside>
+    </div>
     </div>
 
     {completedBurst && <div className="hospitality-celebration" aria-hidden="true">
