@@ -10,6 +10,9 @@ alter table public.nkh_properties
 alter table public.nkh_calendar_rooms
   add column if not exists room_type_id uuid references public.nkh_room_types(id) on delete set null;
 
+alter table public.nkh_room_types
+  add column if not exists room_names text[] not null default '{}';
+
 alter table public.nkh_calendar_bookings
   add column if not exists phone text,
   add column if not exists email text,

@@ -24,8 +24,12 @@ export async function POST(request: NextRequest, context: Context) {
     const input = await request.json();
     const roomName = String(input.room_name || "").trim();
     const roomCode = String(input.room_code || roomName).trim().toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "");
-    const roomCount = Math.max(0, Number(input.room_count || 0));
+    const roomNames = String(input.room_names || "").split(/\r?\n|,/).map(value => value.trim()).filter(Boolean);
+    const roomCount = Math.max(0, Number(input.room_count || roomNames.length || 0));
     if (!roomName || !roomCode || roomCount < 1) return NextResponse.json({ error: "Room name and a room count of at least 1 are required." }, { status: 400 });
+    if (roomNames.length && roomNames.length !== roomCount) {
+      return NextResponse.json({ error: `Enter exactly ${roomCount} individual room names, one per line.` }, { status: 400 });
+    }
     const rows = await supabaseAdmin<Record<string, unknown>[]>("nkh_room_types", {
       method: "POST",
       prefer: "return=representation",
@@ -35,6 +39,7 @@ export async function POST(request: NextRequest, context: Context) {
         room_name: roomName,
         description: String(input.description || "").trim() || null,
         room_count: roomCount,
+        room_names: roomNames,
         max_adults: Math.max(0, Number(input.max_adults || 2)),
         max_children: Math.max(0, Number(input.max_children || 0)),
         max_occupancy: Math.max(1, Number(input.max_occupancy || 2)),
@@ -57,6 +62,14 @@ export async function PATCH(request: NextRequest, context: Context) {
     if (!roomTypeId) return NextResponse.json({ error: "Room type is required." }, { status: 400 });
     const allowed = ["room_name", "description", "room_count", "max_adults", "max_children", "max_occupancy", "bed_configuration", "display_order", "is_active"];
     const body = Object.fromEntries(allowed.filter(key => Object.prototype.hasOwnProperty.call(input, key)).map(key => [key, input[key] === "" ? null : input[key]]));
+    if (Object.prototype.hasOwnProperty.call(input, "room_names")) {
+      const roomNames = String(input.room_names || "").split(/\r?\n|,/).map(value => value.trim()).filter(Boolean);
+      const roomCount = Math.max(0, Number(input.room_count || roomNames.length || 0));
+      if (roomNames.length && roomNames.length !== roomCount) {
+        return NextResponse.json({ error: `Enter exactly ${roomCount} individual room names, one per line.` }, { status: 400 });
+      }
+      body.room_names = roomNames;
+    }
     const rows = await supabaseAdmin<Record<string, unknown>[]>(
       `nkh_room_types?id=eq.${encodeURIComponent(roomTypeId)}&property_id=eq.${encodeURIComponent(id)}`,
       { method: "PATCH", prefer: "return=representation", body }

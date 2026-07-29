@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus, RefreshCw, ShieldAlert } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, RefreshCw } from "lucide-react";
 
 type Property = { id: string; client_code: string; property_name: string; calendar_sheet_code: string | null; calendar_source_mode: "google_sheet" | "supabase"; currency_code: string | null };
 type Room = { id: string; room_name: string; room_type: string | null; room_status: string; sort_order: number };
@@ -22,7 +22,6 @@ export default function CalendarWorkspace() {
   const [data, setData] = useState<Payload>({ properties: [], property: null, rooms: [], bookings: [], sync: null, month });
   const [selected, setSelected] = useState<Booking | null>(null);
   const [editing, setEditing] = useState<Booking | "new" | null>(null);
-  const [modeWarning, setModeWarning] = useState<"google_sheet" | "supabase" | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [backgroundSyncing, setBackgroundSyncing] = useState(false);
@@ -98,19 +97,6 @@ export default function CalendarWorkspace() {
   );
   const nativeMode = data.property?.calendar_source_mode === "supabase";
 
-  async function changeMode() {
-    if (!data.property || !modeWarning) return;
-    setSaving(true); setError("");
-    try {
-      const response = await fetch("/api/calendar/mode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ propertyId: data.property.id, mode: modeWarning }) });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Unable to change calendar mode.");
-      setModeWarning(null);
-      await load(data.property.id, month);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to change calendar mode."); }
-    finally { setSaving(false); }
-  }
-
   async function saveBooking(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!data.property) return;
@@ -161,11 +147,6 @@ export default function CalendarWorkspace() {
       </div>
     </header>
 
-    {data.property && <div className={`calendar-mode-strip ${nativeMode ? "native" : "sheet"}`}>
-      <div><strong>{nativeMode ? "Dashboard calendar" : "Google Sheet calendar"}</strong><span>{nativeMode ? "Bookings can be added, edited and deleted here." : "Sheet sync is ON. Dashboard editing is locked."}</span></div>
-      <label className="calendar-source-switch"><span>Google Sheet</span><input type="checkbox" checked={!nativeMode} onChange={event => setModeWarning(event.target.checked ? "google_sheet" : "supabase")}/><i /></label>
-    </div>}
-
     <div className="calendar-status-row">
       <span className={data.sync?.last_status === "Ready" ? "ready" : ""}><i />{backgroundSyncing ? "Checking source in background" : data.sync?.last_status || "Waiting for first sync"}</span>
       <span>{data.sync?.last_completed_at ? `Updated ${new Date(data.sync.last_completed_at).toLocaleString()}` : "No calendar copy received yet"}</span>
@@ -207,6 +188,5 @@ export default function CalendarWorkspace() {
     <div className="calendar-legend">{["Booking.com","Expedia","Airbnb","Agoda","Travel Agent","FIT","Blocked"].map(source => <span key={source}><i className={sourceClass[source]}/>{source}</span>)}</div>
     {selected && <div className="calendar-detail-backdrop" onClick={() => setSelected(null)}><article onClick={event => event.stopPropagation()}><button onClick={() => setSelected(null)}>×</button><small>RESERVATION DETAILS</small><h3>{selected.guest_name}</h3><dl><div><dt>{selectedRooms.length > 1 ? "Rooms" : "Room"}</dt><dd>{selectedRooms.join(", ") || selected.room_name}</dd></div><div><dt>Stay</dt><dd>{selected.check_in} → {selected.check_out}</dd></div><div><dt>Source</dt><dd>{selected.booking_source}</dd></div><div><dt>Status</dt><dd>{selected.booking_status}</dd></div>{selected.booking_reference && <div><dt>Reference</dt><dd>{selected.booking_reference}</dd></div>}{selected.phone && <div><dt>Phone</dt><dd>{selected.phone}</dd></div>}</dl>{selected.notes && <p>{selected.notes}</p>}{nativeMode ? <footer className="calendar-booking-actions"><button onClick={() => setEditing(selected)}>Edit booking</button><button className="danger" disabled={saving} onClick={deleteBooking}>Delete</button></footer> : <em>{selectedRooms.length > 1 ? `${selectedRooms.length} room allocations · ` : ""}Read-only Sheet view</em>}</article></div>}
     {editing && data.property && <div className="calendar-detail-backdrop"><form className="calendar-booking-form" onSubmit={saveBooking}><button type="button" className="modal-close" onClick={() => setEditing(null)}>×</button><small>SUPABASE CALENDAR</small><h3>{editing === "new" ? "Add booking" : "Edit booking"}</h3><div className="booking-form-grid"><label>Guest name<input name="guest_name" defaultValue={editing === "new" ? "" : editing.guest_name} required/></label><label>Room<select name="room_name" defaultValue={editing === "new" ? "" : editing.room_name} required><option value="">Select room</option>{roomNames.map(room => <option key={room}>{room}</option>)}</select></label><label>Check-in<input name="check_in" type="date" defaultValue={editing === "new" ? "" : editing.check_in} required/></label><label>Check-out<input name="check_out" type="date" defaultValue={editing === "new" ? "" : editing.check_out} required/></label><label>Source<select name="booking_source" defaultValue={editing === "new" ? "Direct" : editing.booking_source}>{["Direct","Booking.com","Agoda","Expedia","Airbnb","Travel Agent","FIT","Blocked"].map(value => <option key={value}>{value}</option>)}</select></label><label>Status<select name="booking_status" defaultValue={editing === "new" ? "Confirmed" : editing.booking_status}>{["Confirmed","Pending","Checked In","Checked Out","Cancelled","Blocked"].map(value => <option key={value}>{value}</option>)}</select></label><label>Reference<input name="booking_reference" defaultValue={editing === "new" ? "" : editing.booking_reference || ""}/></label><label>Phone<input name="phone" defaultValue={editing === "new" ? "" : editing.phone || ""}/></label><label>Email<input name="email" type="email" defaultValue={editing === "new" ? "" : editing.email || ""}/></label><label>Adults<input name="adults" type="number" min="0" defaultValue={editing === "new" ? 1 : editing.adults || 1}/></label><label>Children<input name="children" type="number" min="0" defaultValue={editing === "new" ? 0 : editing.children || 0}/></label><label>Total amount<input name="total_amount" type="number" min="0" step="0.01" defaultValue={editing === "new" ? "" : editing.total_amount ?? ""}/></label><label>Received<input name="received_amount" type="number" min="0" step="0.01" defaultValue={editing === "new" ? "" : editing.received_amount ?? ""}/></label><label>Currency<input name="currency_code" maxLength={3} defaultValue={editing === "new" ? data.property.currency_code || "LKR" : editing.currency_code || "LKR"}/></label><label className="wide">Notes<textarea name="notes" defaultValue={editing === "new" ? "" : editing.notes || ""}/></label></div><footer><button type="button" onClick={() => setEditing(null)}>Cancel</button><button className="primary-action" disabled={saving}>{saving ? "Saving…" : "Save booking"}</button></footer></form></div>}
-    {modeWarning && <div className="calendar-detail-backdrop"><article className="calendar-mode-warning"><ShieldAlert/><small>CALENDAR SOURCE CHANGE</small><h3>{modeWarning === "supabase" ? "Turn Google Sheet off?" : "Turn Google Sheet on?"}</h3><p>{modeWarning === "supabase" ? "Sharp warning: the current Sheet copy in the dashboard will be replaced. Rooms will be rebuilt from the Room Types and room counts saved in this property profile. Dashboard booking add, edit and delete will then be enabled." : "Sharp warning: Dashboard booking editing will be disabled. The next Google Sheet sync will replace the Supabase calendar copy."}</p><footer><button onClick={() => setModeWarning(null)}>Keep current mode</button><button className="danger" disabled={saving} onClick={changeMode}>{saving ? "Switching…" : "Confirm switch"}</button></footer></article></div>}
   </section>;
 }
