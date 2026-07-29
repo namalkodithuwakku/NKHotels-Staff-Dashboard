@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
 import { readServerSession } from "../../lib/serverSession";
 
-type Property = { id: string; client_code: string; property_name: string; calendar_sheet_code: string | null };
+type Property = { id: string; client_code: string; property_name: string; calendar_sheet_code: string | null; calendar_source_mode: "google_sheet" | "supabase"; currency_code: string | null };
 type Room = { id: string; property_id: string; source_key: string; room_name: string; room_type: string | null; room_status: string; sort_order: number };
 type Booking = { id: string; property_id: string; source_key: string; booking_group_key: string | null; booking_reference: string | null; guest_name: string; room_name: string; room_type: string | null; booking_source: string; booking_status: string; check_in: string; check_out: string; notes: string | null };
 
@@ -22,10 +22,10 @@ export async function GET(request: NextRequest) {
     const month = validMonth(request.nextUrl.searchParams.get("month"));
     const requestedProperty = String(request.nextUrl.searchParams.get("propertyId") || "");
     const properties = await supabaseAdmin<Property[]>(
-      "nkh_properties?select=id,client_code,property_name,calendar_sheet_code&client_status=in.(Active,Onboarding)&order=property_name.asc"
+      "nkh_properties?select=id,client_code,property_name,calendar_sheet_code,calendar_source_mode,currency_code&client_status=in.(Active,Onboarding)&order=property_name.asc"
     );
     const property = properties.find(item => item.id === requestedProperty)
-      || properties.find(item => Boolean(item.calendar_sheet_code))
+      || properties.find(item => item.calendar_source_mode === "supabase" || Boolean(item.calendar_sheet_code))
       || properties[0]
       || null;
     if (!property) return NextResponse.json({ properties: [], property: null, rooms: [], bookings: [], sync: null, month });

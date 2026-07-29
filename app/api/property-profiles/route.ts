@@ -4,7 +4,7 @@ import { canManageProperties, readServerSession } from "../../lib/serverSession"
 import { getPropertyIdentificationEmails, savePropertyIdentificationEmail } from "../../lib/propertyIdentificationEmail";
 import { normalizeGoogleSheetCode } from "../../lib/googleSheetCode";
 
-const fields = "id,client_code,property_name,preferred_language,client_status,package_name,notes,legal_name,description,address_line_1,address_line_2,city,country,timezone,currency_code,check_in_time,check_out_time,total_rooms,website_url,map_url,logo_url,calendar_sheet_code,onboarding_completed_at,created_at,updated_at";
+const fields = "id,client_code,property_name,preferred_language,client_status,package_name,notes,legal_name,description,address_line_1,address_line_2,city,country,timezone,currency_code,check_in_time,check_out_time,total_rooms,website_url,map_url,logo_url,calendar_sheet_code,calendar_source_mode,onboarding_completed_at,created_at,updated_at";
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const data = await supabaseAdmin<Array<{ id: string } & Record<string, unknown>>>("nkh_properties", {
       method: "POST",
       prefer: "return=representation",
-      body: { client_code: clientCode, property_name: propertyName, preferred_language: input.preferred_language || "English", client_status: input.client_status || "Onboarding", city: input.city || null, country: input.country || "Sri Lanka", timezone: input.timezone || "Asia/Colombo", currency_code: input.currency_code || "LKR", calendar_sheet_code: normalizeGoogleSheetCode(input.calendar_sheet_code) },
+      body: { client_code: clientCode, property_name: propertyName, preferred_language: input.preferred_language || "English", client_status: input.client_status || "Onboarding", city: input.city || null, country: input.country || "Sri Lanka", timezone: input.timezone || "Asia/Colombo", currency_code: input.currency_code || "LKR", calendar_sheet_code: normalizeGoogleSheetCode(input.calendar_sheet_code), calendar_source_mode: input.calendar_source_mode === "supabase" ? "supabase" : "google_sheet" },
     });
     if (Object.prototype.hasOwnProperty.call(input, "task_email")) {
       await savePropertyIdentificationEmail(data[0].id, input.task_email);
