@@ -75,8 +75,18 @@ export default function CompetitorAnalysisTool() {
         body: JSON.stringify({ propertyId, checkIn, checkOut, adults, rooms, competitorCount, objective }),
       });
       const data = await responseData(response);
-      if (!response.ok || !data.success) throw new Error(data.error || "Unable to complete competitor research.");
-      setResult(data);
+      if (!response.ok || !data.success) throw new Error(data.error || "Unable to start competitor research.");
+      if (!data.reportId) throw new Error("Research started without a report reference.");
+      let completed: Result | null = null;
+      for (let attempt = 0; attempt < 45; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 1500 : 4000));
+        const progressResponse = await fetch(`/api/reservation-tools/competitor-analysis?reportId=${encodeURIComponent(data.reportId)}`, { cache: "no-store" });
+        const progress = await responseData(progressResponse);
+        if (!progressResponse.ok || !progress.success) throw new Error(progress.error || "Unable to check competitor research progress.");
+        if (!progress.pending) { completed = progress as Result; break; }
+      }
+      if (!completed) throw new Error("Research is still processing. Please try again shortly.");
+      setResult(completed);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to complete competitor research.");
     } finally { setLoading(false); }

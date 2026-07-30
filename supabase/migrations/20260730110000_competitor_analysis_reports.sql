@@ -12,9 +12,16 @@ create table if not exists public.nkh_competitor_reports (
   report jsonb not null default '{}'::jsonb,
   sources jsonb not null default '[]'::jsonb,
   generated_by text null,
+  research_status text not null default 'completed',
+  openai_response_id text null,
+  research_error text null,
   created_at timestamptz not null default now()
 );
 
+alter table public.nkh_competitor_reports
+  add column if not exists research_status text not null default 'completed',
+  add column if not exists openai_response_id text null,
+  add column if not exists research_error text null;
+
 create index if not exists nkh_competitor_reports_property_created_idx
   on public.nkh_competitor_reports(property_id, created_at desc);
-

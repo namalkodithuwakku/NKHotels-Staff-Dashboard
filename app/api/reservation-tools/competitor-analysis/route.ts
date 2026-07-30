@@ -104,8 +104,9 @@ async function createResearch(key: string, context: Record<string, unknown>) {
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: process.env.OPENAI_COMPETITOR_MODEL || "gpt-5.4-mini",
+      background: true,
       store: false,
-      reasoning: { effort: "medium" },
+      reasoning: { effort: "low" },
       tools: [{ type: "web_search" }],
       input: `You are the evidence-led competitor analyst for NKH Dashboard. Research genuinely comparable accommodation competitors around the supplied hotel and city for the exact stay criteria.
 
@@ -134,12 +135,52 @@ ${JSON.stringify(context)}`,
     const detail = payload.error as Record<string, unknown> | undefined;
     throw new Error(String(detail?.message || `Competitor research failed (HTTP ${response.status}).`));
   }
-  return { report: parseReport(outputText(payload)), sources: outputSources(payload) };
+  const responseId = String(payload.id || "");
+  if (!responseId) throw new Error("Research service did not return a job reference.");
+  return responseId;
 }
 
 export async function GET(request: NextRequest) {
   try {
     if (!isMasterSession(readServerSession(request))) return NextResponse.json({ error: "Master access required." }, { status: 403 });
+    const reportId = request.nextUrl.searchParams.get("reportId");
+    if (reportId) {
+      if (!/^[0-9a-f-]{36}$/i.test(reportId)) return NextResponse.json({ error: "Invalid research job." }, { status: 400 });
+      const rows = await supabaseAdmin<Array<Record<string, any>>>(`nkh_competitor_reports?select=*&id=eq.${encodeURIComponent(reportId)}&limit=1`);
+      const saved = rows[0];
+      if (!saved) return NextResponse.json({ error: "Research job not found." }, { status: 404 });
+      if (saved.research_status === "completed") {
+        const property = saved.property_snapshot?.property || {};
+        return NextResponse.json({ success: true, pending: false, reportId, property, criteria: { checkIn: saved.check_in, checkOut: saved.check_out, adults: saved.adults, rooms: saved.rooms }, report: saved.report, sources: saved.sources || [] });
+      }
+      if (saved.research_status === "failed") return NextResponse.json({ error: saved.research_error || "Competitor research failed." }, { status: 500 });
+      const key = process.env.OPENAI_API_KEY;
+      if (!key) throw new Error("OPENAI_API_KEY is not configured in Vercel.");
+      const response = await fetch(`https://api.openai.com/v1/responses/${encodeURIComponent(String(saved.openai_response_id || ""))}`, {
+        headers: { Authorization: `Bearer ${key}` }, cache: "no-store",
+      });
+      const raw = await response.text();
+      let payload: Record<string, unknown>;
+      try { payload = JSON.parse(raw) as Record<string, unknown>; }
+      catch { throw new Error("Research service returned an unreadable progress response."); }
+      if (!response.ok) {
+        const detail = payload.error as Record<string, unknown> | undefined;
+        throw new Error(String(detail?.message || `Unable to check research progress (${response.status}).`));
+      }
+      const status = String(payload.status || "in_progress");
+      if (["failed", "cancelled", "incomplete"].includes(status)) {
+        const message = String((payload.error as Record<string, unknown> | undefined)?.message || "Competitor research did not complete.");
+        await supabaseAdmin(`nkh_competitor_reports?id=eq.${encodeURIComponent(reportId)}`, { method: "PATCH", body: { research_status: "failed", research_error: message } });
+        return NextResponse.json({ error: message }, { status: 500 });
+      }
+      if (status !== "completed") return NextResponse.json({ success: true, pending: true, reportId, status });
+      const report = parseReport(outputText(payload)), sources = outputSources(payload);
+      await supabaseAdmin(`nkh_competitor_reports?id=eq.${encodeURIComponent(reportId)}`, {
+        method: "PATCH", body: { research_status: "completed", report, sources, research_error: null },
+      });
+      const property = saved.property_snapshot?.property || {};
+      return NextResponse.json({ success: true, pending: false, reportId, property, criteria: { checkIn: saved.check_in, checkOut: saved.check_out, adults: saved.adults, rooms: saved.rooms }, report, sources });
+    }
     const properties = await supabaseAdmin<Property[]>("nkh_properties?select=id,client_code,property_name,city,country,total_rooms&client_status=eq.Active&order=property_name");
     return NextResponse.json({ success: true, properties });
   } catch (error) {
@@ -171,15 +212,14 @@ export async function POST(request: NextRequest) {
     const key = process.env.OPENAI_API_KEY;
     if (!key) throw new Error("OPENAI_API_KEY is not configured in Vercel.");
     const criteria = { checkIn, checkOut, adults, rooms, competitorCount, objective };
-    const { report, sources } = await createResearch(key, { property, roomTypes, otaRates, criteria });
+    const responseId = await createResearch(key, { property, roomTypes, otaRates, criteria });
     const saved = await supabaseAdmin<Array<{ id: string }>>("nkh_competitor_reports", {
       method: "POST", prefer: "return=representation",
-      body: { property_id: propertyId, check_in: checkIn, check_out: checkOut, adults, rooms, competitor_count: competitorCount, objective, property_snapshot: { property, roomTypes, otaRates }, report, sources, generated_by: session?.name },
+      body: { property_id: propertyId, check_in: checkIn, check_out: checkOut, adults, rooms, competitor_count: competitorCount, objective, property_snapshot: { property, roomTypes, otaRates }, report: {}, sources: [], generated_by: session?.name, research_status: "processing", openai_response_id: responseId },
     });
-    return NextResponse.json({ success: true, reportId: saved[0]?.id, property, criteria, report, sources });
+    return NextResponse.json({ success: true, pending: true, reportId: saved[0]?.id, property, criteria });
   } catch (error) {
     console.error("Competitor analysis failed.", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to complete competitor research." }, { status: 500 });
   }
 }
-
