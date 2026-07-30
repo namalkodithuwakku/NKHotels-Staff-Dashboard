@@ -2,13 +2,16 @@
 -- Existing property, room and calendar data is not overwritten.
 create table if not exists public.nkh_ota_rate_profiles (
  id uuid primary key default gen_random_uuid(), property_id uuid null references public.nkh_properties(id) on delete cascade,
- source_property_name text not null, room_type_id uuid null references public.nkh_room_types(id) on delete set null, room_name text not null, meal_plan text not null default 'Room Only',
+ source_property_name text not null, source_variant smallint not null default 1 check(source_variant > 0), room_type_id uuid null references public.nkh_room_types(id) on delete set null, room_name text not null, meal_plan text not null default 'Room Only',
  rack_rate_usd numeric(12,2) not null default 0 check(rack_rate_usd>=0), commission_percent numeric(5,2) not null default 15 check(commission_percent between 0 and 100),
  genius_percent numeric(5,2) not null default 0 check(genius_percent between 0 and 100), audience_kind text not null default 'mobile' check(audience_kind in ('mobile','country')), audience_percent numeric(5,2) not null default 0 check(audience_percent between 0 and 100),
  campaign_kind text not null default 'getaway' check(campaign_kind in ('getaway','early_year')), campaign_percent numeric(5,2) not null default 0 check(campaign_percent between 0 and 100),
  deal_kind text not null default 'basic' check(deal_kind in ('basic','last_minute','early_booker')), deal_percent numeric(5,2) not null default 0 check(deal_percent between 0 and 100),
  limited_time_percent numeric(5,2) not null default 0 check(limited_time_percent between 0 and 100), needs_review boolean not null default true, notes text null,
- created_at timestamptz not null default now(), updated_at timestamptz not null default now(), unique(source_property_name,room_name,meal_plan));
+ created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+alter table public.nkh_ota_rate_profiles add column if not exists source_variant smallint not null default 1 check(source_variant > 0);
+alter table public.nkh_ota_rate_profiles drop constraint if exists nkh_ota_rate_profiles_source_property_name_room_name_meal_plan_key;
+create unique index if not exists nkh_ota_rate_profiles_source_variant_key on public.nkh_ota_rate_profiles(source_property_name,room_name,meal_plan,source_variant);
 create index if not exists nkh_ota_rate_profiles_property_idx on public.nkh_ota_rate_profiles(property_id);
 drop trigger if exists nkh_ota_rate_profiles_updated_at on public.nkh_ota_rate_profiles;
 create trigger nkh_ota_rate_profiles_updated_at before update on public.nkh_ota_rate_profiles for each row execute function set_wa_updated_at();
@@ -106,13 +109,29 @@ with imported(source_property_name,room_name,meal_plan,rack_rate_usd,genius_perc
   ('Grand Moon River', '705/710/711', 'BB', 169.0000, 0.0000, 10.0000, 20.0000, 0.0000, 0.0000),
   ('Grand Moon River', '702/704', 'BB', 129.0000, 0.0000, 10.0000, 20.0000, 0.0000, 0.0000),
   ('Grand Moon River', '706.0', 'BB', 169.0000, 0.0000, 10.0000, 20.0000, 0.0000, 0.0000)
-), resolved as (select i.*,p.id property_id from imported i left join public.nkh_properties p on regexp_replace(lower(trim(p.property_name)),'[^a-z0-9]+','','g')=regexp_replace(lower(trim(i.source_property_name)),'[^a-z0-9]+','','g'))
-insert into public.nkh_ota_rate_profiles(property_id,source_property_name,room_name,meal_plan,rack_rate_usd,genius_percent,audience_percent,campaign_percent,deal_percent,limited_time_percent,needs_review,notes)
-select property_id,source_property_name,room_name,meal_plan,rack_rate_usd,genius_percent,audience_percent,campaign_percent,deal_percent,limited_time_percent,(property_id is null or rack_rate_usd=0),case when property_id is null then 'Property name did not match automatically. Select the correct hotel before use.' else 'Imported from Master Work OTA Promotions; verify ambiguous promotion type selectors.' end from resolved
-on conflict(source_property_name,room_name,meal_plan) do update set property_id=coalesce(excluded.property_id,nkh_ota_rate_profiles.property_id),rack_rate_usd=excluded.rack_rate_usd,genius_percent=excluded.genius_percent,audience_percent=excluded.audience_percent,campaign_percent=excluded.campaign_percent,deal_percent=excluded.deal_percent,limited_time_percent=excluded.limited_time_percent,needs_review=excluded.needs_review,notes=excluded.notes,updated_at=now();
+), ranked as (
+  select i.*,
+    row_number() over(partition by lower(trim(source_property_name)),lower(trim(room_name)),lower(trim(meal_plan)) order by rack_rate_usd desc)::smallint source_variant,
+    count(*) over(partition by lower(trim(source_property_name)),lower(trim(room_name)),lower(trim(meal_plan))) duplicate_count
+  from imported i
+), resolved as (
+  select i.*,p.id property_id
+  from ranked i
+  left join public.nkh_properties p on regexp_replace(lower(trim(p.property_name)),'[^a-z0-9]+','','g')=regexp_replace(lower(trim(i.source_property_name)),'[^a-z0-9]+','','g')
+)
+insert into public.nkh_ota_rate_profiles(property_id,source_property_name,source_variant,room_name,meal_plan,rack_rate_usd,genius_percent,audience_percent,campaign_percent,deal_percent,limited_time_percent,needs_review,notes)
+select property_id,source_property_name,source_variant,room_name,meal_plan,rack_rate_usd,genius_percent,audience_percent,campaign_percent,deal_percent,limited_time_percent,
+  (property_id is null or rack_rate_usd=0 or duplicate_count>1),
+  case
+    when property_id is null then 'Property name did not match automatically. Select the correct hotel before use.'
+    when duplicate_count>1 then 'The workbook contains multiple rates for this same room and meal plan. Both were preserved; verify which rate is current.'
+    else 'Imported from Master Work OTA Promotions; verify ambiguous promotion type selectors.'
+  end
+from resolved
+on conflict(source_property_name,room_name,meal_plan,source_variant) do update set property_id=coalesce(excluded.property_id,nkh_ota_rate_profiles.property_id),rack_rate_usd=excluded.rack_rate_usd,genius_percent=excluded.genius_percent,audience_percent=excluded.audience_percent,campaign_percent=excluded.campaign_percent,deal_percent=excluded.deal_percent,limited_time_percent=excluded.limited_time_percent,needs_review=excluded.needs_review,notes=excluded.notes,updated_at=now();
 
 insert into public.nkh_ota_rate_profiles(property_id,source_property_name,room_name,meal_plan,rack_rate_usd,needs_review,notes)
 select p.id,'Kandy Casa','Deluxe Double Room with Balcony','BB',0,true,'Rack rate was blank in Master Work. Add the correct USD rate before using this row.'
 from (select 1) seed
 left join public.nkh_properties p on regexp_replace(lower(trim(p.property_name)),'[^a-z0-9]+','','g')='kandycasa'
-on conflict(source_property_name,room_name,meal_plan) do nothing;
+on conflict(source_property_name,room_name,meal_plan,source_variant) do nothing;

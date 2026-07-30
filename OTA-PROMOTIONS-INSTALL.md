@@ -29,5 +29,6 @@ git push origin main
 
 - `Mobile Rate / Country`, `Getaway / Early Year`, and `Basic / Last minute / Early Booker` were combined columns in the workbook. The imported percentage is preserved, and the correct type is now editable.
 - Kandy Casa → Deluxe Double Room with Balcony → BB had no rack rate in the workbook. It is imported as USD 0 and marked **Review**.
+- Lavish Eco Jungle contains two BB rates for the same Eco Double Room (USD 38 and USD 31). Both are preserved as separate review rows instead of silently deleting one.
 - The commission field defaults to 15% as an editable simulator assumption; verify it against the property’s Booking.com agreement.
 - Rows whose hotel name does not match a property exactly are retained with a review note and are not silently attached to another hotel.
