@@ -113,13 +113,16 @@ export async function GET(request: NextRequest) {
       label(page2, title, x + 14, y + 103, bold);
       bulletList(page2, items, x + 14, y + 82, 230, regular, 3);
     });
-    label(page2, "PRIORITY ACTIONS", 32, 444, bold);
-    (report.actions || []).slice(0, 5).forEach((action: Record<string, any>, index: number) => {
-      const y = 410 - index * 54;
-      page2.drawRectangle({ x: 32, y: y - 25, width: 84, height: 36, color: index === 0 ? amber : teal });
-      drawWrapped(page2, action.timeframe, 42, y - 1, 64, bold, 7.2, rgb(1,1,1), 2, 9);
-      page2.drawText(truncate(action.title, 50), { x: 130, y: y + 1, size: 9, font: bold, color: ink });
-      drawWrapped(page2, action.action, 130, y - 12, 433, regular, 7.7, ink, 2, 9);
+    label(page2, "TOP 10 PRIORITIZED RECOMMENDATIONS", 32, 444, bold);
+    (report.actions || []).slice().sort((a: Record<string, any>, b: Record<string, any>) => Number(a.rank || 99) - Number(b.rank || 99)).slice(0, 10).forEach((action: Record<string, any>, index: number) => {
+      const column = index < 5 ? 0 : 1, row = index % 5;
+      const x = column === 0 ? 32 : 303, y = 410 - row * 54;
+      page2.drawRectangle({ x, y: y - 28, width: 260, height: 43, color: pale, borderColor: line, borderWidth: 0.6 });
+      page2.drawCircle({ x: x + 17, y: y - 6, size: 10, color: index === 0 ? amber : teal });
+      page2.drawText(String(action.rank || index + 1), { x: x + (Number(action.rank || index + 1) > 9 ? 11 : 14), y: y - 9, size: 7.5, font: bold, color: rgb(1,1,1) });
+      page2.drawText(truncate(action.title, 31), { x: x + 34, y: y + 3, size: 8, font: bold, color: ink });
+      page2.drawText(`${truncate(action.timeframe || "", 13)} · ${truncate(action.impact || "Medium", 7)} impact`, { x: x + 34, y: y - 7, size: 6.2, font: bold, color: teal });
+      drawWrapped(page2, action.action, x + 34, y - 18, 216, regular, 6.5, ink, 2, 7.5);
     });
     label(page2, "CAUTIONS", 32, 145, bold);
     bulletList(page2, report.cautions || [], 32, 127, 531, regular, 3);

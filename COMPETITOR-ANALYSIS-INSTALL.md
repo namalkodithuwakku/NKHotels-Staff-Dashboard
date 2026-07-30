@@ -1,6 +1,6 @@
 # NKH Competitor Analysis — installation
 
-This update adds a Master-only, source-backed competitor research tool and a downloadable management PDF.
+This update adds a Master-only, source-backed competitor research tool, exactly 10 prioritized recommendations and a downloadable management PDF.
 
 ## 1. Replace the project files
 

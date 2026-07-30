@@ -16,7 +16,7 @@ type Report = {
   recommendedRateMin: number | null; recommendedRateMax: number | null; ratePositionNote: string;
   competitors: Competitor[]; keyFindings: string[];
   swot: { strengths: string[]; weaknesses: string[]; opportunities: string[]; threats: string[] };
-  actions: Array<{ timeframe: string; title: string; action: string; reason: string }>;
+  actions: Array<{ rank: number; timeframe: string; impact: "High" | "Medium" | "Low"; title: string; action: string; reason: string }>;
   cautions: string[];
 };
 type Result = {
@@ -143,7 +143,9 @@ export default function CompetitorAnalysisTool() {
 
       <div className="competitor-insights">
         <article><h4>Three decisions that matter</h4><ol>{result.report.keyFindings.map(item => <li key={item}>{item}</li>)}</ol></article>
-        <article><h4>Action plan</h4>{result.report.actions.map(action => <div className="competitor-action" key={`${action.timeframe}-${action.title}`}><span>{action.timeframe}</span><div><strong>{action.title}</strong><p>{action.action}</p><small>{action.reason}</small></div></div>)}</article>
+        <article><h4>Top 10 recommendations</h4>{result.report.actions.slice().sort((a, b) => (a.rank || 99) - (b.rank || 99)).map((action, index) => <div className="competitor-action" key={`${action.rank}-${action.title}`}>
+          <b className="competitor-rank">{action.rank || index + 1}</b><span>{action.timeframe}</span><div><strong>{action.title}<em className={`impact-${String(action.impact || "Medium").toLowerCase()}`}>{action.impact || "Medium"} impact</em></strong><p>{action.action}</p><small>{action.reason}</small></div>
+        </div>)}</article>
       </div>
       <div className="competitor-swot">
         {(["strengths","weaknesses","opportunities","threats"] as const).map(key => <article key={key}><h4>{key}</h4><ul>{result.report.swot[key].map(item => <li key={item}>{item}</li>)}</ul></article>)}

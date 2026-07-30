@@ -57,10 +57,12 @@ const reportSchema = {
       items: {
         type: "object",
         properties: {
+          rank: { type: "integer", minimum: 1, maximum: 10 },
           timeframe: { type: "string", enum: ["Today","Next 7 days","Next 30 days"] },
+          impact: { type: "string", enum: ["High","Medium","Low"] },
           title: { type: "string" }, action: { type: "string" }, reason: { type: "string" },
         },
-        required: ["timeframe","title","action","reason"], additionalProperties: false,
+        required: ["rank","timeframe","impact","title","action","reason"], additionalProperties: false,
       },
     },
     cautions: { type: "array", items: { type: "string" } },
@@ -118,7 +120,10 @@ Selection rules:
 - Never convert a "from" price, old cached price, member-only price or undated snippet into a verified rate.
 - Do not invent distances, facilities, review scores, review counts, cancellation conditions, meal plans, prices or URLs.
 - Use sourceUrl="" when no direct supporting page is available and set Low confidence.
-- Keep the writing concise enough for a two-page management PDF: executive summary under 80 words; exactly 3 key findings; SWOT maximum 3 short items per quadrant; 4-6 actions total.
+- Keep the writing concise enough for a two-page management PDF: executive summary under 80 words; exactly 3 key findings; SWOT maximum 3 short items per quadrant.
+- Return exactly 10 distinct, practical recommendations ranked 1-10. Rank 1 must be the most valuable immediate recommendation.
+- Each recommendation must include impact and timeframe, a short title, a specific action under 24 words, and an evidence-led reason under 22 words.
+- Cover a useful mix of rate positioning, offer/meal-plan strategy, OTA merchandising, review reputation, direct-booking conversion, content, visibility and local-market opportunities when supported by evidence. Do not force unsupported categories.
 - Recommendations are advisory. Explain important rate limitations in cautions.
 - Return only JSON matching the schema.
 
