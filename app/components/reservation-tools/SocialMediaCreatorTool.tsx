@@ -51,11 +51,31 @@ async function payload(response: Response) {
 }
 function loadImage(source: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = source;
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("The selected photo or logo is no longer available. Please choose the image again."));
+    image.src = source;
   });
 }
 function roundedRect(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number, fill: string) {
-  context.fillStyle = fill; context.beginPath(); context.roundRect(x, y, width, height, radius); context.fill();
+  const safeRadius = Math.max(0, Math.min(radius, width / 2, height / 2));
+  context.fillStyle = fill;
+  context.beginPath();
+  if (typeof context.roundRect === "function") {
+    context.roundRect(x, y, width, height, safeRadius);
+  } else {
+    context.moveTo(x + safeRadius, y);
+    context.lineTo(x + width - safeRadius, y);
+    context.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+    context.lineTo(x + width, y + height - safeRadius);
+    context.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
+    context.lineTo(x + safeRadius, y + height);
+    context.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+    context.lineTo(x, y + safeRadius);
+    context.quadraticCurveTo(x, y, x + safeRadius, y);
+  }
+  context.closePath();
+  context.fill();
 }
 function wrapText(context: CanvasRenderingContext2D, text: string, maxWidth: number) {
   const words = String(text || "").split(/\s+/).filter(Boolean), lines: string[] = []; let line = "";
@@ -136,6 +156,7 @@ export default function SocialMediaCreatorTool() {
   const [loading, setLoading] = useState(false), [rendering, setRendering] = useState(false);
   const [error, setError] = useState(""), [copied, setCopied] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null), logoRef = useRef<HTMLInputElement>(null);
+  const previewUrlRef = useRef(""), logoUrlRef = useRef("");
   const property = useMemo(() => properties.find(item => item.id === propertyId), [properties, propertyId]);
   const template = useMemo(() => templates.find(item => item.id === templateId) || templates[0], [templateId]);
   const theme = useMemo(() => themes.find(item => item.id === themeId) || themes[0], [themeId]);
@@ -147,7 +168,10 @@ export default function SocialMediaCreatorTool() {
       setProperties(data.properties || []); setPropertyId(data.properties?.[0]?.id || "");
     }).catch(reason => setError(reason instanceof Error ? reason.message : "Unable to load properties."));
   }, []);
-  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); if (logoPreview) URL.revokeObjectURL(logoPreview); }, [preview, logoPreview]);
+  useEffect(() => () => {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current);
+  }, []);
 
   function chooseAsset(event: ChangeEvent<HTMLInputElement>, kind: "photo" | "logo") {
     const file = event.target.files?.[0]; if (!file) return;
@@ -155,10 +179,12 @@ export default function SocialMediaCreatorTool() {
     if (file.size > 12 * 1024 * 1024) return setError("The image must be smaller than 12 MB.");
     const url = URL.createObjectURL(file);
     if (kind === "photo") {
-      if (preview) URL.revokeObjectURL(preview);
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = url;
       setPhoto(file); setPreview(url); setZoom(1); setPhotoX(50); setPhotoY(50);
     } else {
-      if (logoPreview) URL.revokeObjectURL(logoPreview);
+      if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current);
+      logoUrlRef.current = url;
       setLogo(file); setLogoPreview(url);
     }
     setDesign(""); setError("");
@@ -353,9 +379,9 @@ export default function SocialMediaCreatorTool() {
           <input ref={photoRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={event => chooseAsset(event, "photo")}/>
           <input ref={logoRef} type="file" accept="image/png,image/webp,image/jpeg" hidden onChange={event => chooseAsset(event, "logo")}/>
           {!preview ? <button type="button" className="social-photo-drop" onClick={() => photoRef.current?.click()}><ImagePlus/><strong>Upload hotel photo</strong><span>JPG, PNG or WebP · maximum 12 MB</span></button> :
-            <div className="social-photo-preview"><img src={preview} alt="Selected hotel"/><div><strong>{photo?.name}</strong><span>{photo ? `${(photo.size / 1024 / 1024).toFixed(1)} MB` : ""}</span></div><button type="button" onClick={() => { setPhoto(null); setPreview(""); setDesign(""); }} aria-label="Remove photo"><X/></button></div>}
+            <div className="social-photo-preview"><img src={preview} alt="Selected hotel"/><div><strong>{photo?.name}</strong><span>{photo ? `${(photo.size / 1024 / 1024).toFixed(1)} MB` : ""}</span></div><button type="button" onClick={() => { if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current); previewUrlRef.current = ""; setPhoto(null); setPreview(""); setDesign(""); }} aria-label="Remove photo"><X/></button></div>}
           {!logoPreview ? <button type="button" className="social-logo-upload" onClick={() => logoRef.current?.click()}><Upload size={17}/><span><strong>Add hotel logo</strong><small>Optional transparent PNG works best</small></span></button> :
-            <div className="social-logo-upload has-logo"><img src={logoPreview} alt="Hotel logo"/><span><strong>{logo?.name}</strong><small>Logo ready</small></span><button type="button" onClick={() => { setLogo(null); setLogoPreview(""); }}><X size={16}/></button></div>}
+            <div className="social-logo-upload has-logo"><img src={logoPreview} alt="Hotel logo"/><span><strong>{logo?.name}</strong><small>Logo ready</small></span><button type="button" onClick={() => { if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current); logoUrlRef.current = ""; setLogo(null); setLogoPreview(""); }}><X size={16}/></button></div>}
           <label className="social-contact-line"><span>Public contact line</span><input value={contactLine} onChange={event => setContactLine(event.target.value)} placeholder="WhatsApp 07X XXX XXXX · hotelwebsite.com"/></label>
         </div>
 
