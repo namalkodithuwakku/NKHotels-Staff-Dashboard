@@ -236,6 +236,62 @@ function buildRevenueEngine(input: {
 export async function GET(request: NextRequest) {
   if (!readServerSession(request)) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
   const properties = await supabaseAdmin<Property[]>("nkh_properties?select=id,client_code,property_name,city,country,total_rooms&client_status=eq.Active&order=property_name");
+  const propertyId = String(request.nextUrl.searchParams.get("propertyId") || "");
+  const from = String(request.nextUrl.searchParams.get("from") || "");
+  const to = String(request.nextUrl.searchParams.get("to") || "");
+  if (propertyId && /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to) && from <= to) {
+    const [propertyRows, roomTypes, bookings, ratePlans, rateRanges] = await Promise.all([
+      supabaseAdmin<Property[]>(`nkh_properties?select=*&id=eq.${encodeURIComponent(propertyId)}&limit=1`),
+      supabaseAdmin<Record<string, unknown>[]>(`nkh_room_types?select=*&property_id=eq.${encodeURIComponent(propertyId)}&is_active=eq.true`),
+      supabaseAdmin<Booking[]>(`nkh_calendar_bookings?select=check_in,check_out,room_name,room_type,booking_status,booking_source,total_amount,received_amount&property_id=eq.${encodeURIComponent(propertyId)}&check_in=lte.${encodeURIComponent(to)}&check_out=gt.${encodeURIComponent(from)}`),
+      supabaseAdmin<Record<string, unknown>[]>(`nkh_rate_plans?select=*&property_id=eq.${encodeURIComponent(propertyId)}`),
+      supabaseAdmin<Record<string, unknown>[]>(`nkh_rate_calendar_ranges?select=*&property_id=eq.${encodeURIComponent(propertyId)}&start_date=lte.${encodeURIComponent(to)}&end_date=gte.${encodeURIComponent(from)}`),
+    ]);
+    const property = propertyRows[0];
+    if (!property) return NextResponse.json({ error: "Property not found." }, { status: 404 });
+    const planIds = ratePlans.map(row => String(row.id || "")).filter(Boolean);
+    const ratePrices = planIds.length
+      ? await supabaseAdmin<Record<string, unknown>[]>(`nkh_rate_plan_prices?select=*&rate_plan_id=in.(${planIds.map(encodeURIComponent).join(",")})`)
+      : [];
+    const inventory = roomTypes.reduce((sum, row) => sum + Number(row.room_count || 0), 0) || Number(property.total_rooms || 0);
+    const occupancy = buildOccupancy(from, to, inventory, bookings);
+    let snapshots: Snapshot[] = [];
+    try {
+      snapshots = await supabaseAdmin<Snapshot[]>(`nkh_revenue_snapshots?select=captured_at,daily_inventory&property_id=eq.${encodeURIComponent(propertyId)}&period_start=eq.${encodeURIComponent(from)}&period_end=eq.${encodeURIComponent(to)}&order=captured_at.desc&limit=40`);
+    } catch (snapshotError) {
+      console.warn("Revenue dashboard pickup history is not available yet.", snapshotError);
+    }
+    const dashboard = buildRevenueEngine({
+      from, to, property, inventory, roomTypes: roomTypes as RoomType[], bookings, occupancy,
+      ratePlans, ratePrices, rateRanges, snapshots,
+    });
+    const latestCapture = snapshots[0]?.captured_at ? new Date(snapshots[0].captured_at).getTime() : 0;
+    if (!latestCapture || Date.now() - latestCapture >= 6 * 3_600_000) {
+      try {
+        await supabaseAdmin("nkh_revenue_snapshots", {
+          method: "POST", prefer: "return=minimal",
+          body: {
+            property_id: propertyId, period_start: from, period_end: to, inventory,
+            occupied_room_nights: dashboard.totals.occupiedRoomNights,
+            booked_revenue: dashboard.totals.bookedRevenue,
+            daily_inventory: dashboard.snapshot,
+          },
+        });
+      } catch (snapshotError) {
+        console.warn("Revenue dashboard snapshot could not be saved.", snapshotError);
+      }
+    }
+    return NextResponse.json({
+      success: true, properties, property,
+      metrics: {
+        inventory,
+        averageOccupancy: occupancy.length ? Math.round(occupancy.reduce((sum, row) => sum + row.occupancyPercent, 0) / occupancy.length) : 0,
+        bookedRevenue: bookings.reduce((sum, row) => sum + Number(row.total_amount || 0), 0),
+        currency: property.currency_code || "LKR",
+      },
+      dashboard,
+    });
+  }
   return NextResponse.json({ success: true, properties });
 }
 

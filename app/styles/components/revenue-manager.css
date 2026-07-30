@@ -84,3 +84,39 @@
 @media(min-width:761px) and (max-width:1150px){
   .revenue-command-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
+
+/* Live Revenue Manager main workspace */
+.live-revenue-manager{display:grid;gap:14px;min-width:0;color:#12303d}
+.revenue-dash-hero{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.revenue-dash-hero small,.revenue-rate-calendar>header small,.revenue-action-queue>header small,.revenue-guides>header small{font-size:9px;font-weight:900;letter-spacing:.14em;color:#078e7c}
+.revenue-dash-hero h2{margin:5px 0 3px;font-size:28px}.revenue-dash-hero p{margin:0;color:#697f89}
+.revenue-dash-hero>span{display:flex;align-items:center;gap:7px;padding:8px 12px;border:1px solid #bce2d7;border-radius:999px;background:#eff9f5;color:#087b59;font-size:10px;font-weight:850}
+.revenue-dash-hero>span i{width:7px;height:7px;border-radius:50%;background:#28aa73;box-shadow:0 0 0 4px #d9f3e8}
+.revenue-dash-controls{display:grid;grid-template-columns:minmax(250px,1fr) auto auto 70px 42px;gap:9px;align-items:center;padding:13px;border:1px solid #d8e5e8;border-radius:15px;background:#fff;box-shadow:0 8px 24px rgba(25,61,75,.05)}
+.revenue-dash-controls>select,.revenue-period-nav,.revenue-today,.revenue-refresh{height:42px;border:1px solid #d5e1e4;border-radius:12px;background:#fff;color:#203d4a;font-weight:750}
+.revenue-dash-controls>select{padding:0 38px 0 13px;font-size:13px}.revenue-view-switch{display:flex;height:42px;padding:3px;border:1px solid #d5e1e4;border-radius:12px;background:#eef4f5}
+.revenue-view-switch button{min-width:62px;border:0;border-radius:9px;background:transparent;color:#58717b;font-weight:800;cursor:pointer}
+.revenue-view-switch button.active{background:#fff;color:#087d70;box-shadow:0 2px 8px rgba(24,64,77,.1)}
+.revenue-period-nav{display:flex;align-items:center;overflow:hidden}.revenue-period-nav button{width:40px;height:40px;border:0;background:transparent;color:#52707c;display:grid;place-items:center;cursor:pointer}
+.revenue-period-nav strong{min-width:150px;text-align:center;font-size:13px}.revenue-today{font-weight:800;cursor:pointer}.revenue-refresh{display:grid;place-items:center;cursor:pointer}
+.revenue-live-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.revenue-live-kpis article{display:flex;align-items:center;gap:12px;min-height:88px;padding:15px 17px;border:1px solid #d8e5e8;border-radius:15px;background:#fff;box-shadow:0 8px 22px rgba(20,57,70,.045)}
+.revenue-live-kpis article>svg{width:34px;height:34px;padding:8px;border-radius:11px;background:#eaf7f4;color:#108d78}
+.revenue-live-kpis small{display:block;color:#71858d;font-size:8px;font-weight:900;letter-spacing:.08em}.revenue-live-kpis strong{display:block;margin:4px 0;color:#123746;font-size:22px}.revenue-live-kpis span{color:#758991;font-size:10px}
+.revenue-rate-calendar,.revenue-action-queue,.revenue-guides{overflow:hidden;border:1px solid #d8e5e8;border-radius:17px;background:#fff;box-shadow:0 10px 28px rgba(18,55,68,.05)}
+.revenue-rate-calendar>header,.revenue-action-queue>header,.revenue-guides>header{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:16px 18px;border-bottom:1px solid #e1eaec}
+.revenue-rate-calendar h3,.revenue-action-queue h3,.revenue-guides h3{margin:4px 0 0}.revenue-rate-calendar>header select{min-width:230px;height:40px;padding:0 35px 0 11px;border:1px solid #d6e2e5;border-radius:10px;background:#fff;font-weight:750}
+.revenue-day-grid{display:grid;grid-template-columns:repeat(7,minmax(130px,1fr));gap:1px;background:#e0e9eb;overflow:auto}.revenue-day-grid.month{grid-template-columns:repeat(7,minmax(145px,1fr))}.revenue-day-grid article{min-height:132px;padding:12px;background:#fff}
+.revenue-day-grid article>header{display:flex;align-items:center;justify-content:space-between}.revenue-day-grid article>header small{color:#617984;font-size:9px;font-weight:850;text-transform:uppercase}.revenue-day-grid article>header b{padding:3px 5px;border-radius:999px;background:#f39a12;color:#fff;font-size:6px}
+.revenue-day-grid article>strong{display:block;margin:10px 0 3px;font-size:24px}.revenue-day-grid article>span{color:#71868f;font-size:9px}
+.revenue-day-grid footer{position:relative;margin-top:10px;padding-top:8px;border-top:1px solid rgba(123,151,161,.22)}.revenue-day-grid footer small,.revenue-day-grid footer b{display:block}.revenue-day-grid footer small{color:#7b8e96;font-size:7px}.revenue-day-grid footer b{margin-top:3px;font-size:11px}.revenue-day-grid footer em{position:absolute;right:0;bottom:0;color:#9b5b09;font-size:9px;font-style:normal;font-weight:900}
+.revenue-day-grid article.demand-low{background:#eef7fb}.revenue-day-grid article.demand-normal{background:#fff}.revenue-day-grid article.demand-high{background:#fff5df}.revenue-day-grid article.demand-peak{background:#ffe7e7}.revenue-day-grid article.today{box-shadow:inset 0 0 0 3px #f39a12}
+.revenue-work-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(290px,.7fr);gap:12px;align-items:start}
+.revenue-action-queue>header>span{padding:6px 9px;border-radius:999px;background:#eaf7f4;color:#087664;font-size:9px;font-weight:850}
+.revenue-action-queue>article{display:grid;grid-template-columns:34px 1fr;gap:12px;padding:14px 17px;border-bottom:1px solid #e7eef0}.revenue-action-queue>article:last-child{border-bottom:0}
+.revenue-action-queue>article>b{width:31px;height:31px;border-radius:9px;background:#eaf6f4;color:#087c6d;display:grid;place-items:center;font-size:11px}
+.revenue-action-queue article small{color:#0b8979;font-size:8px;font-weight:900}.revenue-action-queue h4{margin:4px 0;color:#173743;font-size:13px}.revenue-action-queue p{margin:0;color:#6c818a;font-size:10px;line-height:1.45}
+.revenue-calm{padding:34px;text-align:center}.revenue-calm p{margin:5px 0;color:#71858d}
+.revenue-guides>header{display:block}.revenue-guides article{padding:12px 16px;border-bottom:1px solid #e6edef}.revenue-guides article:last-child{border-bottom:0}.revenue-guides article b{font-size:11px;color:#087e70}.revenue-guides article p{margin:4px 0 0;color:#687e87;font-size:10px;line-height:1.45}
+@media(max-width:1100px){.revenue-dash-controls{grid-template-columns:1fr auto auto}.revenue-period-nav{grid-column:1/-1;grid-row:2}.revenue-live-kpis{grid-template-columns:1fr 1fr}.revenue-work-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.revenue-dash-hero{align-items:flex-start;flex-direction:column}.revenue-dash-controls{grid-template-columns:1fr auto}.revenue-dash-controls>select{grid-column:1/-1}.revenue-view-switch{grid-column:1/-1}.revenue-period-nav{max-width:100%;grid-column:1/-1;overflow:auto}.revenue-period-nav strong{min-width:135px}.revenue-live-kpis{grid-template-columns:1fr}.revenue-rate-calendar>header{align-items:flex-start;flex-direction:column}.revenue-rate-calendar>header select{width:100%;min-width:0}.revenue-day-grid,.revenue-day-grid.month{grid-template-columns:repeat(7,140px)}}
