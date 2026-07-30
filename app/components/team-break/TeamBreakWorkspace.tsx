@@ -65,7 +65,7 @@ function initials(name: string) {
   return name.split(/\s+/).map(part => part[0]).join("").slice(0, 2).toUpperCase();
 }
 
-export default function TeamBreakWorkspace({ staffName }: { staffName: string }) {
+export default function TeamBreakWorkspace({ staffName, canRegenerate = false }: { staffName: string; canRegenerate?: boolean }) {
   const [state, setState] = useState<ChallengeState | null>(null);
   const [loading, setLoading] = useState(true);
   const [answering, setAnswering] = useState("");
@@ -139,15 +139,15 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
     setSelectedCourse(courseId);
   }
 
-  async function generateCurrentImage() {
-    if (!state?.current || state.current.imageUrl || generatingImage) return;
+  async function generateCurrentImage(regenerate = false) {
+    if (!state?.current || (!regenerate && state.current.imageUrl) || generatingImage) return;
     try {
       setGeneratingImage(true);
       setImageError("");
       const response = await fetch("/api/cron/team-break-images", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questionId: state.current.id }),
+        body: JSON.stringify({ questionId: state.current.id, regenerate }),
       });
       const value = await response.json();
       if (!response.ok || !value.success || !value.imageUrl) {
@@ -158,7 +158,7 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
         current: { ...current.current, imageUrl: value.imageUrl },
         imageProgress: {
           ...current.imageProgress,
-          ready: Math.min(current.imageProgress.total, current.imageProgress.ready + (value.alreadyReady ? 0 : 1)),
+          ready: Math.min(current.imageProgress.total, current.imageProgress.ready + (value.alreadyReady || regenerate ? 0 : 1)),
         },
       } : current);
       window.dispatchEvent(new CustomEvent("nkh-pet-celebrate", {
@@ -182,7 +182,7 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
 
   if (loading) return <div className="hospitality-loading"><RefreshCw/><strong>Preparing today’s hospitality challenge…</strong></div>;
 
-  if (assignmentId) return <AcademyAssignment assignmentId={assignmentId} onBack={() => {
+  if (assignmentId) return <AcademyAssignment assignmentId={assignmentId} canRegenerate={canRegenerate} onBack={() => {
     window.sessionStorage.removeItem("nkh_academy_assignment_id");
     setAssignmentId("");
   }}/>;
@@ -261,6 +261,9 @@ export default function TeamBreakWorkspace({ staffName }: { staffName: string })
                 </button>
                 {imageError && <small>{imageError}</small>}
               </section>}
+              {state.current.imageUrl && canRegenerate && <button className="academy-replace-visual" type="button" disabled={generatingImage} onClick={() => void generateCurrentImage(true)}>
+                <RefreshCw size={14}/>{generatingImage ? "Replacing…" : "Replace visual"}
+              </button>}
               <div><span>{state.current.category}</span><b>{state.current.difficulty} · 10 points</b></div>
             </div>
             <div className="hospitality-question-copy">

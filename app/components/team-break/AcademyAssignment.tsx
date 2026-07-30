@@ -48,9 +48,11 @@ function duration(seconds: number) {
 export default function AcademyAssignment({
   assignmentId,
   onBack,
+  canRegenerate = false,
 }: {
   assignmentId: string;
   onBack: () => void;
+  canRegenerate?: boolean;
 }) {
   const [state, setState] = useState<AssignmentState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -129,7 +131,7 @@ export default function AcademyAssignment({
     }
   }
 
-  async function generateImage() {
+  async function generateImage(regenerate = false) {
     if (!state?.current || generatingImage) return;
     try {
       setGeneratingImage(true);
@@ -137,7 +139,7 @@ export default function AcademyAssignment({
       const response = await fetch("/api/cron/team-break-images", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questionId: state.current.id }),
+        body: JSON.stringify({ questionId: state.current.id, regenerate }),
       });
       const value = await response.json();
       if (!response.ok || !value.success || !value.imageUrl) throw new Error(value.error || "Image generation failed.");
@@ -204,6 +206,9 @@ export default function AcademyAssignment({
               <Sparkles size={14}/>{generatingImage ? "Generating…" : "Generate image"}
             </button>
           </section>}
+          {state.current.imageUrl && canRegenerate && <button className="academy-replace-visual" type="button" disabled={generatingImage} onClick={() => void generateImage(true)}>
+            <RefreshCw size={14}/>{generatingImage ? "Replacing…" : "Replace visual"}
+          </button>}
         </div>
         <div className="academy-live-copy">
           <small>{state.current.difficulty}</small>

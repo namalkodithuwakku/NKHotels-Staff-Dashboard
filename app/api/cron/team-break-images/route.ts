@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readServerSession } from "../../../lib/serverSession";
+import { isMasterSession, readServerSession } from "../../../lib/serverSession";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 
 export const maxDuration = 300;
@@ -48,18 +48,28 @@ async function generate(question: ImageQuestion) {
     prefer: "return=minimal",
     body: { image_status: "Generating", image_attempts: Number(question.image_attempts || 0) + 1, image_last_error: null },
   });
+  const conceptPrompt = question.image_prompt || [
+    "Create a friendly, relaxing, softly dimensional hospitality learning image for adult hotel staff.",
+    `Show the concept “${question.term}”: ${question.definition}.`,
+    "Use gentle blue, green, amber and neutral colours in a believable boutique hotel setting.",
+    "Objects must remain normal and must never have eyes, mouths, faces, hands, arms or mascot personalities.",
+    "No children, childish cartoon style, text, logos, watermarks or UI.",
+  ].join(" ");
+  const sriLankanStaffStandard = [
+    "NKH Academy people standard:",
+    "If people are useful for explaining the concept, depict pleasant adult Sri Lankan hospitality staff with natural Sri Lankan facial features and a realistic range of Sri Lankan skin tones.",
+    "Give them warm, calm, professional expressions and believable working poses.",
+    "Uniforms must follow polished international Western hotel standards appropriate to the role: tailored front-office suits, blazers, collared shirts, waistcoats, smart restaurant uniforms, chef uniforms, or neat housekeeping uniforms.",
+    "Keep uniforms modern, modest, clean and premium, using coordinated neutral, navy, teal or warm accent colours.",
+    "Do not use traditional costumes, ceremonial clothing, flags, exaggerated cultural styling, stereotypes, caricatures, or generic European-only staff appearance unless the learning concept specifically requires cultural attire.",
+    "Do not force a person into an object-only concept.",
+  ].join(" ");
   const response = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: process.env.OPENAI_TEAM_BREAK_IMAGE_MODEL || "gpt-image-1-mini",
-      prompt: question.image_prompt || [
-        "Create a friendly, relaxing, softly dimensional hospitality learning image for adult hotel staff.",
-        `Show the concept “${question.term}”: ${question.definition}.`,
-        "Use gentle blue, green, amber and neutral colours in a believable boutique hotel setting.",
-        "Objects must remain normal and must never have eyes, mouths, faces, hands, arms or mascot personalities.",
-        "No children, childish cartoon style, text, logos, watermarks or UI.",
-      ].join(" "),
+      prompt: `${conceptPrompt} ${sriLankanStaffStandard}`,
       size: "1024x1024",
       quality: "low",
       output_format: "webp",
@@ -70,17 +80,18 @@ async function generate(question: ImageQuestion) {
     throw new Error(payload.error?.message || `OpenAI image generation failed (${response.status}).`);
   }
   const imageUrl = await uploadImage(`hospitality/${question.slug}.webp`, Uint8Array.from(Buffer.from(payload.data[0].b64_json, "base64")));
+  const versionedImageUrl = `${imageUrl}?v=${Date.now()}`;
   await supabaseAdmin(`nkh_hospitality_questions?id=eq.${question.id}`, {
     method: "PATCH",
     prefer: "return=minimal",
     body: {
-      image_url: imageUrl,
+      image_url: versionedImageUrl,
       image_status: "Ready",
       image_generated_at: new Date().toISOString(),
       image_last_error: null,
     },
   });
-  return { id: question.id, term: question.term, imageUrl };
+  return { id: question.id, term: question.term, imageUrl: versionedImageUrl };
 }
 
 export async function GET(request: NextRequest) {
@@ -124,6 +135,7 @@ export async function POST(request: NextRequest) {
   try {
     const input = await request.json();
     const questionId = String(input.questionId || "").trim();
+    const regenerate = input.regenerate === true;
     if (!questionId) {
       return NextResponse.json(
         { success: false, error: "Question ID is required." },
@@ -141,7 +153,13 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
-    if (question.image_url) {
+    if (regenerate && !isMasterSession(session)) {
+      return NextResponse.json(
+        { success: false, error: "Only Master can replace an existing Academy visual." },
+        { status: 403 }
+      );
+    }
+    if (question.image_url && !regenerate) {
       return NextResponse.json({
         success: true,
         alreadyReady: true,
@@ -156,6 +174,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (regenerate) {
+      await supabaseAdmin(`nkh_hospitality_questions?id=eq.${question.id}`, {
+        method: "PATCH",
+        prefer: "return=minimal",
+        body: { image_url: null, image_status: "Pending", image_attempts: 0, image_last_error: null },
+      });
+      question.image_attempts = 0;
+      question.image_url = null;
+      question.image_status = "Pending";
+    }
     const result = await generate(question);
     return NextResponse.json({
       success: true,
