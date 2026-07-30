@@ -1,0 +1,86 @@
+.revenue-manager-workspace{
+  min-width:0;
+  width:100%;
+}
+.revenue-manager-workspace .revenue-planner{
+  max-width:none;
+}
+.revenue-manager-workspace .revenue-planner-hero{
+  background:
+    radial-gradient(circle at 92% 20%,rgba(82,205,192,.18),transparent 25%),
+    linear-gradient(120deg,#fff 58%,#edf9f7);
+}
+.revenue-manager-workspace .revenue-plan-results{
+  padding-bottom:30px;
+}
+.revenue-command-center,.revenue-engine-panel{
+  overflow:hidden;
+  border:1px solid #d7e5e8;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 10px 30px rgba(18,55,69,.055);
+}
+.revenue-command-center>header,.revenue-engine-panel>header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:18px 20px;
+  border-bottom:1px solid #e2ebed;
+}
+.revenue-command-center>header small,.revenue-engine-panel>header small{
+  color:#078f7e;font-size:9px;font-weight:900;letter-spacing:.13em;
+}
+.revenue-command-center>header h3,.revenue-engine-panel>header h3{margin:4px 0 0}
+.revenue-command-center>header>span,.revenue-engine-panel>header>span{
+  padding:7px 10px;border-radius:999px;background:#eef7f5;color:#087765;font-size:10px;font-weight:850;
+}
+.revenue-command-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:#e3ecee}
+.revenue-command-kpis article{min-width:0;padding:17px 18px;background:#fff}
+.revenue-command-kpis small{display:block;color:#70858e;font-size:8px;font-weight:900;letter-spacing:.08em}
+.revenue-command-kpis strong{display:block;margin:7px 0 4px;color:#123746;font-size:25px;line-height:1}
+.revenue-command-kpis span{color:#758991;font-size:10px}
+.revenue-desk-tabs{display:flex;gap:6px;padding:10px;background:#f5f9fa;border-top:1px solid #e2ebed;overflow:auto}
+.revenue-desk-tabs button{
+  min-height:38px;padding:0 15px;border:1px solid transparent;border-radius:10px;background:transparent;color:#506c77;font-weight:800;white-space:nowrap;cursor:pointer;
+}
+.revenue-desk-tabs button.active{border-color:#bfe2dd;background:#fff;color:#087d70;box-shadow:0 3px 10px rgba(20,72,83,.08)}
+.revenue-engine-panel>header select{
+  min-width:220px;height:42px;padding:0 36px 0 12px;border:1px solid #d5e2e5;border-radius:11px;background:#fff;color:#173743;font-weight:750;
+}
+.revenue-engine-table-wrap{max-width:100%;overflow:auto}
+.revenue-engine-table-wrap table{width:100%;min-width:980px;border-collapse:collapse}
+.revenue-engine-table-wrap th{
+  position:sticky;top:0;z-index:2;padding:11px 13px;background:#f1f7f8;color:#657b85;font-size:8px;font-weight:900;letter-spacing:.06em;text-align:left;white-space:nowrap;
+}
+.revenue-engine-table-wrap td{padding:12px 13px;border-top:1px solid #e6edef;color:#47616c;font-size:11px;vertical-align:top}
+.revenue-engine-table-wrap td:first-child{font-weight:850;color:#173743;white-space:nowrap}
+.revenue-engine-table-wrap td strong{color:#102f3b}
+.revenue-engine-table-wrap tbody tr:hover{background:#fbfdfd}
+.revenue-engine-table-wrap b[class^="demand-"],.revenue-engine-table-wrap b[class^="ota-"]{
+  display:inline-block;padding:5px 7px;border-radius:999px;background:#eef4f5;color:#4b6670;font-size:8px;white-space:nowrap;
+}
+.revenue-engine-table-wrap .demand-peak,.revenue-engine-table-wrap .ota-high{background:#ffe6e7;color:#b12c36}
+.revenue-engine-table-wrap .demand-high,.revenue-engine-table-wrap .ota-medium{background:#fff0d8;color:#9a5908}
+.revenue-engine-table-wrap .demand-low{background:#e8f2fb;color:#236b9a}
+.revenue-engine-table-wrap .demand-normal,.revenue-engine-table-wrap .ota-watch{background:#e9f7f3;color:#087660}
+.revenue-engine-table-wrap .rate-up{color:#aa5b00;font-weight:900}
+.revenue-engine-table-wrap .rate-down{color:#2677a4;font-weight:900}
+.pickup-window-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:16px}
+.pickup-window-grid article{padding:14px 15px;border:1px solid #dce7e9;border-radius:12px;background:#f9fbfc}
+.pickup-window-grid small{display:block;color:#70858e;font-size:8px;font-weight:900;letter-spacing:.08em}
+.pickup-window-grid strong{display:block;margin:6px 0 3px;color:#138a79;font-size:24px}
+.pickup-window-grid span{color:#748991;font-size:10px}
+@media(max-width:760px){
+  .revenue-manager-workspace .revenue-planner-hero{
+    padding:20px;
+  }
+  .revenue-command-kpis{grid-template-columns:1fr 1fr}
+  .revenue-command-kpis article:last-child{grid-column:1/-1}
+  .revenue-command-center>header,.revenue-engine-panel>header{align-items:flex-start;flex-direction:column}
+  .revenue-engine-panel>header select{width:100%;min-width:0}
+  .pickup-window-grid{grid-template-columns:1fr 1fr}
+}
+@media(min-width:761px) and (max-width:1150px){
+  .revenue-command-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+}

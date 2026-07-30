@@ -22,8 +22,9 @@ import TeamBreakWorkspace from "../components/team-break/TeamBreakWorkspace";
 import NikoPet from "../components/pet/NikoPet";
 import CalendarWorkspace from "../components/calendar/CalendarWorkspace";
 import OccupancyInventoryWorkspace from "../components/occupancy/OccupancyInventoryWorkspace";
+import RevenueManagerWorkspace from "../components/revenue/RevenueManagerWorkspace";
 
-export type WorkspaceView = "home" | "tasks" | "whatsapp" | "sms" | "scheduled" | "properties" | "roster" | "calendar" | "occupancy" | "faq" | "team-break";
+export type WorkspaceView = "home" | "tasks" | "whatsapp" | "sms" | "scheduled" | "properties" | "roster" | "calendar" | "occupancy" | "revenue-manager" | "faq" | "team-break";
 
 const nav: Array<{ key: WorkspaceView; label: string; short: string }> = [
   { key: "home", label: "Home", short: "Home" },
@@ -35,6 +36,7 @@ const nav: Array<{ key: WorkspaceView; label: string; short: string }> = [
   { key: "roster", label: "Roster", short: "Roster" },
   { key: "calendar", label: "Calendars", short: "Calendar" },
   { key: "occupancy", label: "Occupancy", short: "Inventory" },
+  { key: "revenue-manager", label: "Revenue Manager", short: "Revenue" },
   { key: "faq", label: "Hotel FAQ", short: "FAQ" },
   { key: "team-break", label: "NKH Academy", short: "Academy" },
 ];
@@ -172,6 +174,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
           {view === "roster" && <RosterWorkspace />}
           {view === "calendar" && <CalendarWorkspace />}
           {view === "occupancy" && <OccupancyInventoryWorkspace />}
+          {view === "revenue-manager" && <RevenueManagerWorkspace />}
           {view === "faq" && <ComingSoonWorkspace title="Hotel FAQ" description="Search approved answers across every active property profile." />}
           {view === "team-break" && <TeamBreakWorkspace staffName={staff.name} />}
         </div>
@@ -181,7 +184,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
 
       <button className="staff-fab" onClick={() => setCreatorOpen(true)} aria-label="Create task">＋</button>
       <TaskCreatorModal open={creatorOpen} onClose={() => setCreatorOpen(false)} staff={staff} shift={shift} onCreated={refreshAll} />
-      <NikoPet staffName={staff.name} compact={view === "tasks" || view === "whatsapp" || view === "sms"} />
+      <NikoPet staffName={staff.name} compact={view === "tasks" || view === "whatsapp" || view === "sms" || view === "occupancy" || view === "revenue-manager"} />
     </main>
   );
 }

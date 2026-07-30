@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isMasterSession, readServerSession } from "../../../lib/serverSession";
+import { readServerSession } from "../../../lib/serverSession";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 
 export const runtime = "nodejs";
@@ -11,6 +11,8 @@ type Property = {
   country?: string | null; map_url?: string | null; total_rooms?: number | null; currency_code?: string | null;
 };
 type Booking = { check_in: string; check_out: string; room_name: string; room_type?: string | null; booking_status: string; booking_source: string; total_amount?: number | null; received_amount?: number | null };
+type Snapshot = { captured_at: string; daily_inventory: Array<{ date: string; occupiedRooms: number }> };
+type RoomType = { id: string; room_name: string; room_code?: string; room_count?: number; room_names?: string[] };
 
 const planSchema = {
   type: "object",
@@ -104,8 +106,135 @@ function buildOccupancy(from: string, to: string, capacity: number, bookings: Bo
   return rows;
 }
 
+function numberValue(row: Record<string, unknown> | undefined, ...keys: string[]) {
+  for (const key of keys) {
+    const value = Number(row?.[key]);
+    if (Number.isFinite(value) && value > 0) return value;
+  }
+  return 0;
+}
+function roundRate(value: number, currency: string) {
+  const step = currency.toUpperCase() === "LKR" ? 100 : 1;
+  return Math.max(step, Math.round(value / step) * step);
+}
+function roomTypeForBooking(booking: Booking, roomTypes: RoomType[]) {
+  const stated = String(booking.room_type || "").trim().toLowerCase();
+  const room = String(booking.room_name || "").trim().toLowerCase();
+  return roomTypes.find(type =>
+    stated === String(type.room_name || "").trim().toLowerCase()
+    || stated === String(type.room_code || "").trim().toLowerCase()
+    || (type.room_names || []).some(name => String(name).trim().toLowerCase() === room)
+  );
+}
+function closestSnapshot(snapshots: Snapshot[], days: number) {
+  const target = Date.now() - days * 86_400_000;
+  return snapshots
+    .filter(item => new Date(item.captured_at).getTime() <= Date.now() - 12 * 3_600_000)
+    .sort((a, b) => Math.abs(new Date(a.captured_at).getTime() - target) - Math.abs(new Date(b.captured_at).getTime() - target))[0];
+}
+function groupPeriods(rows: Array<{ date: string; level: string; reason: string }>, accepted: string[]) {
+  const matches = rows.filter(row => accepted.includes(row.level));
+  const groups: Array<{ from: string; to: string; level: string; reason: string }> = [];
+  matches.forEach(row => {
+    const previous = groups[groups.length - 1];
+    const expected = previous ? localDate(previous.to) : null;
+    if (expected) expected.setDate(expected.getDate() + 1);
+    if (previous && dateKey(expected!) === row.date && previous.level === row.level) previous.to = row.date;
+    else groups.push({ from: row.date, to: row.date, level: row.level, reason: row.reason });
+  });
+  return groups;
+}
+function buildRevenueEngine(input: {
+  from: string; to: string; property: Property; inventory: number; roomTypes: RoomType[]; bookings: Booking[];
+  occupancy: Array<{ date: string; occupiedRooms: number; availableRooms: number; occupancyPercent: number }>;
+  ratePlans: Record<string, unknown>[]; ratePrices: Record<string, unknown>[]; rateRanges: Record<string, unknown>[]; snapshots: Snapshot[];
+}) {
+  const { property, inventory, roomTypes, bookings, occupancy, ratePlans, ratePrices, rateRanges, snapshots } = input;
+  const currency = property.currency_code || "LKR";
+  const snapshotWindows = [1, 3, 7, 30].map(days => {
+    const snapshot = closestSnapshot(snapshots, days);
+    const previous = new Map((snapshot?.daily_inventory || []).map(row => [row.date, Number(row.occupiedRooms || 0)]));
+    const pickup = snapshot ? occupancy.reduce((sum, row) => sum + Math.max(0, row.occupiedRooms - Number(previous.get(row.date) || 0)), 0) : null;
+    return { days, pickup, available: Boolean(snapshot), capturedAt: snapshot?.captured_at || null };
+  });
+  const pickup7 = snapshotWindows.find(item => item.days === 7 && item.available);
+  const dailyPace = pickup7?.pickup === null || pickup7?.pickup === undefined ? 0 : pickup7.pickup / 7;
+  const today = localDate(dateKey(new Date()));
+  const daily = occupancy.map(row => {
+    const stay = localDate(row.date);
+    const leadDays = Math.max(0, Math.round((stay.getTime() - today.getTime()) / 86_400_000));
+    const paceProjection = Math.min(row.availableRooms, Math.round(dailyPace * Math.min(leadDays, 30) / Math.max(1, occupancy.length)));
+    const forecastSold = Math.min(inventory, row.occupiedRooms + paceProjection);
+    const forecastOccupancy = inventory ? Math.round(forecastSold / inventory * 100) : 0;
+    const level = forecastOccupancy >= 90 ? "Peak" : forecastOccupancy >= 75 ? "High" : forecastOccupancy <= 35 ? "Low" : "Normal";
+    return {
+      ...row, forecastSold, forecastOccupancy, level,
+      confidence: pickup7?.available ? "Medium" : "Low",
+      reason: pickup7?.available ? "Current bookings plus measured seven-day pickup pace." : "Current bookings only; pickup history is still being built.",
+    };
+  });
+  const defaultPlan = ratePlans.find(row => /standard|bar|best available/i.test(String(row.plan_name || row.plan_code || ""))) || ratePlans[0];
+  const rateSuggestions = roomTypes.flatMap(type => daily.map(day => {
+    const range = rateRanges.find(row =>
+      String(row.start_date || "") <= day.date && String(row.end_date || "") >= day.date
+      && (!row.room_type_id || String(row.room_type_id) === String(type.id))
+    );
+    const planId = String(range?.rate_plan_id || defaultPlan?.id || "");
+    const price = ratePrices.find(row => String(row.rate_plan_id) === planId && String(row.room_type_id) === String(type.id))
+      || ratePrices.find(row => String(row.room_type_id) === String(type.id));
+    const baseRate = numberValue(range, "override_double_rate", "override_single_rate", "override_triple_rate")
+      || numberValue(price, "double_rate", "single_rate", "triple_rate");
+    const factor = day.forecastOccupancy >= 90 ? 1.25 : day.forecastOccupancy >= 80 ? 1.15
+      : day.forecastOccupancy >= 65 ? 1.08 : day.forecastOccupancy <= 25 ? .85
+      : day.forecastOccupancy <= 40 ? .92 : 1;
+    return {
+      date: day.date, roomTypeId: type.id, roomType: type.room_name, rooms: Number(type.room_count || 0),
+      baseRate, suggestedRate: baseRate ? roundRate(baseRate * factor, currency) : 0,
+      changePercent: Math.round((factor - 1) * 100), occupancy: day.occupancyPercent,
+      forecastOccupancy: day.forecastOccupancy, demandLevel: day.level,
+      reason: !baseRate ? "Add a base room rate in the property profile."
+        : factor > 1 ? "Demand supports a controlled rate increase."
+        : factor < 1 ? "Soft demand supports a tactical offer while protecting rate integrity."
+        : "Hold the current rate and monitor pickup.",
+    };
+  }));
+  const otaDaily = daily.map(day => ({
+    date: day.date,
+    action: day.forecastOccupancy >= 92 ? "Close discounts"
+      : day.forecastOccupancy >= 82 ? "Restrict promotions"
+      : day.forecastOccupancy <= 30 ? "Open all suitable channels"
+      : "Keep open",
+    scope: day.forecastOccupancy >= 92 ? "Close mobile/Genius/campaign discounts; keep direct and essential channels."
+      : day.forecastOccupancy >= 82 ? "Pause deep discounts and consider minimum-stay controls."
+      : day.forecastOccupancy <= 30 ? "Keep OTAs open and activate a controlled visibility offer."
+      : "Maintain current OTA distribution.",
+    occupancy: day.forecastOccupancy,
+    priority: day.forecastOccupancy >= 92 || day.forecastOccupancy <= 30 ? "High" : day.forecastOccupancy >= 82 ? "Medium" : "Watch",
+  }));
+  const currentDaily = occupancy.map(row => ({ date: row.date, occupiedRooms: row.occupiedRooms, occupancyPercent: row.occupancyPercent }));
+  return {
+    generatedAt: new Date().toISOString(), currency,
+    dataQuality: {
+      pickupHistory: snapshots.length ? "Building" : "New",
+      rateCoverage: rateSuggestions.length ? Math.round(rateSuggestions.filter(row => row.baseRate > 0).length / rateSuggestions.length * 100) : 0,
+      forecastConfidence: pickup7?.available ? "Medium" : "Low",
+    },
+    pickup: snapshotWindows,
+    forecast: daily,
+    highDemandPeriods: groupPeriods(daily, ["High", "Peak"]),
+    lowDemandPeriods: groupPeriods(daily, ["Low"]),
+    rateSuggestions,
+    otaActions: otaDaily,
+    snapshot: currentDaily,
+    totals: {
+      occupiedRoomNights: occupancy.reduce((sum, row) => sum + row.occupiedRooms, 0),
+      bookedRevenue: bookings.reduce((sum, row) => sum + Number(row.total_amount || 0), 0),
+    },
+  };
+}
+
 export async function GET(request: NextRequest) {
-  if (!isMasterSession(readServerSession(request))) return NextResponse.json({ error: "Master access required." }, { status: 403 });
+  if (!readServerSession(request)) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
   const properties = await supabaseAdmin<Property[]>("nkh_properties?select=id,client_code,property_name,city,country,total_rooms&client_status=eq.Active&order=property_name");
   return NextResponse.json({ success: true, properties });
 }
@@ -113,7 +242,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = readServerSession(request);
-    if (!isMasterSession(session)) return NextResponse.json({ error: "Master access required." }, { status: 403 });
+    if (!session) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
     const input = await request.json();
     const propertyId = String(input.propertyId || ""), from = String(input.from || ""), to = String(input.to || "");
     const objective = String(input.objective || "Balanced occupancy and revenue");
@@ -139,7 +268,28 @@ export async function POST(request: NextRequest) {
     const occupancy = buildOccupancy(from, to, inventory, bookings);
     const key = process.env.OPENAI_API_KEY;
     if (!key) throw new Error("OPENAI_API_KEY is not configured in Vercel.");
-    const context = { property, planningPeriod: { from, to, objective }, inventory, roomTypes, occupancy, bookings, ratePlans, ratePrices, rateRanges };
+    let snapshots: Snapshot[] = [];
+    try {
+      snapshots = await supabaseAdmin<Snapshot[]>(`nkh_revenue_snapshots?select=captured_at,daily_inventory&property_id=eq.${encodeURIComponent(propertyId)}&period_start=eq.${encodeURIComponent(from)}&period_end=eq.${encodeURIComponent(to)}&order=captured_at.desc&limit=40`);
+    } catch (snapshotError) {
+      console.warn("Revenue pickup history is not available yet.", snapshotError);
+    }
+    const revenueEngine = buildRevenueEngine({
+      from, to, property, inventory, roomTypes: roomTypes as RoomType[], bookings, occupancy,
+      ratePlans, ratePrices, rateRanges, snapshots,
+    });
+    const context = {
+      property, planningPeriod: { from, to, objective }, inventory, roomTypes, occupancy, bookings,
+      ratePlans, ratePrices, rateRanges,
+      calculatedRevenueSignals: {
+        dataQuality: revenueEngine.dataQuality,
+        pickup: revenueEngine.pickup,
+        forecast: revenueEngine.forecast,
+        highDemandPeriods: revenueEngine.highDemandPeriods,
+        lowDemandPeriods: revenueEngine.lowDemandPeriods,
+        otaActionSummary: revenueEngine.otaActions.filter(item => item.action !== "Keep open"),
+      },
+    };
     let plan;
     try {
       plan = await requestRevenuePlan(key, context);
@@ -151,7 +301,20 @@ export async function POST(request: NextRequest) {
       method: "POST", prefer: "return=representation",
       body: { property_id: propertyId, period_start: from, period_end: to, objective, generated_by: session?.name, inventory_snapshot: { totalRooms: inventory, roomTypes, occupancy }, plan },
     });
-    return NextResponse.json({ success: true, planId: saved[0]?.id, property: { id: property.id, property_name: property.property_name, city: property.city, country: property.country }, metrics: { inventory, averageOccupancy: occupancy.length ? Math.round(occupancy.reduce((sum, row) => sum + row.occupancyPercent, 0) / occupancy.length) : 0, bookedRevenue: bookings.reduce((sum, row) => sum + Number(row.total_amount || 0), 0), currency: property.currency_code || "LKR" }, plan });
+    try {
+      await supabaseAdmin("nkh_revenue_snapshots", {
+        method: "POST", prefer: "return=minimal",
+        body: {
+          property_id: propertyId, period_start: from, period_end: to, inventory,
+          occupied_room_nights: revenueEngine.totals.occupiedRoomNights,
+          booked_revenue: revenueEngine.totals.bookedRevenue,
+          daily_inventory: revenueEngine.snapshot,
+        },
+      });
+    } catch (snapshotError) {
+      console.warn("Revenue snapshot could not be saved.", snapshotError);
+    }
+    return NextResponse.json({ success: true, planId: saved[0]?.id, property: { id: property.id, property_name: property.property_name, city: property.city, country: property.country }, metrics: { inventory, averageOccupancy: occupancy.length ? Math.round(occupancy.reduce((sum, row) => sum + row.occupancyPercent, 0) / occupancy.length) : 0, bookedRevenue: bookings.reduce((sum, row) => sum + Number(row.total_amount || 0), 0), currency: property.currency_code || "LKR" }, revenueEngine, plan });
   } catch (error) {
     console.error("AI revenue plan failed.", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to create the revenue plan." }, { status: 500 });
