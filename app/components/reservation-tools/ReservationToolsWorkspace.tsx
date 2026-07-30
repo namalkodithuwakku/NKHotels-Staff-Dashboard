@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart3, FileSearch, Megaphone, Plus } from "lucide-react";
+import { BadgePercent, BarChart3, FileSearch, Megaphone, Plus } from "lucide-react";
 import OtaAuditTool from "./OtaAuditTool";
 import RevenuePlannerTool from "./RevenuePlannerTool";
 import SocialMediaCreatorTool from "./SocialMediaCreatorTool";
+import OtaPromotionsTool from "./OtaPromotionsTool";
 
-type ToolKey = "ota-audit" | "revenue-planner" | "social-creator";
+type ToolKey = "ota-audit" | "ota-promotions" | "revenue-planner" | "social-creator";
 const tools: Array<{ key: ToolKey; name: string; description: string; icon: typeof FileSearch }> = [
   { key: "ota-audit", name: "OTA Booking Audit", description: "Compare OTA exports with the property calendar.", icon: FileSearch },
+  { key: "ota-promotions", name: "OTA Promotions", description: "Simulate valid Booking.com stacks and payout.", icon: BadgePercent },
   { key: "revenue-planner", name: "AI Revenue Planner", description: "Create a destination-aware revenue action plan.", icon: BarChart3 },
   { key: "social-creator", name: "Social Media Creator", description: "Create truthful hotel posts from real property details and photos.", icon: Megaphone },
 ];
@@ -30,7 +32,7 @@ export default function ReservationToolsWorkspace() {
       <button className="future-tool" disabled><i><Plus size={20}/></i><span><strong>More tools coming</strong><small>The tools library can expand without crowding the main menu.</small></span></button>
     </nav>
     <div className="nkh-tool-stage">
-      {activeTool === "ota-audit" ? <OtaAuditTool/> : activeTool === "revenue-planner" ? <RevenuePlannerTool/> : <SocialMediaCreatorTool/>}
+      {activeTool === "ota-audit" ? <OtaAuditTool/> : activeTool === "ota-promotions" ? <OtaPromotionsTool/> : activeTool === "revenue-planner" ? <RevenuePlannerTool/> : <SocialMediaCreatorTool/>}
     </div>
   </section>;
 }
