@@ -57,5 +57,6 @@
 @import "./styles/components/social-media-creator.css";
 @import "./styles/components/competitor-analysis.css";
 @import "./styles/components/occupancy-analysis.css";
+@import "./styles/components/occupancy-inventory.css";
 @import "./styles/pwa-mobile.css";
 @import "./styles/nkh-premium-ui.css";

@@ -19,13 +19,14 @@ import TeamBreakWorkspace from "../components/team-break/TeamBreakWorkspace";
 import NikoPet from "../components/pet/NikoPet";
 import CalendarWorkspace from "../components/calendar/CalendarWorkspace";
 import ReservationToolsWorkspace from "../components/reservation-tools/ReservationToolsWorkspace";
+import OccupancyInventoryWorkspace from "../components/occupancy/OccupancyInventoryWorkspace";
 
-type MasterView = "overview" | "tasks" | "scheduled" | "properties" | "staff" | "roster" | "calendar" | "reservation-tools" | "whatsapp" | "sms" | "team-break" | "reports" | "settings";
+type MasterView = "overview" | "tasks" | "scheduled" | "properties" | "staff" | "roster" | "calendar" | "occupancy" | "reservation-tools" | "whatsapp" | "sms" | "team-break" | "reports" | "settings";
 const navigation: Array<{ key: MasterView; label: string }> = [
   { key: "overview", label: "Overview" }, { key: "tasks", label: "Company Tasks" },
   { key: "scheduled", label: "Scheduled Tasks" }, { key: "properties", label: "Properties" },
   { key: "staff", label: "Staff Profiles" }, { key: "roster", label: "Roster" },
-  { key: "calendar", label: "Calendars" }, { key: "reservation-tools", label: "NKH Tools" },
+  { key: "calendar", label: "Calendars" }, { key: "occupancy", label: "Occupancy" }, { key: "reservation-tools", label: "NKH Tools" },
   { key: "whatsapp", label: "WhatsApp Inbox" }, { key: "sms", label: "SMS Center" },
   { key: "team-break", label: "NKH Academy" }, { key: "reports", label: "Reports" },
   { key: "settings", label: "Settings" },
@@ -76,11 +77,12 @@ export default function MasterDashboard({ staff, onLogout }: { staff: StaffSessi
     {view === "staff" && <StaffProfilesWorkspace />}
     {view === "roster" && <RosterWorkspace />}
     {view === "calendar" && <CalendarWorkspace />}
+    {view === "occupancy" && <OccupancyInventoryWorkspace />}
     {view === "reservation-tools" && <ReservationToolsWorkspace />}
     {view === "whatsapp" && <WhatsAppInbox staff={staff} onCreate={() => setCreatorOpen(true)} />}
     {view === "sms" && <SmsCenter staff={staff} />}
     {view === "reports" && <ComingSoonWorkspace title="Reports" description="Company performance, roster coverage and service reports will appear here." />}
     {view === "settings" && <ComingSoonWorkspace title="Settings" description="Company-wide integrations, access rules and operational defaults will appear here." />}
     {view === "team-break" && <TeamBreakWorkspace staffName={staff.name} canRegenerate />}
-  </div></section><MobileWorkspaceMenu items={navigation} primaryKeys={["overview","tasks","calendar","reservation-tools"]} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as MasterView)} onLogout={onLogout} /><button className="staff-fab" onClick={() => setCreatorOpen(true)}>＋</button><TaskCreatorModal open={creatorOpen} onClose={() => setCreatorOpen(false)} staff={staff} shift={shift} onCreated={refreshAll} /><NikoPet staffName={staff.name} compact={view === "tasks" || view === "whatsapp" || view === "sms" || view === "reservation-tools"} /></main>;
+  </div></section><MobileWorkspaceMenu items={navigation} primaryKeys={["overview","tasks","calendar","occupancy"]} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as MasterView)} onLogout={onLogout} /><button className="staff-fab" onClick={() => setCreatorOpen(true)}>＋</button><TaskCreatorModal open={creatorOpen} onClose={() => setCreatorOpen(false)} staff={staff} shift={shift} onCreated={refreshAll} /><NikoPet staffName={staff.name} compact={view === "tasks" || view === "whatsapp" || view === "sms" || view === "reservation-tools" || view === "occupancy"} /></main>;
 }
