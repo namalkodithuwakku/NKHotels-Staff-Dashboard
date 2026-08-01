@@ -4,6 +4,7 @@
 .niko-svg{overflow:visible}.niko-ear{transform-box:fill-box;transform-origin:center;animation:niko-ear 4.5s ease-in-out infinite}.niko-ear-right{animation-delay:.12s}.niko-eyes{transform-origin:center;animation:niko-blink 4s ease-in-out infinite}.niko-trunk{animation:niko-trunk 3.2s ease-in-out infinite;transform-origin:120px 95px}.niko-accessory{animation:niko-float 3s ease-in-out infinite}.niko-svg.celebrating{animation:niko-hop .48s ease 3}.niko-svg.celebrating .niko-trunk{animation:niko-wave .38s ease-in-out 4}.niko-confetti{animation:niko-confetti .7s ease-in-out infinite alternate}
 .niko-status{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:13px 15px 9px}.niko-status>div{display:grid;grid-template-columns:1fr auto;gap:4px}.niko-status span,.niko-status b{font-size:8px}.niko-status span{color:#748690}.niko-status b{color:#294f62}.niko-status i{grid-column:1/-1;height:5px;overflow:hidden;border-radius:6px;background:#e7edef}.niko-status em{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#239a70,#67c5dd)}
 .niko-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:7px 15px}.niko-actions button{min-height:42px;display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid #d9e5e8;border-radius:10px;background:#fff;color:#42616f;font-size:9px;font-weight:800}.niko-actions button:hover:not(:disabled){border-color:#77bba6;background:#edf8f3;color:#187653}.niko-actions button:disabled{opacity:.45}.niko-actions svg{width:14px}.niko-visits{margin:3px 15px 11px;color:#8b999f;font-size:8px;text-align:center}.niko-error{margin:4px 15px;padding:7px 9px;border-radius:8px;background:#fff0f0;color:#a63333;font-size:8px}.niko-outfit{display:grid;grid-template-columns:1fr 145px;align-items:center;gap:8px;margin:0 15px 12px;padding:9px;border:1px solid #e4e0f1;border-radius:10px;background:#f8f6fc}.niko-outfit>span{display:flex;align-items:center;gap:5px;color:#5e588e;font-size:8px;font-weight:800}.niko-outfit svg{width:13px}.niko-outfit select{height:31px;min-width:0;border:1px solid #dbd7ea;border-radius:8px;background:#fff;color:#4e5570;font-size:8px}.niko-panel>footer{min-height:40px;display:grid;grid-template-columns:18px auto 1fr;align-items:center;gap:5px;padding:8px 15px;border-top:1px solid #e5ecef;background:#fafcfc}.niko-panel footer svg{width:15px;color:#ed8a0a}.niko-panel footer span{color:#6f8089;font-size:8px}.niko-panel footer small{overflow:hidden;color:#98a3a8;font-size:7px;text-align:right;text-overflow:ellipsis;white-space:nowrap}
+.niko-foods{margin:6px 15px 2px;padding:9px;border:1px solid #e2ece8;border-radius:11px;background:#f8fcfa}.niko-foods>span{display:block;margin-bottom:7px;color:#52716a;font-size:8px;font-weight:800;letter-spacing:.04em}.niko-foods>div{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}.niko-foods button{min-width:0;padding:4px 1px;border:1px solid transparent;border-radius:8px;background:transparent;color:#647984;cursor:pointer}.niko-foods button:hover,.niko-foods button.active{border-color:#9bd4bd;background:#fff;box-shadow:0 3px 9px rgba(35,154,112,.1)}.niko-foods b{display:block;font-size:17px;line-height:19px}.niko-foods small{display:block;overflow:hidden;margin-top:2px;font-size:6px;text-overflow:ellipsis;white-space:nowrap}.niko-foods button.active small{color:#187653;font-weight:800}
 @keyframes niko-panel-in{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:none}}@keyframes niko-speech-in{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:none}}@keyframes niko-ear{0%,85%,100%{transform:rotate(0)}90%{transform:rotate(-6deg)}95%{transform:rotate(4deg)}}@keyframes niko-blink{0%,43%,47%,100%{transform:scaleY(1)}45%{transform:scaleY(.08)}}@keyframes niko-trunk{0%,100%{transform:rotate(0)}50%{transform:rotate(5deg)}}@keyframes niko-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}@keyframes niko-hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-13px)}}@keyframes niko-wave{0%,100%{transform:rotate(0)}50%{transform:rotate(15deg)}}@keyframes niko-confetti{from{opacity:.45;transform:scale(.9)}to{opacity:1;transform:scale(1.08)}}
 @media(max-width:900px){.niko-pet{right:13px;bottom:84px}.niko-launcher{width:66px;height:66px;border-radius:22px}.niko-launcher .niko-svg{width:67px;height:64px}.niko-pet.compact .niko-launcher{width:55px;height:55px}.niko-pet.compact .niko-launcher .niko-svg{width:56px;height:53px}.niko-panel{width:min(348px,calc(100vw - 26px));max-height:calc(100vh - 105px);overflow-y:auto}.niko-speech{right:54px;bottom:48px;max-width:190px}}@media(max-width:430px){.niko-scene{height:172px}.niko-scene .niko-svg{width:185px;height:165px}.niko-panel>header{height:58px}}@media(prefers-reduced-motion:reduce){.niko-pet *{animation:none!important}}
 
@@ -44,4 +45,62 @@
 @keyframes niko-big-wave{0%,100%{transform:rotate(0)}50%{transform:rotate(24deg) translate(3px,-4px)}}
 @keyframes niko-ear-wave{0%,100%{transform:rotate(0)}50%{transform:rotate(10deg)}}
 
+@media(prefers-reduced-motion:reduce){.niko-pet *{animation:none!important}}
+
+/* Niko 2.0 — mascot-quality character rig */
+.niko-head{transform-origin:122px 126px;animation:niko-head-personality 8s ease-in-out infinite}
+.niko-belly{transform-box:fill-box;transform-origin:center;animation:niko-belly-breathe 3.4s ease-in-out infinite}
+.niko-vest{pointer-events:none}
+.niko-badge{transform-origin:149px 149px;animation:niko-badge-shine 4.8s ease-in-out infinite}
+.niko-crown{transform-origin:122px 42px;animation:niko-crown-bob 3.4s ease-in-out infinite}
+.niko-crown circle{transform-box:fill-box;transform-origin:center;animation:niko-gem-sparkle 3.6s ease-in-out infinite}
+.niko-crown circle:nth-of-type(2),.niko-crown circle:nth-of-type(4){animation-delay:.35s}
+.niko-crown circle:nth-of-type(3){animation-delay:.7s}
+.niko-eye{transform-box:fill-box;transform-origin:center;animation:niko-soft-blink 5.2s ease-in-out infinite}
+.niko-eye-right{animation-delay:.035s}
+.niko-pupil{transform-box:fill-box;transform-origin:center;animation:niko-curious-look 7s ease-in-out infinite}
+.niko-lashes{opacity:.8}
+.niko-mouth{transform-origin:122px 107px;animation:niko-mouth-smile 5.5s ease-in-out infinite}
+.niko-trunk-shine{pointer-events:none}
+.niko-arm{transform-box:fill-box;transform-origin:top center;animation:niko-arm-idle 4.2s ease-in-out infinite}
+.niko-arm-right{animation-delay:.16s}
+.niko-leg{transform-box:fill-box;transform-origin:bottom center}
+.niko-launcher:hover .niko-arm-right{animation:niko-friendly-wave .32s ease-in-out 5}
+.niko-launcher:hover .niko-head{animation:niko-hover-tilt .75s ease-in-out both}
+.niko-svg.motion-pat .niko-arm-left,.niko-svg.motion-pat .niko-arm-right{animation:niko-hug .38s ease-in-out 4}
+.niko-svg.motion-pat .niko-mouth{animation:niko-big-smile .45s ease-in-out 3}
+.niko-svg.motion-feed .niko-arm-right{animation:niko-take-snack .55s ease-in-out 3}
+.niko-svg.motion-feed .niko-mouth{animation:niko-munch .24s ease-in-out 7}
+.niko-svg.motion-wave .niko-arm-right{animation:niko-friendly-wave .28s ease-in-out 7}
+.niko-svg.motion-wave .niko-head{animation:niko-wave-head .42s ease-in-out 4}
+.niko-svg.celebrating .niko-arm-left{animation:niko-celebrate-left .38s ease-in-out 5}
+.niko-svg.celebrating .niko-arm-right{animation:niko-celebrate-right .38s ease-in-out 5}
+.niko-svg.celebrating .niko-leg-left{animation:niko-dance-left .38s ease-in-out 5}
+.niko-svg.celebrating .niko-leg-right{animation:niko-dance-right .38s ease-in-out 5}
+.niko-svg.celebrating .niko-mouth{animation:niko-big-smile .38s ease-in-out 5}
+.niko-scene:after{animation:niko-scene-cloud 8s ease-in-out infinite}
+
+@keyframes niko-head-personality{0%,42%,100%{transform:rotate(0) translateY(0)}46%,54%{transform:rotate(-2.5deg) translateY(-1px)}58%{transform:rotate(1.5deg) translateY(0)}}
+@keyframes niko-belly-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.025,1.04)}}
+@keyframes niko-badge-shine{0%,75%,100%{filter:brightness(1)}82%{filter:brightness(1.35) drop-shadow(0 0 3px rgba(244,163,33,.7))}}
+@keyframes niko-crown-bob{0%,100%{transform:translateY(0) rotate(-.5deg)}50%{transform:translateY(-1.8px) rotate(.5deg)}}
+@keyframes niko-gem-sparkle{0%,70%,100%{transform:scale(1);filter:brightness(1)}78%{transform:scale(1.22);filter:brightness(1.35)}}
+@keyframes niko-soft-blink{0%,38%,42%,76%,80%,100%{transform:scaleY(1)}40%,78%{transform:scaleY(.08)}}
+@keyframes niko-curious-look{0%,18%,100%{transform:translate(0)}27%,42%{transform:translate(2.6px,-.7px)}52%,65%{transform:translate(-2px,.4px)}74%{transform:translate(0)}}
+@keyframes niko-mouth-smile{0%,72%,100%{transform:scale(1)}78%{transform:scale(1.07,1.13)}}
+@keyframes niko-arm-idle{0%,100%{transform:rotate(0)}50%{transform:rotate(2.2deg)}}
+@keyframes niko-friendly-wave{0%,100%{transform:rotate(0)}50%{transform:translate(4px,-5px) rotate(-24deg)}}
+@keyframes niko-hover-tilt{0%{transform:rotate(0)}55%{transform:translateY(-2px) rotate(5deg)}100%{transform:translateY(-1px) rotate(3deg)}}
+@keyframes niko-hug{0%,100%{transform:rotate(0)}50%{transform:translateY(-8px) rotate(18deg)}}
+@keyframes niko-big-smile{0%,100%{transform:scale(1)}50%{transform:scale(1.14,1.22)}}
+@keyframes niko-take-snack{0%,100%{transform:rotate(0)}50%{transform:translate(8px,-8px) rotate(-26deg)}}
+@keyframes niko-munch{0%,100%{transform:scale(1)}50%{transform:scale(.88,1.18) translateY(1px)}}
+@keyframes niko-wave-head{0%,100%{transform:rotate(0)}50%{transform:rotate(-4deg) translateY(-2px)}}
+@keyframes niko-celebrate-left{0%,100%{transform:rotate(0)}50%{transform:translate(-5px,-11px) rotate(27deg)}}
+@keyframes niko-celebrate-right{0%,100%{transform:rotate(0)}50%{transform:translate(6px,-11px) rotate(-27deg)}}
+@keyframes niko-dance-left{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-5px) rotate(-5deg)}}
+@keyframes niko-dance-right{0%,100%{transform:translateY(-4px) rotate(5deg)}50%{transform:translateY(0) rotate(0)}}
+@keyframes niko-scene-cloud{0%,100%{transform:translateX(0)}50%{transform:translateX(-7px)}}
+
+@media(max-width:900px){.niko-lashes,.niko-tusk{display:none}.niko-badge text{font-size:5px}}
 @media(prefers-reduced-motion:reduce){.niko-pet *{animation:none!important}}

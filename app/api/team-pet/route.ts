@@ -15,6 +15,14 @@ type PetState = {
 };
 
 const accessories = ["none", "amber_scarf", "blue_cap", "flower_crown", "birthday_hat"];
+const foods: Record<string, string> = {
+  apple: "apple",
+  pineapple: "pineapple",
+  banana: "banana",
+  mango: "mango",
+  watermelon: "watermelon",
+  carrot: "carrot",
+};
 
 function colomboDate() {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -50,7 +58,7 @@ async function personalCount(staffName: string, date: string) {
 async function responseState(staffName: string) {
   const date = colomboDate();
   const [pet, used] = await Promise.all([currentState(), personalCount(staffName, date)]);
-  return { success: true, pet, interactions: { used, limit: 3, remaining: Math.max(0, 3 - used) } };
+  return { success: true, pet, interactions: { used, unlimited: true } };
 }
 
 export async function GET(request: NextRequest) {
@@ -93,10 +101,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Choose a Niko interaction." }, { status: 400 });
     }
     const date = colomboDate();
-    const used = await personalCount(session.name, date);
-    if (used >= 3) {
-      return NextResponse.json({ success: false, error: "Niko has enjoyed your three visits today. Come back tomorrow!" }, { status: 429 });
-    }
+    const food = action === "feed" && foods[String(input.food || "apple")]
+      ? String(input.food || "apple")
+      : "apple";
     const pet = await currentState();
     const changes = action === "feed"
       ? { happiness: 2, energy: 7, mood: "Content" }
@@ -122,7 +129,7 @@ export async function POST(request: NextRequest) {
     });
     const messages: Record<string, string> = {
       pat: `Niko enjoyed the gentle pat from ${session.name}.`,
-      feed: `${session.name} gave Niko a healthy snack.`,
+      feed: `${session.name} gave Niko some ${foods[food]}. He loved it!`,
       wave: `Niko is waving back at ${session.name}!`,
     };
     return NextResponse.json({
