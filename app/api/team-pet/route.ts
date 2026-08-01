@@ -15,14 +15,7 @@ type PetState = {
 };
 
 const accessories = ["none", "amber_scarf", "blue_cap", "flower_crown", "birthday_hat"];
-const foods: Record<string, string> = {
-  apple: "apple",
-  pineapple: "pineapple",
-  banana: "banana",
-  mango: "mango",
-  watermelon: "watermelon",
-  carrot: "carrot",
-};
+const foods = ["apple", "pineapple", "banana", "mango", "watermelon", "carrot"];
 
 function colomboDate() {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -101,9 +94,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Choose a Niko interaction." }, { status: 400 });
     }
     const date = colomboDate();
-    const food = action === "feed" && foods[String(input.food || "apple")]
-      ? String(input.food || "apple")
-      : "apple";
+    const food = foods.includes(String(input.food || "apple")) ? String(input.food || "apple") : "apple";
     const pet = await currentState();
     const changes = action === "feed"
       ? { happiness: 2, energy: 7, mood: "Content" }
@@ -129,7 +120,7 @@ export async function POST(request: NextRequest) {
     });
     const messages: Record<string, string> = {
       pat: `Niko enjoyed the gentle pat from ${session.name}.`,
-      feed: `${session.name} gave Niko some ${foods[food]}. He loved it!`,
+      feed: `${session.name} gave Niko some ${food}. He loved it!`,
       wave: `Niko is waving back at ${session.name}!`,
     };
     return NextResponse.json({
