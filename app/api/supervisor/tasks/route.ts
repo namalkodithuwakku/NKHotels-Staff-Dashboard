@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
-import { isSupervisorRequestAuthorized } from "../../../lib/supervisorAuth";
+import { isSupervisorRequestAuthorized } from "../../lib/supervisorAuth";
 
 type TaskRow = { id:string; status:string; priority:string; task_type:string; source:string; property_name_snapshot:string|null; booking_id:string|null; assigned_name_snapshot:string|null; subject:string; notes:string|null; created_at:string; started_at:string|null; completed_at:string|null; completion_note:string|null; source_metadata:Record<string,unknown>|null };
 
