@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
-import { isSupervisorRequestAuthorized } from "../../../lib/supervisorAuth";
+import { isSupervisorRequestAuthorized } from "../../lib/supervisorAuth";
 
 type StaffRow = { id:string; display_name:string|null; google_staff_name:string|null; access_level:string|null; phone:string|null; whatsapp_number:string|null; employment_status:string|null };
 type PropertyRow = { id:string; property_name:string|null; client_code:string|null; status:string|null; language:string|null };
