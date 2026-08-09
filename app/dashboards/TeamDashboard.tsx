@@ -20,15 +20,17 @@ import RosterWorkspace from "../components/roster/RosterWorkspace";
 import MobileWorkspaceMenu from "../components/mobile/MobileWorkspaceMenu";
 import TeamBreakWorkspace from "../components/team-break/TeamBreakWorkspace";
 import AISupervisorGuide from "../components/supervisor/AISupervisorGuide";
+import AIEmailReview from "../components/supervisor/AIEmailReview";
 import CalendarWorkspace from "../components/calendar/CalendarWorkspace";
 import OccupancyInventoryWorkspace from "../components/occupancy/OccupancyInventoryWorkspace";
 import RevenueManagerWorkspace from "../components/revenue/RevenueManagerWorkspace";
 
-export type WorkspaceView = "home" | "tasks" | "whatsapp" | "sms" | "scheduled" | "properties" | "roster" | "calendar" | "occupancy" | "revenue-manager" | "faq" | "team-break";
+export type WorkspaceView = "home" | "tasks" | "ai-email-review" | "whatsapp" | "sms" | "scheduled" | "properties" | "roster" | "calendar" | "occupancy" | "revenue-manager" | "faq" | "team-break";
 
 const nav: Array<{ key: WorkspaceView; label: string; short: string }> = [
   { key: "home", label: "Home", short: "Home" },
   { key: "tasks", label: "Shift Tasks", short: "Tasks" },
+  { key: "ai-email-review", label: "AI Email Review", short: "AI Review" },
   { key: "whatsapp", label: "WhatsApp Inbox", short: "WhatsApp" },
   { key: "sms", label: "SMS Inbox", short: "SMS" },
   { key: "scheduled", label: "Scheduled Tasks", short: "Scheduled" },
@@ -167,6 +169,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
         <div className="staff-content">
           {view === "home" && <StaffHome staffName={staff.name} shift={shift} counts={counts} tasks={last24Tasks} onOpen={setView} />}
           {view === "tasks" && <ShiftTasks tasks={last24Tasks} staffName={staff.name} canUseTasks={canUseTasks} loading={loading} error={error} onCreate={() => setCreatorOpen(true)} onRefresh={refreshAll} onOptimisticClose={closeTasksOptimistically} />}
+          {view === "ai-email-review" && <AIEmailReview />}
           {view === "whatsapp" && <WhatsAppInbox staff={staff} onCreate={() => setCreatorOpen(true)} />}
           {view === "scheduled" && <ScheduledTasks onCreate={() => setCreatorOpen(true)} />}
           {view === "properties" && <PropertiesWorkspace access={staff.access} />}
@@ -180,7 +183,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
         </div>
       </section>
 
-      <MobileWorkspaceMenu items={availableNav} primaryKeys={["home", "tasks", "whatsapp", "roster"].filter(key => availableNav.some(item => item.key === key))} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as WorkspaceView)} onLogout={onLogout} />
+      <MobileWorkspaceMenu items={availableNav} primaryKeys={["home", "tasks", "ai-email-review", "roster"].filter(key => availableNav.some(item => item.key === key))} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as WorkspaceView)} onLogout={onLogout} />
 
       <button className="staff-fab" onClick={() => setCreatorOpen(true)} aria-label="Create task">＋</button>
       <TaskCreatorModal open={creatorOpen} onClose={() => setCreatorOpen(false)} staff={staff} shift={shift} onCreated={refreshAll} />
@@ -188,7 +191,7 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
         staffName={staff.name}
         tasks={last24Tasks as any[]}
         onOpenTasks={() => setView("tasks")}
-        compact={view === "tasks" || view === "whatsapp" || view === "sms" || view === "occupancy" || view === "revenue-manager"}
+        compact={view === "tasks" || view === "ai-email-review" || view === "whatsapp" || view === "sms" || view === "occupancy" || view === "revenue-manager"}
       />
     </main>
   );
