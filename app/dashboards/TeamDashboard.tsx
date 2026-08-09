@@ -19,7 +19,7 @@ import ComingSoonWorkspace from "../components/shared/ComingSoonWorkspace";
 import RosterWorkspace from "../components/roster/RosterWorkspace";
 import MobileWorkspaceMenu from "../components/mobile/MobileWorkspaceMenu";
 import TeamBreakWorkspace from "../components/team-break/TeamBreakWorkspace";
-import NikoPet from "../components/pet/NikoPet";
+import AISupervisorGuide from "../components/supervisor/AISupervisorGuide";
 import CalendarWorkspace from "../components/calendar/CalendarWorkspace";
 import OccupancyInventoryWorkspace from "../components/occupancy/OccupancyInventoryWorkspace";
 import RevenueManagerWorkspace from "../components/revenue/RevenueManagerWorkspace";
@@ -184,7 +184,12 @@ export default function TeamDashboard({ staff, onLogout }: { staff: StaffSession
 
       <button className="staff-fab" onClick={() => setCreatorOpen(true)} aria-label="Create task">＋</button>
       <TaskCreatorModal open={creatorOpen} onClose={() => setCreatorOpen(false)} staff={staff} shift={shift} onCreated={refreshAll} />
-      <NikoPet staffName={staff.name} compact={view === "tasks" || view === "whatsapp" || view === "sms" || view === "occupancy" || view === "revenue-manager"} />
+      <AISupervisorGuide
+        staffName={staff.name}
+        tasks={last24Tasks as any[]}
+        onOpenTasks={() => setView("tasks")}
+        compact={view === "tasks" || view === "whatsapp" || view === "sms" || view === "occupancy" || view === "revenue-manager"}
+      />
     </main>
   );
 }
