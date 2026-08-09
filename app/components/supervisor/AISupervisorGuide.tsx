@@ -61,12 +61,142 @@ function cleanOperationalSummary(value: unknown) {
 
 function guidance(task: TaskLike) {
   const text = [task.subject, task.type, task.taskType, task.notes, task.source].join(" ").toLowerCase();
-  if (text.includes("cancel")) return ["Confirm the cancellation reference.", "Update the hotel calendar.", "Restore OTA inventory if required."];
-  if (text.includes("guest") || text.includes("message")) return ["Read the guest request and identify the action needed.", "Contact the guest or hotel if required.", "Record the outcome and update the task status."];
-  if (text.includes("booking") || text.includes("reservation")) return ["Verify the booking reference and guest details.", "Confirm it is in the correct hotel calendar.", "Check arrival, room type and special requests."];
-  if (text.includes("ota") || text.includes("inventory") || text.includes("channel")) return ["Check the affected OTA/channel.", "Compare inventory with the hotel calendar.", "Make the update and verify it online."];
-  if (text.includes("rate") || text.includes("yield")) return ["Check occupancy and current selling rate.", "Confirm the required rate action.", "Verify the OTA after updating."];
-  return ["Identify the required outcome.", "Complete the action for the correct property.", "Add a completion note and update the status."];
+  const property = task.property || "the correct property";
+  const reference = task.bookingId ? `booking ${task.bookingId}` : "the booking/reference";
+  const has = (...terms: string[]) => terms.some(term => text.includes(term));
+
+  if (has("cancel", "cancellation", "cancelled", "canceled")) {
+    return [
+      `Verify ${reference} and confirm the cancellation belongs to ${property}.`,
+      "Check the reservation calendar and mark/remove the cancelled stay correctly.",
+      "Restore room inventory on affected OTA/channel dates if the cancellation released availability.",
+      "Record what was updated, then mark the task Done only after the calendar and OTA are consistent.",
+    ];
+  }
+
+  if (has("modify", "modification", "amend", "date change", "change booking")) {
+    return [
+      `Open ${reference} and compare the old details with the requested new details.`,
+      "Update stay dates, room type, occupancy or other changed fields in the hotel calendar.",
+      "Check availability and OTA/channel inventory for the revised dates before confirming the change.",
+      "Confirm the modification to the guest/OTA if required and record the final result in the task.",
+    ];
+  }
+
+  if (has("payment", "deposit", "advance", "bank slip", "payment slip", "paid")) {
+    return [
+      `Verify the payment evidence against ${reference} for ${property}.`,
+      "Check the amount, payment reference/date and whether it satisfies the required advance or balance.",
+      "Update the booking payment status and confirm the reservation only if the payment is valid.",
+      "Record the verified amount/status and notify the guest or hotel if confirmation is required.",
+    ];
+  }
+
+  if (has("room block", "block room", "blocked room", "inventory block")) {
+    return [
+      `Confirm the exact room(s), dates and reason for the block at ${property}.`,
+      "Block those dates in the operational calendar without changing unrelated bookings.",
+      "Reduce/close OTA inventory for the same dates if the blocked room was previously sellable.",
+      "Verify the block is visible in the calendar and channels, then record completion.",
+    ];
+  }
+
+  if (has("guest message", "guest request", "guest", "message", "whatsapp")) {
+    return [
+      `Read the full guest request for ${property} and identify the exact answer or action needed.`,
+      `Check ${reference} and the hotel details before replying so the response is accurate.`,
+      "Contact the guest through the correct channel and coordinate with the hotel if operational confirmation is needed.",
+      "Record the response/outcome in the task and mark Done only when the guest request has been handled.",
+    ];
+  }
+
+  if (has("new booking", "new reservation", "reservation confirmed", "booking confirmation")) {
+    return [
+      `Verify ${reference}, guest/stay dates and property name against the source message.`,
+      `Confirm the booking exists in the ${property} calendar with the correct room allocation.`,
+      "Check room type, adults/children, meal plan, payment status and any special request that needs hotel action.",
+      "If anything is missing, correct/escalate it; otherwise record verification and mark the task Done.",
+    ];
+  }
+
+  if (has("booking info", "booking information", "reservation info", "booking details")) {
+    return [
+      `Open ${reference} for ${property} and identify exactly which booking information is missing or needs checking.`,
+      "Verify the details against the OTA/email/calendar before making any operational decision.",
+      "Update or communicate the required information to the correct staff/hotel/guest.",
+      "Record the confirmed information and close the task only when no further follow-up is required.",
+    ];
+  }
+
+  if (has("ota issue", "channel issue", "inventory", "channel manager", "overbooking", "availability")) {
+    return [
+      `Open the affected OTA/channel for ${property} and identify the exact inventory or booking problem.`,
+      "Compare OTA availability with the Staff Dashboard/Client Portal calendar for the same dates and room type.",
+      "Make the minimum required inventory/channel correction and avoid changing unrelated dates or room types.",
+      "Reload/recheck the OTA to confirm the correction is live, then record what was changed.",
+    ];
+  }
+
+  if (has("rate update", "rate change", "yield", "pricing", "rate")) {
+    return [
+      `Check ${property} occupancy, current selling rate and the dates/room type mentioned in the task.`,
+      "Confirm the exact new rate or pricing action before changing any channel.",
+      "Apply the rate only to the intended dates/room types and verify it on the OTA/channel afterwards.",
+      "Record the old/new rate and affected dates so the change can be audited later.",
+    ];
+  }
+
+  if (has("promotion", "promo", "offer", "discount")) {
+    return [
+      `Confirm the promotion objective, stay/booking dates, room types and channels for ${property}.`,
+      "Check that the discount/rate conditions will not conflict with existing offers or minimum-rate rules.",
+      "Create/update the promotion on the intended OTA/channel and verify the guest-facing result.",
+      "Record the promotion name, dates and channels activated before completing the task.",
+    ];
+  }
+
+  if (has("inquiry", "enquiry", "quotation", "quote", "proposal")) {
+    return [
+      `Read the inquiry and identify dates, rooms, guest/company needs and any deadline for ${property}.`,
+      "Check availability and the correct approved rate/package before preparing the response.",
+      "Send a clear quotation/reply through the requested channel and include only confirmed information.",
+      "Record the response and follow-up requirement; keep the task open if the customer still needs action from us.",
+    ];
+  }
+
+  if (has("complaint", "problem", "unhappy", "refund", "issue with stay")) {
+    return [
+      `Review the complaint and ${reference} to understand the guest impact and urgency.`,
+      `Contact the responsible person at ${property} and verify the facts before promising a solution.`,
+      "Agree and communicate the corrective action, escalation or approved compensation where applicable.",
+      "Record the resolution and guest response; close only when the issue has been properly handed over or resolved.",
+    ];
+  }
+
+  if (has("supplier", "vendor", "invoice", "purchase", "maintenance")) {
+    return [
+      `Identify the supplier/vendor request and the responsible property or department.`,
+      "Verify the amount/item/service and whether approval or hotel confirmation is required.",
+      "Contact the responsible staff/vendor and complete the required operational follow-up.",
+      "Record the outcome, approval/reference and any next deadline before closing the task.",
+    ];
+  }
+
+  if (has("booking", "reservation")) {
+    return [
+      `Verify ${reference} and make sure it belongs to ${property}.`,
+      "Check the calendar for correct stay dates, room allocation and booking status.",
+      "Review payment status and any guest/special request requiring action.",
+      "Complete the required correction/follow-up, record the result, and then mark the task Done.",
+    ];
+  }
+
+  return [
+    `Read the task summary and confirm the exact expected outcome for ${property}.`,
+    "Verify the relevant booking, message, calendar or operational record before taking action.",
+    "Complete only the required action and avoid changing unrelated hotel data.",
+    "Record what was completed and any follow-up needed before marking the task Done.",
+  ];
 }
 
 export default function AISupervisorGuide({
@@ -181,7 +311,7 @@ export default function AISupervisorGuide({
 
               <div className="ai-supervisor-steps">
                 <strong><ListChecks size={15} /> Action checklist</strong>
-                <ol>{steps.map((step, index) => <li key={step}><span>{index + 1}</span><p>{step}</p></li>)}</ol>
+                <ol>{steps.map((step, index) => <li key={`${index}-${step}`}><span>{index + 1}</span><p>{step}</p></li>)}</ol>
               </div>
 
               <div className="ai-supervisor-summary-row">
