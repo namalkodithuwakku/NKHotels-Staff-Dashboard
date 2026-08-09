@@ -1,0 +1,2 @@
+Redeploy trigger after upgrading Vercel plan to Pro.
+No runtime behavior changes.
