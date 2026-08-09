@@ -37,24 +37,47 @@ function ageHours(task: TaskLike) {
   return Math.max(0, (Date.now() - timestamp) / 3600000);
 }
 
+function cleanOperationalSummary(value: unknown) {
+  const raw = String(value || "")
+    .replace(/https?:\/\/\S+/gi, " ")
+    .replace(/\bwww\.\S+/gi, " ")
+    .replace(/[#*_`>|]+/g, " ")
+    .replace(/\b(?:utm_[a-z_]+|product_id|from_instant_email|source|email_id|campaign)[=:]\S+/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!raw) return "";
+
+  const useful = raw
+    .split(/(?<=[.!?])\s+/)
+    .map(part => part.trim())
+    .filter(Boolean)
+    .filter(part => !/^https?:/i.test(part))
+    .slice(0, 3)
+    .join(" ");
+
+  if (useful.length <= 260) return useful;
+  return `${useful.slice(0, 257).trimEnd()}…`;
+}
+
 function guidance(task: TaskLike) {
   const text = [task.subject, task.type, task.taskType, task.notes, task.source].join(" ").toLowerCase();
-  if (text.includes("booking") || text.includes("reservation")) {
-    return ["Verify the booking/reference and guest details.", "Confirm it is entered in the correct hotel calendar.", "Check arrival, room type and special requests before completing the task."];
-  }
   if (text.includes("cancel")) {
-    return ["Confirm the cancellation reference.", "Remove or update the booking in the operational calendar.", "Restore inventory and verify OTA availability if required."];
+    return ["Confirm the cancellation reference.", "Update the booking in the hotel calendar.", "Restore inventory / OTA availability if required."];
+  }
+  if (text.includes("booking") || text.includes("reservation")) {
+    return ["Verify the booking reference and guest details.", "Confirm the booking is in the correct hotel calendar.", "Check arrival, room type and special requests, then complete the task."];
   }
   if (text.includes("guest") || text.includes("message")) {
-    return ["Read the full guest request before acting.", "Confirm the hotel can fulfil the request.", "Record the outcome and complete the task once the guest/hotel has been updated."];
+    return ["Read the guest request and identify exactly what they need.", "Confirm the hotel can fulfil the request.", "Record the outcome and complete the task after the guest/hotel is updated."];
   }
   if (text.includes("ota") || text.includes("inventory") || text.includes("channel")) {
-    return ["Check the affected OTA/channel first.", "Compare current inventory/rate with the hotel calendar.", "Make the required update and verify the channel reflects the change."];
+    return ["Check the affected OTA/channel.", "Compare inventory with the hotel calendar.", "Make the required update and verify it is reflected online."];
   }
   if (text.includes("rate") || text.includes("yield")) {
-    return ["Check occupancy and current selling rate.", "Confirm the requested rate action with the task details.", "Verify the OTA/channel after the update before marking Done."];
+    return ["Check occupancy and the current selling rate.", "Confirm the requested rate action.", "Verify the OTA/channel after the update before marking Done."];
   }
-  return ["Read the task and identify the exact expected outcome.", "Complete the operational action for the correct property.", "Add any important completion note, then mark the task Done."];
+  return ["Identify the exact expected outcome.", "Complete the action for the correct property.", "Add any important completion note and mark the task Done."];
 }
 
 export default function AISupervisorGuide({
@@ -99,6 +122,7 @@ export default function AISupervisorGuide({
   }, [focusTask, focusId, dismissedTaskId]);
 
   const steps = focusTask ? guidance(focusTask) : [];
+  const summary = focusTask ? cleanOperationalSummary(focusTask.notes) : "";
 
   function dismiss() {
     if (focusId) setDismissedTaskId(focusId);
@@ -129,8 +153,8 @@ export default function AISupervisorGuide({
           </header>
 
           <div className="ai-supervisor-intro">
-            <strong>Hi {staffName}, I’m monitoring your work.</strong>
-            <p>{focusTask ? "This is the item I recommend you handle first." : "Your active queue is clear. I’ll alert you when something needs attention."}</p>
+            <strong>Hi {staffName}, this needs your attention.</strong>
+            <p>{focusTask ? "Handle this item first, then update its task status." : "Your active queue is clear. I’ll alert you when something needs attention."}</p>
           </div>
 
           {focusTask ? (
@@ -141,12 +165,15 @@ export default function AISupervisorGuide({
                   {ageHours(focusTask) >= 6 && <em><Clock3 size={14} /> {Math.floor(ageHours(focusTask))}h open</em>}
                 </div>
                 <h4>{focusTask.subject || focusTask.type || "Operational task"}</h4>
-                <p>{focusTask.property || "General operations"}{focusTask.bookingId ? ` · Ref ${focusTask.bookingId}` : ""}</p>
-                {focusTask.notes && <small>{focusTask.notes}</small>}
+                <div className="ai-supervisor-task-meta">
+                  <span>{focusTask.property || "General operations"}</span>
+                  {focusTask.bookingId && <b>Ref {focusTask.bookingId}</b>}
+                </div>
+                {summary && <p className="ai-supervisor-task-summary">{summary}</p>}
               </article>
 
               <div className="ai-supervisor-steps">
-                <strong><ListChecks size={16} /> Recommended steps</strong>
+                <strong><ListChecks size={16} /> What to do now</strong>
                 <ol>{steps.map((step, index) => <li key={step}><span>{index + 1}</span><p>{step}</p></li>)}</ol>
               </div>
 
@@ -157,7 +184,7 @@ export default function AISupervisorGuide({
               </div>
 
               <button className="ai-supervisor-primary" type="button" onClick={() => { setOpen(false); onOpenTasks?.(); }}>
-                Open my tasks <ChevronRight size={17} />
+                Open task <ChevronRight size={17} />
               </button>
             </>
           ) : (
