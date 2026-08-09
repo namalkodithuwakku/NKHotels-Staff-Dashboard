@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, BellRing, Bot, CheckCircle2, ChevronLeft, ChevronRight, Clock3, ListChecks, X } from "lucide-react";
+import AISupervisorManualRunButton from "./AISupervisorManualRunButton";
 
 type TaskLike = {
   id?: string | number;
@@ -131,7 +132,7 @@ function guidance(task: TaskLike) {
   if (has("ota issue", "channel issue", "inventory", "channel manager", "overbooking", "availability")) {
     return [
       `Open the affected OTA/channel for ${property} and identify the exact inventory or booking problem.`,
-      "Compare OTA availability with the Staff Dashboard/Client Portal calendar for the same dates and room type.",
+      "Compare OTA availability with the Staff Dashboard calendar for the same dates and room type.",
       "Make the minimum required inventory/channel correction and avoid changing unrelated dates or room types.",
       "Reload/recheck the OTA to confirm the correction is live, then record what was changed.",
     ];
@@ -285,6 +286,8 @@ export default function AISupervisorGuide({
             </div>
             <button type="button" onClick={dismiss} aria-label="Close AI Supervisor"><X size={18} /></button>
           </header>
+
+          <AISupervisorManualRunButton />
 
           {focusTask ? (
             <>
