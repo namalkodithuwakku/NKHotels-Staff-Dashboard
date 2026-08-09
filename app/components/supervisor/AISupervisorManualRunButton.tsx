@@ -6,17 +6,25 @@ import { useState } from "react";
 export default function AISupervisorManualRunButton() {
   const [running, setRunning] = useState(false);
   const [message, setMessage] = useState("");
+  const [detail, setDetail] = useState("");
   const [ok, setOk] = useState<boolean | null>(null);
 
   async function runNow() {
     if (running) return;
     setRunning(true);
     setMessage("Scanning recent emails…");
+    setDetail("");
     setOk(null);
     try {
       const response = await fetch("/api/supervisor/run", { method: "POST", cache: "no-store" });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(String(payload?.error || `Run failed (${response.status})`));
+      if (!response.ok) {
+        const host = String(payload?.backendHost || "").trim();
+        const status = payload?.status ? String(payload.status) : "";
+        const parts = [host ? `Backend: ${host}` : "", status ? `Status: ${status}` : ""].filter(Boolean);
+        setDetail(parts.join(" · "));
+        throw new Error(String(payload?.error || `Run failed (${response.status})`));
+      }
 
       const scanned = Number(payload?.scanned || 0);
       const actionable = Number(payload?.actionable || 0);
@@ -40,6 +48,7 @@ export default function AISupervisorManualRunButton() {
         {running ? "Running…" : "Run supervisor now"}
       </button>
       {message && <small data-state={ok === null ? "running" : ok ? "ok" : "error"}>{message}</small>}
+      {detail && <small data-state="error">{detail}</small>}
     </div>
   );
 }
