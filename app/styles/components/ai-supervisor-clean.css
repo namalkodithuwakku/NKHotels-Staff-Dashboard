@@ -36,236 +36,56 @@
   color: #1f2933 !important;
 }
 
-.ai-supervisor-queuebar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 14px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e7eaee;
-}
-
-.ai-supervisor-queuebar > span {
-  font-size: 12px;
-  font-weight: 800;
-  color: #59636e;
-}
-
-.ai-supervisor-queuebar > div {
-  display: flex;
-  gap: 6px;
-}
-
-.ai-supervisor-queuebar button {
-  min-height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 0 10px;
-  border: 1px solid #d8dde3;
-  border-radius: 10px;
-  background: #ffffff;
-  color: #20262d;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.ai-supervisor-queuebar button:disabled {
-  opacity: .35;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-focus {
-  margin: 12px 14px 0;
-  padding: 14px;
-  border-radius: 16px;
-  box-shadow: none;
-  background: #ffffff !important;
-  border: 1px solid #d8dde3 !important;
-  color: #20262d !important;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-focus.priority-high,
-.ai-supervisor-panel-clean .ai-supervisor-focus.priority-urgent,
-.ai-supervisor-panel-clean .ai-supervisor-focus.priority-critical {
-  border-color: #e2a126 !important;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-focus-top {
-  margin-bottom: 10px;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-focus-top span {
-  color: #a76400 !important;
-  font-weight: 800;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-focus-top em {
-  color: #59636e !important;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-focus h4 {
-  margin: 0 0 10px;
-  font-size: 17px;
-  line-height: 1.3;
-  letter-spacing: -.2px;
-  color: #111418 !important;
-  background: transparent !important;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-task-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 8px;
-  margin-bottom: 10px;
-  font-size: 12px;
-  color: #39414a !important;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-task-meta span {
-  color: #2f3740 !important;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-task-meta b {
-  padding: 4px 7px;
-  border-radius: 8px;
-  background: #f1f3f5 !important;
-  color: #20262d !important;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-task-summary {
-  margin: 0;
-  padding: 11px 12px;
-  border-radius: 12px;
-  font-size: 13px;
-  line-height: 1.5;
-  background: #f5f6f7 !important;
-  color: #28313a !important;
-  border: 1px solid #e7eaee !important;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-steps {
-  margin: 14px;
-  color: #20262d !important;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-steps > strong {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  margin-bottom: 8px;
-  color: #171b20 !important;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-steps ol {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-steps li {
-  display: grid;
-  grid-template-columns: 24px 1fr;
-  align-items: start;
-  gap: 8px;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-steps li > span {
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 900;
-  background: #fff3d6 !important;
-  color: #925b00 !important;
-  border: 1px solid #efd18b !important;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-steps li p {
-  margin: 2px 0 0;
-  font-size: 12px;
-  line-height: 1.4;
-  color: #2f3740 !important;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-summary-row {
-  margin: 0 14px 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-summary-row span {
-  font-size: 11px;
-  color: #4c5661 !important;
-  background: #f5f6f7 !important;
-  border: 1px solid #e4e7eb !important;
-}
-
-.ai-supervisor-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 0 14px;
-}
-
-.ai-supervisor-actions > button {
-  min-height: 42px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 900;
-}
-
-.ai-supervisor-actions .ai-supervisor-primary {
-  width: auto;
-  margin: 0;
-  background: #1f2933 !important;
-  color: #ffffff !important;
-  border-color: #1f2933 !important;
-}
-
-.ai-supervisor-next {
-  border: 1px solid #d8dde3 !important;
-  background: #ffffff !important;
-  color: #20262d !important;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-clear {
-  color: #20262d !important;
-}
-
-.ai-supervisor-panel-clean .ai-supervisor-clear p {
-  color: #59636e !important;
-}
+.ai-monitor-panel { max-height: min(760px, calc(100vh - 38px)); overflow: auto; }
+.ai-monitor-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; background:#f8f9fa; border-bottom:1px solid #e7eaee; }
+.ai-monitor-toolbar>div { display:flex; flex-direction:column; gap:2px; }
+.ai-monitor-toolbar strong { font-size:13px; color:#171b20; }
+.ai-monitor-toolbar small { font-size:11px; color:#68727c; }
+.ai-monitor-toolbar>button { width:34px; height:34px; display:grid; place-items:center; border:1px solid #d8dde3; border-radius:10px; background:#fff; color:#29313a; }
+.ai-monitor-error { margin:10px 14px 0; padding:9px 10px; border:1px solid #efc1c1; border-radius:10px; background:#fff4f4; color:#9b3030; font-size:11px; }
+.ai-monitor-report-nav { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px; padding:10px 14px; }
+.ai-monitor-report-nav span { font-size:11px; font-weight:800; color:#59636e; text-align:center; }
+.ai-monitor-report-nav button { min-height:31px; display:inline-flex; align-items:center; justify-content:center; gap:3px; border:1px solid #d8dde3; border-radius:9px; background:#fff; color:#2c343d; font-size:11px; font-weight:800; }
+.ai-monitor-report-nav button:last-child { justify-self:end; }
+.ai-monitor-report-nav button:disabled { opacity:.35; }
+.ai-monitor-overview { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; padding:0 14px 10px; }
+.ai-monitor-overview>div { padding:9px 8px; border:1px solid #e3e6ea; border-radius:12px; background:#f7f8f9; text-align:center; }
+.ai-monitor-overview span { display:block; font-size:9px; color:#69737e; }
+.ai-monitor-overview strong { display:block; margin-top:2px; font-size:18px; color:#171b20; }
+.ai-monitor-report-summary { margin:0 14px 12px; padding:11px 12px; border:1px solid #e4e7ea; border-radius:12px; background:#fff; color:#303944; font-size:12px; line-height:1.48; }
+.ai-monitor-items { display:grid; gap:9px; padding:0 14px 2px; }
+.ai-monitor-item { padding:12px; border:1px solid #dfe3e7; border-radius:14px; background:#fff; }
+.ai-monitor-item.urgency-high,.ai-monitor-item.urgency-urgent,.ai-monitor-item.urgency-critical { border-color:#e0a64a; }
+.ai-monitor-item-top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+.ai-monitor-item-top small { display:block; margin-bottom:2px; color:#747f89; font-size:10px; font-weight:800; }
+.ai-monitor-item-top h4 { margin:0; color:#161a1f; font-size:14px; line-height:1.3; }
+.ai-monitor-item-top>span { display:inline-flex; align-items:center; gap:4px; padding:4px 6px; border-radius:999px; background:#fff3d6; color:#875800; font-size:9px; font-weight:900; white-space:nowrap; }
+.ai-monitor-meta { display:flex; flex-wrap:wrap; gap:5px 7px; align-items:center; margin-top:8px; color:#626d78; font-size:10px; }
+.ai-monitor-meta b { padding:3px 6px; border-radius:7px; background:#f1f3f5; color:#333c45; }
+.ai-monitor-meta span { display:inline-flex; align-items:center; gap:3px; }
+.ai-monitor-item>p { margin:9px 0 0; color:#35404a; font-size:11px; line-height:1.45; }
+.ai-monitor-action { display:grid; gap:3px; margin-top:9px; padding:8px 9px; border-radius:10px; background:#fff8e8; border:1px solid #f0dca8; }
+.ai-monitor-action strong { color:#885c00; font-size:9px; text-transform:uppercase; letter-spacing:.04em; }
+.ai-monitor-action span { color:#3d4650; font-size:11px; line-height:1.4; }
+.ai-monitor-comment-toggle { margin-top:9px; display:inline-flex; align-items:center; gap:5px; padding:6px 8px; border:1px solid #d9dde1; border-radius:9px; background:#fff; color:#35404a; font-size:10px; font-weight:900; }
+.ai-monitor-comments { margin-top:9px; padding-top:9px; border-top:1px solid #eceff1; }
+.ai-monitor-comment-list { display:grid; gap:7px; margin-bottom:8px; }
+.ai-monitor-comment-list>div { padding:8px 9px; border-radius:9px; background:#f6f7f8; }
+.ai-monitor-comment-list strong { font-size:10px; color:#27313a; }
+.ai-monitor-comment-list span { margin-left:7px; font-size:9px; color:#8a939c; }
+.ai-monitor-comment-list p { margin:4px 0 0; font-size:10px; line-height:1.4; color:#414b55; }
+.ai-monitor-comment-box { display:grid; gap:6px; }
+.ai-monitor-comment-box textarea { width:100%; min-height:68px; resize:vertical; box-sizing:border-box; padding:8px 9px; border:1px solid #d8dde3; border-radius:10px; background:#fff; color:#242c34; font:inherit; font-size:11px; line-height:1.4; }
+.ai-monitor-comment-box button { justify-self:end; min-height:32px; display:inline-flex; align-items:center; gap:5px; padding:0 10px; border:0; border-radius:9px; background:#1f2933; color:#fff; font-size:10px; font-weight:900; }
+.ai-monitor-comment-box button:disabled { opacity:.45; }
+.ai-monitor-empty { margin:14px; min-height:150px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; text-align:center; border:1px dashed #d7dce1; border-radius:14px; color:#3a444e; }
+.ai-monitor-empty strong { font-size:13px; }
+.ai-monitor-empty p { max-width:260px; margin:0; color:#7a848e; font-size:11px; line-height:1.45; }
+@keyframes ai-supervisor-spin { to { transform:rotate(360deg); } }
+.ai-supervisor-spin { animation:ai-supervisor-spin .8s linear infinite; }
 
 @media (max-width: 480px) {
-  .ai-supervisor-panel-clean {
-    width: calc(100vw - 8px);
-    max-height: calc(100dvh - 8px);
-  }
-
-  .ai-supervisor-panel-clean .ai-supervisor-focus {
-    margin-left: 10px;
-    margin-right: 10px;
-  }
-
-  .ai-supervisor-panel-clean .ai-supervisor-steps,
-  .ai-supervisor-panel-clean .ai-supervisor-summary-row {
-    margin-left: 10px;
-    margin-right: 10px;
-  }
-
-  .ai-supervisor-actions {
-    padding: 0 10px;
-  }
+  .ai-supervisor-panel-clean { width: calc(100vw - 8px); max-height: calc(100dvh - 8px); }
+  .ai-monitor-items,.ai-monitor-overview { padding-left:10px; padding-right:10px; }
+  .ai-monitor-report-summary { margin-left:10px; margin-right:10px; }
 }
