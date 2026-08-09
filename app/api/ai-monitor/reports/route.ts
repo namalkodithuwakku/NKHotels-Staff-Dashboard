@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "../../lib/supabaseAdmin";
-import { readServerSession } from "../../lib/serverSession";
+import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { readServerSession } from "../../../lib/serverSession";
 import { isSupervisorRequestAuthorized } from "../../lib/supervisorAuth";
 
 type ReportRow = {
