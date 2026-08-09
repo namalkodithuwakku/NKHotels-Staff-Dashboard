@@ -18,8 +18,26 @@ type IncomingEmail = {
 type Property = { id: string; client_code: string; property_name: string };
 type Contact = { property_id: string; email: string | null };
 type ExistingInbox = { id: string; status: string | null; task_id: string | null };
+type ExistingTask = { id: string; status: string | null };
+type StaffRow = { id: string; display_name: string | null };
+type SupervisorCommand = {
+  property?: string;
+  assignedTo?: string;
+  taskType?: string;
+  title?: string;
+  priority?: string;
+  bookingId?: string;
+  summary?: string;
+  action?: string;
+  reason?: string;
+  sourceEmailId?: string;
+  sourceTime?: string;
+};
 
 const secret = process.env.EMAIL_TASK_INTEGRATION_SECRET;
+const SUPERVISOR_COMMAND_SENDER = "info@nkhotels.lk";
+const SUPERVISOR_COMMAND_PREFIX = "[AI SUPERVISOR TASK]";
+const AI_SUPERVISOR_NAME = "AI Supervisor";
 
 function safeMatch(received: string | null) {
   if (!secret || !received) return false;
@@ -39,6 +57,11 @@ function clean(value: unknown, maximum: number) {
 
 function normalize(value: string) {
   return value.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function cleanPriority(value: unknown) {
+  const requested = clean(value, 20);
+  return ["Normal", "High", "Urgent", "Critical"].includes(requested) ? requested : "Normal";
 }
 
 function classify(subject: string, body: string) {
@@ -103,6 +126,123 @@ function findProperty(message: IncomingEmail, properties: Property[], contacts: 
 function shortSummary(subject: string, body: string) {
   const compact = body.replace(/https?:\/\/\S+/gi, " ").replace(/\s+/g, " ").trim();
   return clean(compact || subject, 500);
+}
+
+function parseSupervisorCommand(message: IncomingEmail): SupervisorCommand | null {
+  const sender = emailAddress(clean(message.from, 500));
+  const subject = clean(message.subject, 500);
+  if (sender !== SUPERVISOR_COMMAND_SENDER || !subject.startsWith(SUPERVISOR_COMMAND_PREFIX)) return null;
+  const body = clean(message.body, 12000);
+  try {
+    const start = body.indexOf("{");
+    const end = body.lastIndexOf("}");
+    if (start < 0 || end <= start) return null;
+    return JSON.parse(body.slice(start, end + 1)) as SupervisorCommand;
+  } catch {
+    return null;
+  }
+}
+
+async function createSupervisorTask(message: IncomingEmail, command: SupervisorCommand) {
+  const commandMessageId = clean(message.messageId, 180);
+  const sourceEmailId = clean(command.sourceEmailId, 180);
+  const title = clean(command.title || command.taskType || "Operational task", 220);
+  if (!title) return { messageId: commandMessageId, status: "error", error: "Supervisor command title is required." };
+
+  if (sourceEmailId) {
+    const existing = await supabaseAdmin<ExistingTask[]>(
+      `nkh_tasks?source_email_id=eq.${encodeURIComponent(sourceEmailId)}&select=id,status&limit=1`,
+    );
+    if (existing[0]) {
+      return { messageId: commandMessageId, status: "duplicate_task", taskId: existing[0].id };
+    }
+  }
+
+  const propertyName = clean(command.property, 220);
+  const assignedName = clean(command.assignedTo, 160);
+  const [propertyRows, staffRows] = await Promise.all([
+    propertyName
+      ? supabaseAdmin<Property[]>(`nkh_properties?select=id,client_code,property_name&property_name=eq.${encodeURIComponent(propertyName)}&limit=1`)
+      : Promise.resolve([] as Property[]),
+    assignedName
+      ? supabaseAdmin<StaffRow[]>(`nkh_staff?select=id,display_name&or=(display_name.eq.${encodeURIComponent(assignedName)},google_staff_name.eq.${encodeURIComponent(assignedName)})&limit=1`)
+      : Promise.resolve([] as StaffRow[]),
+  ]);
+
+  const notes = [clean(command.summary, 1200), clean(command.action, 1200)]
+    .filter(Boolean)
+    .filter((value, index, values) => values.indexOf(value) === index)
+    .join("\n\n");
+
+  const rows = await supabaseAdmin<Array<{ id: string }>>("nkh_tasks", {
+    method: "POST",
+    prefer: "return=representation",
+    body: {
+      status: "Pending",
+      priority: cleanPriority(command.priority),
+      intent: "AI Supervisor Command",
+      task_type: clean(command.taskType || "Other", 100) || "Other",
+      source: "AI Supervisor",
+      property_id: propertyRows[0]?.id || null,
+      property_name_snapshot: propertyName || null,
+      booking_id: clean(command.bookingId, 80) || null,
+      subject: title,
+      notes: notes || null,
+      assigned_staff_id: staffRows[0]?.id || null,
+      assigned_name_snapshot: assignedName || null,
+      source_email_id: sourceEmailId || null,
+      source_gmail_url: null,
+      source_metadata: {
+        supervisor: AI_SUPERVISOR_NAME,
+        command_email_id: commandMessageId || null,
+        reason: clean(command.reason, 500) || null,
+        source_kind: sourceEmailId ? "email" : "supervisor",
+        source_received_at: clean(command.sourceTime, 100) || null,
+      },
+      created_by_staff_id: null,
+      created_by_name_snapshot: AI_SUPERVISOR_NAME,
+    },
+  });
+
+  const task = rows[0];
+  await supabaseAdmin("nkh_task_events", {
+    method: "POST",
+    prefer: "return=minimal",
+    body: {
+      task_id: task.id,
+      event_type: "Created by AI Supervisor",
+      to_status: "Pending",
+      actor_staff_id: null,
+      actor_name_snapshot: AI_SUPERVISOR_NAME,
+      event_data: {
+        command_email_id: commandMessageId || null,
+        source_email_id: sourceEmailId || null,
+        property: propertyName || null,
+        assigned_to: assignedName || null,
+      },
+    },
+  });
+
+  if (sourceEmailId) {
+    const inbox = await supabaseAdmin<Array<{ id: string }>>(
+      `nkh_email_inbox?select=id&gmail_message_id=eq.${encodeURIComponent(sourceEmailId)}&limit=1`,
+    );
+    if (inbox[0]) {
+      await supabaseAdmin(`nkh_email_inbox?id=eq.${encodeURIComponent(inbox[0].id)}`, {
+        method: "PATCH",
+        prefer: "return=minimal",
+        body: {
+          status: "Handled by AI Supervisor",
+          task_id: task.id,
+          handled_by_staff_id: null,
+          handled_by_name_snapshot: AI_SUPERVISOR_NAME,
+          handled_at: new Date().toISOString(),
+        },
+      });
+    }
+  }
+
+  return { messageId: commandMessageId, status: "task_created_by_ai_supervisor", taskId: task.id };
 }
 
 async function queueForSupervisor(message: IncomingEmail, properties: Property[], contacts: Contact[]) {
@@ -198,12 +338,14 @@ export async function POST(request: NextRequest) {
     const results = [];
     for (const message of messages) {
       try {
-        results.push(await queueForSupervisor(message, properties, contacts));
+        const command = parseSupervisorCommand(message);
+        if (command) results.push(await createSupervisorTask(message, command));
+        else results.push(await queueForSupervisor(message, properties, contacts));
       } catch (error) {
         results.push({
           messageId: clean(message.messageId, 180),
           status: "error",
-          error: error instanceof Error ? error.message : "Email queueing failed.",
+          error: error instanceof Error ? error.message : "Email processing failed.",
         });
       }
     }
@@ -212,7 +354,7 @@ export async function POST(request: NextRequest) {
       success: true,
       processed: results.length,
       queued: results.filter(item => item.status === "queued_for_ai_supervisor").length,
-      tasksCreated: 0,
+      tasksCreated: results.filter(item => item.status === "task_created_by_ai_supervisor").length,
       results,
     });
   } catch (error) {
