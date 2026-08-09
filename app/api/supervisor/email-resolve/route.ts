@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
-import { AI_SUPERVISOR_NAME, isSupervisorRequestAuthorized } from "../../../lib/supervisorAuth";
+import { AI_SUPERVISOR_NAME, isSupervisorRequestAuthorized } from "../../lib/supervisorAuth";
 
 type InboxRow = { id:string; status:string|null };
 async function first<T>(path:string) { const rows = await supabaseAdmin<T[]>(path); return rows[0] || null; }
