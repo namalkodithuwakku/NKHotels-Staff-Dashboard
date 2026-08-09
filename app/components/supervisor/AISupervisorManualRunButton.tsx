@@ -3,6 +3,21 @@
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 
+function errorText(value: unknown, fallback: string) {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (value && typeof value === "object") {
+    try {
+      const record = value as Record<string, unknown>;
+      const preferred = record.message || record.error_description || record.code || record.type;
+      if (typeof preferred === "string" && preferred.trim()) return preferred.trim();
+      return JSON.stringify(value);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
 export default function AISupervisorManualRunButton() {
   const [running, setRunning] = useState(false);
   const [message, setMessage] = useState("");
@@ -20,10 +35,10 @@ export default function AISupervisorManualRunButton() {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
         const host = String(payload?.backendHost || "").trim();
-        const status = payload?.status ? String(payload.status) : "";
+        const status = payload?.status ? String(payload.status) : String(response.status || "");
         const parts = [host ? `Backend: ${host}` : "", status ? `Status: ${status}` : ""].filter(Boolean);
         setDetail(parts.join(" · "));
-        throw new Error(String(payload?.error || `Run failed (${response.status})`));
+        throw new Error(errorText(payload?.error, `Run failed (${response.status})`));
       }
 
       const scanned = Number(payload?.scanned || 0);
