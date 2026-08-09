@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, BellRing, Bot, CheckCircle2, ChevronRight, Clock3, ListChecks, X } from "lucide-react";
+import { AlertTriangle, BellRing, Bot, CheckCircle2, ChevronLeft, ChevronRight, Clock3, ListChecks, X } from "lucide-react";
 
 type TaskLike = {
   id?: string | number;
@@ -47,7 +47,6 @@ function cleanOperationalSummary(value: unknown) {
     .trim();
 
   if (!raw) return "";
-
   const useful = raw
     .split(/(?<=[.!?])\s+/)
     .map(part => part.trim())
@@ -56,28 +55,18 @@ function cleanOperationalSummary(value: unknown) {
     .slice(0, 3)
     .join(" ");
 
-  if (useful.length <= 260) return useful;
-  return `${useful.slice(0, 257).trimEnd()}…`;
+  if (useful.length <= 240) return useful;
+  return `${useful.slice(0, 237).trimEnd()}…`;
 }
 
 function guidance(task: TaskLike) {
   const text = [task.subject, task.type, task.taskType, task.notes, task.source].join(" ").toLowerCase();
-  if (text.includes("cancel")) {
-    return ["Confirm the cancellation reference.", "Update the booking in the hotel calendar.", "Restore inventory / OTA availability if required."];
-  }
-  if (text.includes("booking") || text.includes("reservation")) {
-    return ["Verify the booking reference and guest details.", "Confirm the booking is in the correct hotel calendar.", "Check arrival, room type and special requests, then complete the task."];
-  }
-  if (text.includes("guest") || text.includes("message")) {
-    return ["Read the guest request and identify exactly what they need.", "Confirm the hotel can fulfil the request.", "Record the outcome and complete the task after the guest/hotel is updated."];
-  }
-  if (text.includes("ota") || text.includes("inventory") || text.includes("channel")) {
-    return ["Check the affected OTA/channel.", "Compare inventory with the hotel calendar.", "Make the required update and verify it is reflected online."];
-  }
-  if (text.includes("rate") || text.includes("yield")) {
-    return ["Check occupancy and the current selling rate.", "Confirm the requested rate action.", "Verify the OTA/channel after the update before marking Done."];
-  }
-  return ["Identify the exact expected outcome.", "Complete the action for the correct property.", "Add any important completion note and mark the task Done."];
+  if (text.includes("cancel")) return ["Confirm the cancellation reference.", "Update the hotel calendar.", "Restore OTA inventory if required."];
+  if (text.includes("guest") || text.includes("message")) return ["Read the guest request and identify the action needed.", "Contact the guest or hotel if required.", "Record the outcome and update the task status."];
+  if (text.includes("booking") || text.includes("reservation")) return ["Verify the booking reference and guest details.", "Confirm it is in the correct hotel calendar.", "Check arrival, room type and special requests."];
+  if (text.includes("ota") || text.includes("inventory") || text.includes("channel")) return ["Check the affected OTA/channel.", "Compare inventory with the hotel calendar.", "Make the update and verify it online."];
+  if (text.includes("rate") || text.includes("yield")) return ["Check occupancy and current selling rate.", "Confirm the required rate action.", "Verify the OTA after updating."];
+  return ["Identify the required outcome.", "Complete the action for the correct property.", "Add a completion note and update the status."];
 }
 
 export default function AISupervisorGuide({
@@ -93,17 +82,22 @@ export default function AISupervisorGuide({
 }) {
   const [open, setOpen] = useState(false);
   const [dismissedTaskId, setDismissedTaskId] = useState("");
+  const [taskIndex, setTaskIndex] = useState(0);
   const firstAutoOpen = useRef(false);
 
   const openTasks = useMemo(() => tasks.filter(task => !isClosed(task)), [tasks]);
-  const focusTask = useMemo(() => {
-    return [...openTasks].sort((a, b) => {
-      const priorityDifference = rank(b) - rank(a);
-      if (priorityDifference) return priorityDifference;
-      return ageHours(b) - ageHours(a);
-    })[0] || null;
-  }, [openTasks]);
+  const sortedTasks = useMemo(() => [...openTasks].sort((a, b) => {
+    const priorityDifference = rank(b) - rank(a);
+    if (priorityDifference) return priorityDifference;
+    return ageHours(b) - ageHours(a);
+  }), [openTasks]);
 
+  useEffect(() => {
+    if (!sortedTasks.length) setTaskIndex(0);
+    else if (taskIndex > sortedTasks.length - 1) setTaskIndex(sortedTasks.length - 1);
+  }, [sortedTasks.length, taskIndex]);
+
+  const focusTask = sortedTasks[taskIndex] || null;
   const urgentCount = useMemo(
     () => openTasks.filter(task => ["critical", "urgent", "high"].includes(String(task.priority || "").toLowerCase())).length,
     [openTasks]
@@ -129,6 +123,16 @@ export default function AISupervisorGuide({
     setOpen(false);
   }
 
+  function nextTask() {
+    if (!sortedTasks.length) return;
+    setTaskIndex(index => (index + 1) % sortedTasks.length);
+  }
+
+  function previousTask() {
+    if (!sortedTasks.length) return;
+    setTaskIndex(index => (index - 1 + sortedTasks.length) % sortedTasks.length);
+  }
+
   return (
     <div className={`ai-supervisor-guide ${compact ? "compact" : ""} ${open ? "open" : ""}`}>
       {!open && (
@@ -143,26 +147,29 @@ export default function AISupervisorGuide({
       )}
 
       {open && (
-        <section className="ai-supervisor-panel" role="dialog" aria-label="AI Supervisor guidance">
+        <section className="ai-supervisor-panel ai-supervisor-panel-clean" role="dialog" aria-label="AI Supervisor guidance">
           <header>
             <div className="ai-supervisor-heading">
-              <span className="ai-supervisor-avatar"><Bot size={21} /></span>
+              <span className="ai-supervisor-avatar"><Bot size={20} /></span>
               <div><small>NKH OPERATIONS</small><h3>AI Supervisor</h3></div>
             </div>
             <button type="button" onClick={dismiss} aria-label="Close AI Supervisor"><X size={18} /></button>
           </header>
 
-          <div className="ai-supervisor-intro">
-            <strong>Hi {staffName}, this needs your attention.</strong>
-            <p>{focusTask ? "Handle this item first, then update its task status." : "Your active queue is clear. I’ll alert you when something needs attention."}</p>
-          </div>
-
           {focusTask ? (
             <>
+              <div className="ai-supervisor-queuebar">
+                <span>Task {taskIndex + 1} of {sortedTasks.length}</span>
+                <div>
+                  <button type="button" onClick={previousTask} disabled={sortedTasks.length < 2} aria-label="Previous task"><ChevronLeft size={17} /></button>
+                  <button type="button" onClick={nextTask} disabled={sortedTasks.length < 2}>Next task <ChevronRight size={16} /></button>
+                </div>
+              </div>
+
               <article className={`ai-supervisor-focus priority-${String(focusTask.priority || "normal").toLowerCase()}`}>
                 <div className="ai-supervisor-focus-top">
-                  <span><BellRing size={16} /> {String(focusTask.priority || "Normal")} priority</span>
-                  {ageHours(focusTask) >= 6 && <em><Clock3 size={14} /> {Math.floor(ageHours(focusTask))}h open</em>}
+                  <span><BellRing size={14} /> {String(focusTask.priority || "Normal")} priority</span>
+                  {ageHours(focusTask) >= 6 && <em><Clock3 size={13} /> {Math.floor(ageHours(focusTask))}h open</em>}
                 </div>
                 <h4>{focusTask.subject || focusTask.type || "Operational task"}</h4>
                 <div className="ai-supervisor-task-meta">
@@ -173,19 +180,26 @@ export default function AISupervisorGuide({
               </article>
 
               <div className="ai-supervisor-steps">
-                <strong><ListChecks size={16} /> What to do now</strong>
+                <strong><ListChecks size={15} /> Action checklist</strong>
                 <ol>{steps.map((step, index) => <li key={step}><span>{index + 1}</span><p>{step}</p></li>)}</ol>
               </div>
 
               <div className="ai-supervisor-summary-row">
-                <span><AlertTriangle size={15} /> {urgentCount} priority</span>
-                <span><Clock3 size={15} /> {overdueCount} overdue</span>
-                <span><CheckCircle2 size={15} /> {openTasks.length} open</span>
+                <span><AlertTriangle size={14} /> {urgentCount} priority</span>
+                <span><Clock3 size={14} /> {overdueCount} overdue</span>
+                <span><CheckCircle2 size={14} /> {openTasks.length} open</span>
               </div>
 
-              <button className="ai-supervisor-primary" type="button" onClick={() => { setOpen(false); onOpenTasks?.(); }}>
-                Open task <ChevronRight size={17} />
-              </button>
+              <div className="ai-supervisor-actions">
+                <button className="ai-supervisor-primary" type="button" onClick={() => { setOpen(false); onOpenTasks?.(); }}>
+                  Open task <ChevronRight size={17} />
+                </button>
+                {sortedTasks.length > 1 && (
+                  <button className="ai-supervisor-next" type="button" onClick={nextTask}>
+                    Next task <ChevronRight size={17} />
+                  </button>
+                )}
+              </div>
             </>
           ) : (
             <div className="ai-supervisor-clear"><CheckCircle2 size={24} /><strong>Queue under control</strong><p>No open task needs immediate guidance.</p></div>
