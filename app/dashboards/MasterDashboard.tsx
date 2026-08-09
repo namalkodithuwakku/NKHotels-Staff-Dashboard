@@ -16,7 +16,7 @@ import ComingSoonWorkspace from "../components/shared/ComingSoonWorkspace";
 import MobileWorkspaceMenu from "../components/mobile/MobileWorkspaceMenu";
 import TaskCreatorModal from "../components/tasks/TaskCreatorModal";
 import TeamBreakWorkspace from "../components/team-break/TeamBreakWorkspace";
-import NikoPet from "../components/pet/NikoPet";
+import AISupervisorGuide from "../components/supervisor/AISupervisorGuide";
 import CalendarWorkspace from "../components/calendar/CalendarWorkspace";
 import ReservationToolsWorkspace from "../components/reservation-tools/ReservationToolsWorkspace";
 import OccupancyInventoryWorkspace from "../components/occupancy/OccupancyInventoryWorkspace";
@@ -87,5 +87,5 @@ export default function MasterDashboard({ staff, onLogout }: { staff: StaffSessi
     {view === "reports" && <ComingSoonWorkspace title="Reports" description="Company performance, roster coverage and service reports will appear here." />}
     {view === "settings" && <ComingSoonWorkspace title="Settings" description="Company-wide integrations, access rules and operational defaults will appear here." />}
     {view === "team-break" && <TeamBreakWorkspace staffName={staff.name} canRegenerate />}
-  </div></section><MobileWorkspaceMenu items={navigation} primaryKeys={["overview","tasks","calendar","occupancy"]} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as MasterView)} onLogout={onLogout} /><button className="staff-fab" onClick={() => setCreatorOpen(true)}>＋</button><TaskCreatorModal open={creatorOpen} onClose={() => setCreatorOpen(false)} staff={staff} shift={shift} onCreated={refreshAll} /><NikoPet staffName={staff.name} compact={view === "tasks" || view === "whatsapp" || view === "sms" || view === "reservation-tools" || view === "occupancy" || view === "revenue-manager"} /></main>;
+  </div></section><MobileWorkspaceMenu items={navigation} primaryKeys={["overview","tasks","calendar","occupancy"]} activeKey={view} counts={notificationCounts} onSelect={key => setView(key as MasterView)} onLogout={onLogout} /><button className="staff-fab" onClick={() => setCreatorOpen(true)}>＋</button><TaskCreatorModal open={creatorOpen} onClose={() => setCreatorOpen(false)} staff={staff} shift={shift} onCreated={refreshAll} /><AISupervisorGuide staffName={staff.name} tasks={last24Tasks as any[]} onOpenTasks={() => setView("tasks")} compact={view === "tasks" || view === "whatsapp" || view === "sms" || view === "reservation-tools" || view === "occupancy" || view === "revenue-manager"} /></main>;
 }
