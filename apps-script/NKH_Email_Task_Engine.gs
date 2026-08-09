@@ -214,9 +214,9 @@ function installNKHEmailTaskTrigger() {
     .setProperty("NKH_EMAIL_ENGINE_BASELINE", String(Date.now()));
   ScriptApp.newTrigger("runNKHEmailTaskEngine")
     .timeBased()
-    .everyMinutes(10)
+    .everyMinutes(1)
     .create();
-  return { success: true, intervalMinutes: 10, baseline: new Date().toISOString() };
+  return { success: true, intervalMinutes: 1, baseline: new Date().toISOString() };
 }
 
 function testNKHEmailTaskEngineReadOnly() {
