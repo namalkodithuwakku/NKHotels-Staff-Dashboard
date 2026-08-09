@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
-import { isSupervisorRequestAuthorized } from "../../../lib/supervisorAuth";
+import { isSupervisorRequestAuthorized } from "../../lib/supervisorAuth";
 
 export async function GET(request: NextRequest) {
   if (!isSupervisorRequestAuthorized(request)) return NextResponse.json({ success:false, error:"Unauthorized" }, { status:401 });
