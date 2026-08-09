@@ -1,4 +1,4 @@
-/***** NKH EMAIL TO TASK ENGINE — SUPABASE V1 *****/
+/***** NKH EMAIL TO TASK ENGINE — AI SUPERVISOR RELAY *****/
 
 const NKH_EMAIL_ENGINE = {
   timezone: "Asia/Colombo",
@@ -11,9 +11,12 @@ const NKH_EMAIL_ENGINE = {
   labels: {
     created: "NKH Task Created",
     duplicate: "NKH Task Created",
-    review: "NKH Task Review",
+    review: "NKH AI Review",
     ignored: "NKH Task Ignored",
     auto_ignored: "NKH Automatically Ignored",
+    queued_for_ai_supervisor: "NKH AI Review",
+    task_created_by_ai_supervisor: "NKH AI Task Created",
+    duplicate_task: "NKH AI Task Created",
     error: "NKH Task Failed"
   }
 };
@@ -55,7 +58,7 @@ function processNKHEmailTasks_() {
         from: String(message.getFrom() || ""),
         to: String(message.getTo() || ""),
         subject: String(message.getSubject() || ""),
-        body: cleanNKHEmailBody_(message.getPlainBody() || "").slice(0, 8000),
+        body: cleanNKHEmailBody_(message.getPlainBody() || "").slice(0, 12000),
         receivedAt: message.getDate().toISOString(),
         gmailUrl: "https://mail.google.com/mail/u/0/#inbox/" + thread.getId(),
         attachmentNames: []
@@ -65,10 +68,32 @@ function processNKHEmailTasks_() {
   });
 
   if (!pending.length) {
-    return { success: true, found: 0, created: 0 };
+    return { success: true, found: 0, tasksCreated: 0, queued: 0 };
   }
 
-  const totals = { created: 0, duplicate: 0, review: 0, ignored: 0, auto_ignored: 0, error: 0 };
+  const totals = {
+    created: 0,
+    duplicate: 0,
+    review: 0,
+    ignored: 0,
+    auto_ignored: 0,
+    queued_for_ai_supervisor: 0,
+    task_created_by_ai_supervisor: 0,
+    duplicate_task: 0,
+    error: 0
+  };
+
+  const finalStatuses = [
+    "created",
+    "duplicate",
+    "review",
+    "ignored",
+    "auto_ignored",
+    "queued_for_ai_supervisor",
+    "task_created_by_ai_supervisor",
+    "duplicate_task"
+  ];
+
   for (let offset = 0; offset < pending.length; offset += NKH_EMAIL_ENGINE.maximumMessagesPerRequest) {
     const batch = pending.slice(offset, offset + NKH_EMAIL_ENGINE.maximumMessagesPerRequest);
     const response = sendNKHEmailTaskBatch_(settings, batch);
@@ -83,11 +108,7 @@ function processNKHEmailTasks_() {
         thread.addLabel(getOrCreateNKHEmailLabel_(NKH_EMAIL_ENGINE.labels[status]));
       }
 
-      /*
-       * Created, duplicate, review and ignored messages are final.
-       * Errors are deliberately not recorded, so the next run retries them.
-       */
-      if (["created", "duplicate", "review", "ignored", "auto_ignored"].indexOf(status) !== -1) {
+      if (finalStatuses.indexOf(status) !== -1) {
         processed[messageId] = Date.now();
       }
     });
@@ -97,12 +118,11 @@ function processNKHEmailTasks_() {
   const result = {
     success: true,
     found: pending.length,
-    created: totals.created,
-    duplicate: totals.duplicate,
-    review: totals.review,
-    ignored: totals.ignored,
-    automaticallyIgnored: totals.auto_ignored,
-    errors: totals.error
+    queued: Number(totals.queued_for_ai_supervisor || 0),
+    tasksCreated: Number(totals.task_created_by_ai_supervisor || 0),
+    duplicateTasks: Number(totals.duplicate_task || 0),
+    duplicates: Number(totals.duplicate || 0),
+    errors: Number(totals.error || 0)
   };
   Logger.log(JSON.stringify(result, null, 2));
   return result;
