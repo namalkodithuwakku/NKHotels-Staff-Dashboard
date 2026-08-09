@@ -40,7 +40,8 @@ type JwtPayload = {
 type Property = { id: string; property_name: string };
 type Staff = { id: string; display_name: string | null };
 type ExistingTask = { id: string; status: string | null };
-type GitHubJwk = JsonWebKey & { kid?: string; alg?: string; use?: string };
+type NodeJsonWebKey = import("node:crypto").JsonWebKey;
+type Jwk = NodeJsonWebKey & { kid?: string; alg?: string; use?: string };
 
 function clean(value: unknown, max: number) {
   return String(value || "").replace(/\u0000/g, "").trim().slice(0, max);
@@ -64,11 +65,11 @@ async function verifyGithubOidc(token: string) {
 
   const jwksResponse = await fetch(JWKS_URL, { cache: "no-store" });
   if (!jwksResponse.ok) throw new Error("Unable to load GitHub OIDC signing keys.");
-  const jwks = (await jwksResponse.json()) as { keys?: GitHubJwk[] };
+  const jwks = (await jwksResponse.json()) as { keys?: Jwk[] };
   const jwk = (jwks.keys || []).find(key => key.kid === header.kid);
   if (!jwk) throw new Error("GitHub OIDC signing key not found.");
 
-  const publicKey = createPublicKey({ key: jwk as JsonWebKey, format: "jwk" });
+  const publicKey = createPublicKey({ key: jwk as NodeJsonWebKey, format: "jwk" });
   const verified = verifySignature(
     "RSA-SHA256",
     Buffer.from(`${parts[0]}.${parts[1]}`),
