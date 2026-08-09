@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
-import { AI_SUPERVISOR_NAME, isSupervisorRequestAuthorized } from "../../../../lib/supervisorAuth";
+import { AI_SUPERVISOR_NAME, isSupervisorRequestAuthorized } from "../../../lib/supervisorAuth";
 
 type TaskRow = { id:string; status:string; assigned_name_snapshot:string|null; priority:string };
 type StaffRow = { id:string; display_name:string|null };
