@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "../../lib/supabaseAdmin";
-import { AI_SUPERVISOR_NAME, isSupervisorRequestAuthorized } from "../../lib/supervisorAuth";
+import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { AI_SUPERVISOR_NAME, isSupervisorRequestAuthorized } from "../../../lib/supervisorAuth";
 
 type NamedRow = { id: string; property_name?: string; display_name?: string };
 type ExistingTask = { id: string; status?: string };
@@ -23,21 +23,29 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const emailId = String(body.emailId || "").trim();
     const propertyName = String(body.property || "").trim();
     const assignedName = String(body.assignedTo || "").trim();
     const taskType = String(body.taskType || body.category || "Other").trim() || "Other";
-    const subject = String(body.title || body.aiTitle || body.subject || taskType).trim();
+    const subject = String(body.title || body.subject || body.aiTitle || taskType).trim();
+    const sourceEmailId = String(body.sourceEmailId || body.emailId || "").trim();
 
-    if (!emailId || !subject) {
-      return NextResponse.json({ success: false, error: "emailId and title are required." }, { status: 400 });
+    if (!subject) {
+      return NextResponse.json({ success: false, error: "Task title is required." }, { status: 400 });
     }
 
-    const existing = await first<ExistingTask>(
-      `nkh_tasks?select=id,status&source_email_id=eq.${encodeURIComponent(emailId)}&limit=1`
-    );
-    if (existing) {
-      return NextResponse.json({ success: true, created: false, duplicate: true, taskId: existing.id, status: existing.status || null });
+    if (sourceEmailId) {
+      const existing = await first<ExistingTask>(
+        `nkh_tasks?select=id,status&source_email_id=eq.${encodeURIComponent(sourceEmailId)}&limit=1`
+      );
+      if (existing) {
+        return NextResponse.json({
+          success: true,
+          created: false,
+          duplicate: true,
+          taskId: existing.id,
+          status: existing.status || null,
+        });
+      }
     }
 
     const [property, assignedStaff, inbox] = await Promise.all([
@@ -47,7 +55,9 @@ export async function POST(request: NextRequest) {
       assignedName
         ? first<NamedRow>(`nkh_staff?select=id,display_name&or=(display_name.eq.${encodeURIComponent(assignedName)},google_staff_name.eq.${encodeURIComponent(assignedName)})&limit=1`)
         : null,
-      first<InboxRow>(`nkh_email_inbox?select=id&gmail_message_id=eq.${encodeURIComponent(emailId)}&limit=1`),
+      sourceEmailId
+        ? first<InboxRow>(`nkh_email_inbox?select=id&gmail_message_id=eq.${encodeURIComponent(sourceEmailId)}&limit=1`)
+        : null,
     ]);
 
     const notes = [
@@ -67,7 +77,7 @@ export async function POST(request: NextRequest) {
         priority: cleanPriority(body.priority),
         intent: String(body.event || body.category || "").trim() || null,
         task_type: taskType,
-        source: "Email",
+        source: "AI Supervisor",
         property_id: property?.id || null,
         property_name_snapshot: propertyName || null,
         booking_id: String(body.bookingId || "").trim() || null,
@@ -76,14 +86,13 @@ export async function POST(request: NextRequest) {
         assigned_staff_id: assignedStaff?.id || null,
         assigned_name_snapshot: assignedName || null,
         shift_label: String(body.shift || "").trim() || null,
-        source_email_id: emailId,
-        source_gmail_url: String(body.gmailLink || "").trim() || null,
+        source_email_id: sourceEmailId || null,
+        source_gmail_url: null,
         source_metadata: {
-          from: String(body.from || "").trim() || null,
-          to: String(body.to || "").trim() || null,
-          received_at: String(body.time || "").trim() || null,
           supervisor: AI_SUPERVISOR_NAME,
           reason: String(body.reason || "").trim() || null,
+          source_kind: String(body.sourceKind || (sourceEmailId ? "email" : "supervisor")).trim(),
+          source_received_at: String(body.sourceTime || body.time || "").trim() || null,
         },
         created_by_staff_id: null,
         created_by_name_snapshot: AI_SUPERVISOR_NAME,
@@ -91,31 +100,33 @@ export async function POST(request: NextRequest) {
     });
 
     const task = rows[0];
+
     await supabaseAdmin("nkh_task_events", {
       method: "POST",
       prefer: "return=minimal",
       body: {
         task_id: task.id,
-        event_type: "Created by AI Supervisor from Email",
+        event_type: "Created by AI Supervisor",
         to_status: "Pending",
         actor_staff_id: null,
         actor_name_snapshot: AI_SUPERVISOR_NAME,
         event_data: {
-          source_email_id: emailId,
+          source_email_id: sourceEmailId || null,
           assigned_to: assignedName || null,
           property: propertyName || null,
+          reason: String(body.reason || "").trim() || null,
         },
       },
     });
 
-    if (inbox?.id) {
+    if (inbox?.id && sourceEmailId) {
       const handledAt = new Date().toISOString();
       await Promise.all([
         supabaseAdmin(`nkh_email_inbox?id=eq.${encodeURIComponent(inbox.id)}`, {
           method: "PATCH",
           prefer: "return=minimal",
           body: {
-            status: "Task Created",
+            status: "Handled by AI Supervisor",
             task_id: task.id,
             handled_by_staff_id: null,
             handled_by_name_snapshot: AI_SUPERVISOR_NAME,
@@ -127,8 +138,8 @@ export async function POST(request: NextRequest) {
           prefer: "return=minimal",
           body: {
             email_inbox_id: inbox.id,
-            gmail_message_id: emailId,
-            action: "Task Created by AI Supervisor",
+            gmail_message_id: sourceEmailId,
+            action: "Operational Task Created by AI Supervisor",
             actor_staff_id: null,
             actor_name_snapshot: AI_SUPERVISOR_NAME,
             task_id: task.id,
@@ -142,10 +153,16 @@ export async function POST(request: NextRequest) {
       ]);
     }
 
-    return NextResponse.json({ success: true, created: true, duplicate: false, taskId: task.id, task });
+    return NextResponse.json({
+      success: true,
+      created: true,
+      duplicate: false,
+      taskId: task.id,
+      task,
+    });
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Failed to create AI supervisor email task." },
+      { success: false, error: error instanceof Error ? error.message : "Failed to create AI Supervisor task." },
       { status: 500 }
     );
   }
