@@ -52,6 +52,7 @@
 @import "./styles/components/ai-supervisor-clean.css";
 @import "./styles/components/operations-calendar.css";
 @import "./styles/components/reservation-tools.css";
+@import "./styles/components/live-reservation-audit.css";
 @import "./styles/components/ota-promotions.css";
 @import "./styles/components/reservation-audit-cancellation.css";
 @import "./styles/components/nkh-tools.css";

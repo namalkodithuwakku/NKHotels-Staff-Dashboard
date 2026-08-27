@@ -121,6 +121,7 @@ export async function importGmailMessage(messageId: string, token: string) {
       ai_error: intelligence.error || null,
       ai_model: process.env.OPENAI_EMAIL_MODEL || "gpt-5.6-luna",
       ai_processed_at: new Date().toISOString(),
+      reservation: intelligence.reservation,
     },
   }});
   return true;
