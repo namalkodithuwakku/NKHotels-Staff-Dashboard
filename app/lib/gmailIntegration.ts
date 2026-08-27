@@ -186,3 +186,24 @@ export async function initialGmailImport() {
   } while (pageToken && pages < 5);
   return imported;
 }
+
+export async function importRecentOtaEmails(days = 7) {
+  const token = await gmailAccessToken();
+  let imported = 0;
+  let pageToken = "";
+  let pages = 0;
+  do {
+    const query = new URLSearchParams({
+      q: `newer_than:${days}d -in:sent -in:drafts -in:trash -in:spam {from:booking.com from:airbnb.com from:agoda.com from:expedia.com from:vrbo.com from:trip.com from:makemytrip.com from:goibibo.com}`,
+      maxResults: "100",
+    });
+    if (pageToken) query.set("pageToken", pageToken);
+    const result = await gmail<{ messages?: Array<{ id: string }>; nextPageToken?: string }>(`messages?${query}`, token);
+    for (const message of result.messages || []) {
+      if (await importGmailMessage(message.id, token)) imported += 1;
+    }
+    pageToken = result.nextPageToken || "";
+    pages += 1;
+  } while (pageToken && pages < 2);
+  return imported;
+}
