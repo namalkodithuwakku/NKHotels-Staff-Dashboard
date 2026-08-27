@@ -17,6 +17,8 @@ type EmailRow = {
   booking_id: string | null;
   event_type: string;
   category: string | null;
+  subject: string | null;
+  body_text: string | null;
   source_metadata: { reservation?: ReservationExpectation } | null;
 };
 
@@ -47,6 +49,15 @@ const clean = (value: unknown) => String(value || "").trim();
 const key = (value: unknown) => clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
 const date = (value: unknown) => clean(value).slice(0, 10);
 const cancelled = (value: unknown) => /cancel|void|reject|no[ -]?show/i.test(clean(value));
+
+function reservationEvent(email: EmailRow) {
+  if (relevantEvents.includes(email.event_type)) return email.event_type;
+  const subject = clean(email.subject).toLowerCase();
+  if (/\b(cancelled|canceled|cancellation)\b/.test(subject)) return "Cancelled Booking";
+  if (/\b(modified|modification|amended|amendment|changed|updated)\b/.test(subject) && /\b(booking|reservation)\b/.test(subject)) return "Modified Booking";
+  if (/\b(new booking|booking confirmation|booking confirmed|reservation confirmed|confirmed reservation)\b/.test(subject)) return "New Booking";
+  return null;
+}
 
 function nameMatches(left: unknown, right: unknown) {
   const a = key(left), b = key(right);
@@ -111,11 +122,13 @@ function evaluate(audit: AuditRow, group: Booking[] | null, confidence: number) 
 
 export async function runLiveReservationAudit(graceMinutes = 10) {
   const emails = await supabaseAdmin<EmailRow[]>(
-    `nkh_email_inbox?select=id,gmail_message_id,received_at,property_id,property_name_snapshot,booking_id,event_type,category,source_metadata&event_type=in.(${relevantEvents.map(encodeURIComponent).join(",")})&received_at=gte.${encodeURIComponent(new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())}&order=received_at.asc`,
+    `nkh_email_inbox?select=id,gmail_message_id,received_at,property_id,property_name_snapshot,booking_id,event_type,category,subject,body_text,source_metadata&received_at=gte.${encodeURIComponent(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())}&order=received_at.asc&limit=1000`,
   );
 
   let queued = 0;
   for (const email of emails) {
+    const eventType = reservationEvent(email);
+    if (!eventType) continue;
     const expected = email.source_metadata?.reservation || {};
     await supabaseAdmin("nkh_reservation_audit_events", {
       method: "POST",
@@ -126,7 +139,7 @@ export async function runLiveReservationAudit(graceMinutes = 10) {
         property_id: email.property_id,
         property_name: email.property_name_snapshot,
         ota_source: email.category,
-        event_type: email.event_type,
+        event_type: eventType,
         booking_reference: email.booking_id,
         email_received_at: email.received_at,
         due_at: new Date(new Date(email.received_at).getTime() + graceMinutes * 60_000).toISOString(),
@@ -182,5 +195,5 @@ export async function runLiveReservationAudit(graceMinutes = 10) {
     }});
     if (result.status === "Verified") verified++; else attention++;
   }
-  return { queued, checked: due.length, verified, attention, unable };
+  return { emailsScanned: emails.length, reservationEmailsFound: queued, queued, checked: due.length, verified, attention, unable };
 }
