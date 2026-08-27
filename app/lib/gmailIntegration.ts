@@ -61,7 +61,7 @@ export async function gmailAccessToken() {
     cache: "no-store",
   });
   const data = await response.json();
-  if (!response.ok || !data.access_token) throw new Error(data.error_description || data.error || "Unable to refresh Gmail access token.");
+  if (!response.ok || !data.access_token) throw new Error(`Gmail OAuth token refresh failed: ${data.error_description || data.error || response.statusText || "Unknown authentication error"}`);
   return String(data.access_token);
 }
 
@@ -72,7 +72,11 @@ async function gmail<T>(path: string, token: string, init?: RequestInit): Promis
     cache: "no-store",
   });
   const data = await response.json();
-  if (!response.ok) throw new Error(data?.error?.message || `Gmail API failed (${response.status}).`);
+  if (!response.ok) {
+    const operation = path.split("?")[0];
+    const reason = data?.error?.errors?.[0]?.reason || data?.error?.status || "unknown_reason";
+    throw new Error(`Gmail API ${operation} failed (${response.status}, ${reason}): ${data?.error?.message || response.statusText}`);
+  }
   return data as T;
 }
 
