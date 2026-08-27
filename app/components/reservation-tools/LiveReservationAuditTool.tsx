@@ -20,6 +20,7 @@ export default function LiveReservationAuditTool() {
   const [items, setItems] = useState<AuditItem[]>([]), [loading, setLoading] = useState(true), [running, setRunning] = useState(false);
   const [error, setError] = useState(""), [filter, setFilter] = useState<"attention" | "all" | AuditItem["audit_status"]>("all");
   const [runSummary, setRunSummary] = useState("");
+  const [runStage, setRunStage] = useState("");
   const load = useCallback(async () => {
     setError("");
     try {
@@ -31,14 +32,21 @@ export default function LiveReservationAuditTool() {
   }, []);
   useEffect(() => { void load(); }, [load]);
   async function runAudit() {
-    setRunning(true); setError(""); setRunSummary("");
+    setRunning(true); setError(""); setRunSummary(""); setRunStage("Connecting to Gmail and importing recent OTA emails…");
     try {
       const response = await fetch("/api/reservation-audit", { method: "POST" }), payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Reservation audit failed.");
-      setRunSummary(`${payload.imported || 0} recent OTA emails imported · ${payload.emailsScanned || 0} inbox emails scanned · ${payload.reservationEmailsFound || 0} reservation events found${payload.gmailWarning ? ` · Gmail warning: ${payload.gmailWarning}` : ""}`);
+      const summary = `${payload.imported || 0} recent OTA emails imported · ${payload.emailsScanned || 0} inbox emails scanned · ${payload.reservationEmailsFound || 0} reservation events found${payload.gmailWarning ? ` · Gmail warning: ${payload.gmailWarning}` : ""}`;
+      setRunSummary(summary);
+      setRunStage("");
       await load();
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Reservation audit failed."); }
-    finally { setRunning(false); }
+      window.alert(`Reservation audit completed\n\n${summary}`);
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : "Reservation audit failed.";
+      setError(message); setRunStage("");
+      window.alert(`Reservation audit could not run\n\n${message}`);
+    }
+    finally { setRunning(false); setRunStage(""); }
   }
   const counts = useMemo(() => ({
     waiting: items.filter(item => item.audit_status === "Waiting").length,
@@ -63,6 +71,7 @@ export default function LiveReservationAuditTool() {
   return <section className="reservation-tools live-reservation-audit">
     <header className="reservation-tools-hero"><div><small>EMAIL + CALENDAR CONTROL</small><h2>Reservation audit</h2><p>Shows every detected reservation email and confirms whether the matching calendar action is complete.</p></div><button className="audit-download" onClick={runAudit} disabled={running}><RefreshCw size={17} className={running ? "audit-rotating" : ""}/>{running ? "Checking…" : "Run audit now"}</button></header>
     {error && <div className="audit-error"><AlertTriangle size={18}/>{error}</div>}
+    {runStage && <div className="audit-error" style={{ borderColor: "#f0b35b", background: "#fff8ec", color: "#74430b" }}><RefreshCw size={18} className="audit-rotating"/><strong>{runStage}</strong></div>}
     {runSummary && <div className="audit-error" style={{ borderColor: "#9ccfc2", background: "#effaf7", color: "#165b4d" }}><MailCheck size={18}/>{runSummary}</div>}
     <div className="audit-scorecards"><article className="warn"><small>WAITING</small><strong>{counts.waiting}</strong><span>Inside grace period</span></article><article className="good"><small>VERIFIED</small><strong>{counts.verified}</strong><span>Calendar is correct</span></article><article className="bad"><small>URGENT ISSUES</small><strong>{counts.urgent}</strong><span>Calendar not updated</span></article><article><small>MANUAL CHECK</small><strong>{counts.unable}</strong><span>Match needs confirmation</span></article></div>
     <nav className="audit-filters">{(["attention","Waiting","Verified","Needs Staff Action","Unable to Match","all"] as const).map(value => <button key={value} className={filter === value ? "active" : ""} onClick={() => setFilter(value)}>{value === "attention" ? "Needs attention" : value === "all" ? "All emails" : statusLabel[value]}</button>)}</nav>
