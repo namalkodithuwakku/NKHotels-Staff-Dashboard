@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     let imported = 0;
     let gmailWarning: string | null = null;
     try {
-      imported = await importRecentOtaEmails(7);
+      imported = await importRecentOtaEmails();
     } catch (error) {
       gmailWarning = error instanceof Error ? error.message : "Recent Gmail refresh failed.";
       console.error("Reservation audit Gmail refresh failed; checking existing inbox copy.", error);
