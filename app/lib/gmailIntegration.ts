@@ -194,7 +194,7 @@ export async function importRecentOtaEmails(days = 7) {
   let pages = 0;
   do {
     const query = new URLSearchParams({
-      q: `newer_than:${days}d -in:sent -in:drafts -in:trash -in:spam {from:booking.com from:airbnb.com from:agoda.com from:expedia.com from:vrbo.com from:trip.com from:makemytrip.com from:goibibo.com}`,
+      q: `newer_than:${days}d -in:sent -in:drafts -in:trash -in:spam`,
       maxResults: "100",
     });
     if (pageToken) query.set("pageToken", pageToken);
