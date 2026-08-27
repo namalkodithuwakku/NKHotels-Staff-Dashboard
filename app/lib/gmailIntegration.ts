@@ -187,23 +187,21 @@ export async function initialGmailImport() {
   return imported;
 }
 
-export async function importRecentOtaEmails(days = 7) {
+export async function importRecentOtaEmails() {
   const token = await gmailAccessToken();
   let imported = 0;
-  let pageToken = "";
-  let pages = 0;
-  do {
-    const query = new URLSearchParams({
-      q: `newer_than:${days}d -in:sent -in:drafts -in:trash -in:spam`,
-      maxResults: "100",
-    });
-    if (pageToken) query.set("pageToken", pageToken);
-    const result = await gmail<{ messages?: Array<{ id: string }>; nextPageToken?: string }>(`messages?${query}`, token);
-    for (const message of result.messages || []) {
-      if (await importGmailMessage(message.id, token)) imported += 1;
-    }
-    pageToken = result.nextPageToken || "";
-    pages += 1;
-  } while (pageToken && pages < 2);
+  const query = new URLSearchParams({ maxResults: "100", labelIds: "INBOX" });
+  const result = await gmail<{ messages?: Array<{ id: string }> }>(`messages?${query}`, token);
+  const candidates = await Promise.all((result.messages || []).map(async item => {
+    const message = await gmail<GmailMessage>(`messages/${encodeURIComponent(item.id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject`, token);
+    const from = header(message, "From").toLowerCase();
+    const subject = header(message, "Subject").toLowerCase();
+    const ota = /booking\.com|airbnb|agoda|expedia|vrbo|trip\.com|makemytrip|goibibo/.test(from);
+    const reservation = /new booking|booking confirmation|booking confirmed|reservation confirmed|confirmed reservation|cancel|modif|amend|booking changed|reservation updated/.test(subject);
+    return ota && reservation ? item.id : null;
+  }));
+  for (const messageId of candidates) {
+    if (messageId && await importGmailMessage(messageId, token)) imported += 1;
+  }
   return imported;
 }
