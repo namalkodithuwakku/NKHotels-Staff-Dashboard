@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runLiveReservationAudit } from "../../lib/liveReservationAudit";
+import { importRecentOtaEmails } from "../../lib/gmailIntegration";
 import { readServerSession } from "../../lib/serverSession";
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
 import { isSupervisorRequestAuthorized } from "../lib/supervisorAuth";
@@ -26,8 +27,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   if (!authorized(request)) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   try {
+    let imported = 0;
+    let gmailWarning: string | null = null;
+    try {
+      imported = await importRecentOtaEmails(7);
+    } catch (error) {
+      gmailWarning = error instanceof Error ? error.message : "Recent Gmail refresh failed.";
+      console.error("Reservation audit Gmail refresh failed; checking existing inbox copy.", error);
+    }
     const result = await runLiveReservationAudit(10);
-    return NextResponse.json({ success: true, ...result });
+    return NextResponse.json({ success: true, imported, gmailWarning, ...result });
   } catch (error) {
     console.error("Live reservation audit failed.", error);
     return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Reservation audit failed." }, { status: 500 });
