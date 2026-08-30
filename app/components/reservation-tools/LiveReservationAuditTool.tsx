@@ -73,13 +73,13 @@ export default function LiveReservationAuditTool() {
     try {
       do {
         setRunStage(`Historical audit · ${selected} · ${totals.scanned} Gmail messages checked so far…`);
-        const response = await fetch("/api/reservation-audit/history", {
+        const historyResponse = await fetch("/api/reservation-audit/history", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ days: historyDays, pageToken }),
         });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || "Historical reservation audit failed.");
+        const payload = await historyResponse.json();
+        if (!historyResponse.ok) throw new Error(payload.error || "Historical reservation audit failed.");
 
         totals.scanned += Number(payload.scanned || 0);
         totals.candidates += Number(payload.candidates || 0);
