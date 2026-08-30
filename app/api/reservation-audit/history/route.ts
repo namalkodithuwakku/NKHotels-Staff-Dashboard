@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { gmailAccessToken, importGmailMessage } from "../../../lib/gmailIntegration";
 import { auditHistoricalGmailMessages } from "../../../lib/historicalReservationAudit";
 import { readServerSession } from "../../../lib/serverSession";
+import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { isSupervisorRequestAuthorized } from "../../lib/supervisorAuth";
 
 export const runtime = "nodejs";
@@ -25,6 +26,24 @@ async function gmail<T>(path: string, token: string): Promise<T> {
   const data = await response.json();
   if (!response.ok) throw new Error(data?.error?.message || `Gmail request failed (${response.status}).`);
   return data as T;
+}
+
+export async function GET(request: NextRequest) {
+  if (!authorized(request)) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  try {
+    const properties = await supabaseAdmin<Array<{ id: string; calendar_sheet_code: string | null; calendar_source_mode: string | null }>>(
+      "nkh_properties?select=id,calendar_sheet_code,calendar_source_mode&client_status=in.(Active,Onboarding)",
+    );
+    const connected = new Set(properties
+      .filter(property => property.calendar_source_mode === "supabase" || Boolean(String(property.calendar_sheet_code || "").trim()))
+      .map(property => property.id));
+    const rows = await supabaseAdmin<Array<Record<string, unknown> & { property_id?: string | null }>>(
+      "nkh_reservation_audit_events?select=*&order=email_received_at.desc&limit=1000",
+    );
+    return NextResponse.json({ success: true, items: rows.filter(row => Boolean(row.property_id && connected.has(row.property_id))) });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Unable to load reservation audit." }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {
