@@ -73,7 +73,7 @@ export default function LiveReservationAuditTool() {
     try {
       do {
         setRunStage(`Historical audit · ${selected} · ${totals.scanned} Gmail messages checked so far…`);
-        const historyResponse = await fetch("/api/reservation-audit/history", {
+        const historyResponse: Response = await window.fetch("/api/reservation-audit/history", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ days: historyDays, pageToken }),
