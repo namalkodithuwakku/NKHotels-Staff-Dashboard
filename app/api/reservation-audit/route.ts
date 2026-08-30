@@ -31,7 +31,7 @@ type Booking = {
 };
 
 type LookupRequest = {
-  action?: "lookup";
+  action?: "lookup" | "historical";
   property?: string;
   propertyId?: string;
   reservationId?: string;
@@ -40,6 +40,7 @@ type LookupRequest = {
   checkIn?: string;
   checkOut?: string;
   roomCount?: number;
+  lookbackDays?: number;
 };
 
 function authorized(request: NextRequest) {
@@ -207,16 +208,19 @@ export async function POST(request: NextRequest) {
     const body = (await request.json().catch(() => ({}))) as LookupRequest;
     if (body.action === "lookup") return lookupReservation(body);
 
+    const requestedLookback = Number(body.lookbackDays || 7);
+    const lookbackDays = [7, 30, 90, 180].includes(requestedLookback) ? requestedLookback : Math.min(180, Math.max(1, requestedLookback || 7));
+
     let imported = 0;
     let gmailWarning: string | null = null;
     try {
-      imported = await importRecentOtaEmails();
+      imported = await importRecentOtaEmails(lookbackDays);
     } catch (error) {
       gmailWarning = error instanceof Error ? error.message : "Recent Gmail refresh failed.";
       console.error("Reservation audit Gmail refresh failed; checking existing inbox copy.", error);
     }
-    const result = await runLiveReservationAudit(10);
-    return NextResponse.json({ success: true, imported, gmailWarning, ...result });
+    const result = await runLiveReservationAudit(10, lookbackDays);
+    return NextResponse.json({ success: true, imported, gmailWarning, lookbackDays, ...result });
   } catch (error) {
     console.error("Live reservation audit failed.", error);
     return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Reservation audit failed." }, { status: 500 });
