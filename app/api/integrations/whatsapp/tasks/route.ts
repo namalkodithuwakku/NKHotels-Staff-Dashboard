@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
-import { sendWhatsAppTaskCreated } from "../../../../lib/whatsappTaskNotifications";
+import { sendWhatsAppTaskCreated, sendWhatsAppTaskDone } from "../../../../lib/whatsappTaskNotifications";
 
 const secret = process.env.INBOX_INTEGRATION_SECRET;
 function safeMatch(received: string | null) {
@@ -98,4 +98,50 @@ export async function POST(request: NextRequest) {
       whatsappWarning,
     });
   } catch (error) { return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Task creation failed" }, { status: 500 }); }
+}
+
+
+export async function PATCH(request: NextRequest) {
+  if (!authorized(request)) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  try {
+    const input = await request.json();
+    const taskId = String(input.taskId || input.id || "").trim();
+    const staffName = String(input.staffName || input.completedBy || "NKH Team").trim();
+    const completionNote = String(input.completionNote || "").trim();
+    if (!taskId) return NextResponse.json({ success: false, error: "Task ID is required" }, { status: 400 });
+
+    const tasks = await supabaseAdmin<Array<{id:string;status:string;subject:string|null;property_name_snapshot:string|null}>>(
+      `nkh_tasks?id=eq.${encodeURIComponent(taskId)}&select=id,status,subject,property_name_snapshot&limit=1`
+    );
+    const task = tasks[0];
+    if (!task) return NextResponse.json({ success: false, error: "Task was not found" }, { status: 404 });
+    if (String(task.status).toLowerCase().includes("done") || String(task.status).toLowerCase().includes("complete")) {
+      return NextResponse.json({ success: true, taskId: task.id, status: "Done", duplicate: true });
+    }
+
+    const now = new Date().toISOString();
+    await supabaseAdmin(`nkh_tasks?id=eq.${encodeURIComponent(task.id)}`, {
+      method: "PATCH", prefer: "return=minimal",
+      body: { status: "Done", completed_at: now, completed_by_name_snapshot: staffName, completion_note: completionNote || null },
+    });
+    await Promise.all([
+      supabaseAdmin("nkh_task_events", { method: "POST", prefer: "return=minimal", body: {
+        task_id: task.id, event_type: "Completed", from_status: task.status, to_status: "Done",
+        actor_name_snapshot: staffName, note: completionNote || null,
+      }}),
+      supabaseAdmin(`wa_task_links?dashboard_task_id=eq.${encodeURIComponent(task.id)}`, {
+        method: "PATCH", prefer: "return=minimal",
+        body: { task_status: "Done", assigned_to: staffName, completion_note: completionNote || null },
+      }),
+    ]);
+    let whatsappWarning: string | null = null;
+    try {
+      await sendWhatsAppTaskDone({ taskId: task.id, property: task.property_name_snapshot, subject: task.subject, staffName, completionNote });
+    } catch (reason) {
+      whatsappWarning = reason instanceof Error ? reason.message : "WhatsApp completion notification failed";
+    }
+    return NextResponse.json({ success: true, taskId: task.id, status: "Done", whatsappWarning });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Task completion failed" }, { status: 500 });
+  }
 }
