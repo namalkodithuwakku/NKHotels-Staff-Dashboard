@@ -22,7 +22,11 @@ var NKH_KEYS = ["date","day","reservations_06_12","reservations_12_14","reservat
 function getNKHRosterSettings_() {
   var p = PropertiesService.getScriptProperties();
   var endpoint = String(p.getProperty("NKH_ROSTER_SYNC_ENDPOINT") || "").trim();
-  var secret = String(p.getProperty("NKH_ROSTER_SYNC_SECRET") || "").trim();
+  if (!endpoint) {
+    var calendarEndpoint = String(p.getProperty("NKH_CALENDAR_SYNC_ENDPOINT") || "").trim();
+    endpoint = calendarEndpoint.replace(/\/calendar\/sync\/?$/, "/roster/sync");
+  }
+  var secret = String(p.getProperty("NKH_ROSTER_SYNC_SECRET") || p.getProperty("NKH_CALENDAR_SYNC_SECRET") || "").trim();
   if (!endpoint || !secret) throw new Error("Roster sync endpoint/secret missing.");
   return { endpoint: endpoint, secret: secret };
 }
