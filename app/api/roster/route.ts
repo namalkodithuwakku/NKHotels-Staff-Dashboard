@@ -68,7 +68,24 @@ export async function GET(request: NextRequest) {
       supabaseAdmin<Property[]>("nkh_properties?select=id,property_name,client_code&client_status=in.(Active,Onboarding)&order=property_name.asc"),
       supabaseAdmin<Entry[]>(`nkh_roster_entries?select=id,staff_id,property_id,shift_date,start_time,end_time,status,shift_label,notes&shift_date=gte.${encodeURIComponent(from)}&shift_date=lte.${encodeURIComponent(to)}&status=neq.Cancelled&order=start_time.asc.nullslast`),
     ]);
-    return NextResponse.json({ staff, properties, entries });
+    // Visun and Dinuka are the same person. Keep the original staff UUID so
+    // historical roster entries stay attached, but expose one canonical Dinuka
+    // identity in the roster UI even before the database rename migration runs.
+    const visun = staff.find(item => item.display_name.toLowerCase() === "visun");
+    const dinuka = staff.find(item => item.display_name.toLowerCase() === "dinuka");
+    let rosterStaff = staff;
+    let rosterEntries = entries;
+    if (visun) {
+      if (dinuka && dinuka.id !== visun.id) {
+        rosterEntries = entries.map(entry => entry.staff_id === dinuka.id ? { ...entry, staff_id: visun.id } : entry);
+        rosterStaff = staff.filter(item => item.id !== dinuka.id).map(item =>
+          item.id === visun.id ? { ...item, display_name: "Dinuka" } : item
+        );
+      } else {
+        rosterStaff = staff.map(item => item.id === visun.id ? { ...item, display_name: "Dinuka" } : item);
+      }
+    }
+    return NextResponse.json({ staff: rosterStaff, properties, entries: rosterEntries });
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load roster." }, { status: 500 }); }
 }
 
