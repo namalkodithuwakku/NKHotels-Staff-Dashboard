@@ -1,11 +1,21 @@
-/***** NK HOTELS LIVE ROSTER — TWO-WAY SYNC *****
- * Sheet ID: 1Bm1GHvIke8CeYkvzyyLpI8jZjQC0DyizeQeF0iho2HE
- * Script Properties required:
- * NKH_ROSTER_SYNC_ENDPOINT = https://YOUR-DASHBOARD.vercel.app/api/integrations/roster/sync
- * NKH_ROSTER_SYNC_SECRET   = same secret configured in Vercel
+/***** NK HOTELS MASTER WORK ROSTER SYNC *****
+ * Authoritative roster: Master Work.xlsx in Google Drive
+ * File ID: 114XLQ2dbhURHaD95HpDgOrS2evbP9h-R
+ *
+ * One-time Apps Script setup:
+ * 1. Enable Advanced Google Service: Drive API.
+ * 2. Script Properties:
+ *    NKH_ROSTER_SYNC_ENDPOINT = https://YOUR-DASHBOARD.vercel.app/api/integrations/roster/sync
+ *    NKH_ROSTER_SYNC_SECRET   = same secret configured in Vercel
+ * 3. Run installNKHMasterWorkRosterTrigger().
+ *
+ * The script converts Master Work.xlsx to a temporary native Sheet only long
+ * enough to read the first (Roster) tab, pushes it to the dashboard, then
+ * trashes the temporary conversion. Master Work.xlsx is never overwritten.
  */
-var NKH_ROSTER_SHEET_ID = "1Bm1GHvIke8CeYkvzyyLpI8jZjQC0DyizeQeF0iho2HE";
-var NKH_ROSTER_SHEET_NAME = "Roster";
+var NKH_MASTER_WORK_FILE_ID = "114XLQ2dbhURHaD95HpDgOrS2evbP9h-R";
+var NKH_LIVE_ROSTER_SHEET_ID = "1Bm1GHvIke8CeYkvzyyLpI8jZjQC0DyizeQeF0iho2HE";
+var NKH_LIVE_ROSTER_SHEET_NAME = "Roster";
 var NKH_HEADERS = ["Date","Day","Reservations 6:00 AM - 12:00 PM","Reservations 12:00 PM - 2:00 PM","Reservations 2:00 PM - 4:00 PM","Reservations 4:00 PM - 10:00 PM","Digital Marketing 12:00 PM - 2:00 PM","Digital Marketing 2:00 PM - 4:00 PM"];
 var NKH_KEYS = ["date","day","reservations_06_12","reservations_12_14","reservations_14_16","reservations_16_22","digital_12_14","digital_14_16"];
 
@@ -16,9 +26,6 @@ function getNKHRosterSettings_() {
   if (!endpoint || !secret) throw new Error("Roster sync endpoint/secret missing.");
   return { endpoint: endpoint, secret: secret };
 }
-function rosterSheet_() {
-  return SpreadsheetApp.openById(NKH_ROSTER_SHEET_ID).getSheetByName(NKH_ROSTER_SHEET_NAME);
-}
 function isoDate_(value) {
   if (!value) return "";
   if (Object.prototype.toString.call(value) === "[object Date]") return Utilities.formatDate(value, "Asia/Colombo", "yyyy-MM-dd");
@@ -26,62 +33,66 @@ function isoDate_(value) {
   var match = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
   return match ? match[1] + "-" + match[2] + "-" + match[3] : "";
 }
-function readRosterRows_() {
-  var sheet = rosterSheet_();
-  var values = sheet.getDataRange().getValues();
-  return values.slice(1).map(function(row) {
-    var item = {};
-    NKH_KEYS.forEach(function(key, i) { item[key] = i === 0 ? isoDate_(row[i]) : String(row[i] || "").trim(); });
-    return item;
+function normalizedMasterWorkRows_(values) {
+  // Master Work Roster: row 2 has column labels; data starts row 3.
+  // A Date, B Day, C-F Reservations, G-H OFF, I separator, J-K Digital Marketing.
+  return values.slice(2).map(function(row) {
+    return {
+      date: isoDate_(row[0]),
+      day: String(row[1] || "").trim(),
+      reservations_06_12: String(row[2] || "").trim(),
+      reservations_12_14: String(row[3] || "").trim(),
+      reservations_14_16: String(row[4] || "").trim(),
+      reservations_16_22: String(row[5] || "").trim(),
+      digital_12_14: String(row[9] || "").trim(),
+      digital_14_16: String(row[10] || "").trim()
+    };
   }).filter(function(item) { return item.date; });
 }
-function pushRosterToDashboard() {
-  var settings = getNKHRosterSettings_();
-  var response = UrlFetchApp.fetch(settings.endpoint, {
-    method: "post", contentType: "application/json",
-    headers: { "X-NKH-Roster-Secret": settings.secret },
-    payload: JSON.stringify({ rows: readRosterRows_() }), muteHttpExceptions: true
-  });
-  if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) throw new Error(response.getContentText());
-  return JSON.parse(response.getContentText());
+function readMasterWorkRoster_() {
+  var temp = null;
+  try {
+    temp = Drive.Files.copy(
+      { title: "NKH Roster Sync Temporary " + new Date().getTime(), mimeType: MimeType.GOOGLE_SHEETS },
+      NKH_MASTER_WORK_FILE_ID,
+      { convert: true }
+    );
+    var spreadsheet = SpreadsheetApp.openById(temp.id);
+    var roster = spreadsheet.getSheets()[0];
+    return normalizedMasterWorkRows_(roster.getDataRange().getValues());
+  } finally {
+    if (temp && temp.id) Drive.Files.trash(temp.id);
+  }
 }
-function refreshRosterFromDashboard() {
-  var settings = getNKHRosterSettings_();
-  var response = UrlFetchApp.fetch(settings.endpoint + "?from=2026-09-01&to=2027-12-31", {
-    method: "get", headers: { "X-NKH-Roster-Secret": settings.secret }, muteHttpExceptions: true
-  });
-  if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) throw new Error(response.getContentText());
-  var data = JSON.parse(response.getContentText());
-  var rows = data.rows || [];
-  var sheet = rosterSheet_();
+function mirrorLiveRoster_(rows) {
+  var sheet = SpreadsheetApp.openById(NKH_LIVE_ROSTER_SHEET_ID).getSheetByName(NKH_LIVE_ROSTER_SHEET_NAME);
   var output = [NKH_HEADERS];
   rows.forEach(function(item) {
-    var d = new Date(item.date + "T12:00:00");
-    output.push([item.date, Utilities.formatDate(d, "Asia/Colombo", "EEE"), item.reservations_06_12 || "", item.reservations_12_14 || "", item.reservations_14_16 || "", item.reservations_16_22 || "", item.digital_12_14 || "", item.digital_14_16 || ""]);
+    output.push([item.date,item.day,item.reservations_06_12,item.reservations_12_14,item.reservations_14_16,item.reservations_16_22,item.digital_12_14,item.digital_14_16]);
   });
-  sheet.getRange(1, 1, Math.max(sheet.getLastRow(), output.length), 8).clearContent();
-  sheet.getRange(1, 1, output.length, 8).setValues(output);
+  var clearRows = Math.max(sheet.getLastRow(), output.length);
+  if (clearRows) sheet.getRange(1,1,clearRows,8).clearContent();
+  sheet.getRange(1,1,output.length,8).setValues(output);
   sheet.setFrozenRows(1);
-  return { success: true, rows: rows.length };
 }
-function onEdit(e) {
-  if (!e || !e.range || e.range.getSheet().getName() !== NKH_ROSTER_SHEET_NAME || e.range.getRow() === 1) return;
-  pushRosterToDashboard();
-}
-function doPost(e) {
-  try {
-    var request = JSON.parse(e && e.postData && e.postData.contents || "{}");
-    var settings = getNKHRosterSettings_();
-    if (String(request.secret || "") !== settings.secret) return jsonRoster_({ success:false, error:"Unauthorized" });
-    if (request.action === "refreshFromDashboard") return jsonRoster_(refreshRosterFromDashboard());
-    return jsonRoster_({ success:false, error:"Unsupported action" });
-  } catch (error) { return jsonRoster_({ success:false, error:String(error) }); }
-}
-function jsonRoster_(data) { return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON); }
-function installNKHRosterTrigger() {
-  ScriptApp.getProjectTriggers().forEach(function(trigger) {
-    if (trigger.getHandlerFunction() === "pushRosterToDashboard") ScriptApp.deleteTrigger(trigger);
+function syncMasterWorkRosterToDashboard() {
+  var settings = getNKHRosterSettings_();
+  var rows = readMasterWorkRoster_();
+  var response = UrlFetchApp.fetch(settings.endpoint, {
+    method: "post",
+    contentType: "application/json",
+    headers: { "X-NKH-Roster-Secret": settings.secret },
+    payload: JSON.stringify({ rows: rows }),
+    muteHttpExceptions: true
   });
-  ScriptApp.newTrigger("pushRosterToDashboard").timeBased().everyMinutes(10).create();
-  return { success:true };
+  if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) throw new Error(response.getContentText());
+  mirrorLiveRoster_(rows);
+  return JSON.parse(response.getContentText());
+}
+function installNKHMasterWorkRosterTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === "syncMasterWorkRosterToDashboard") ScriptApp.deleteTrigger(trigger);
+  });
+  ScriptApp.newTrigger("syncMasterWorkRosterToDashboard").timeBased().everyMinutes(10).create();
+  return syncMasterWorkRosterToDashboard();
 }
