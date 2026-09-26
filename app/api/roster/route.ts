@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
 import { canManageProperties, readServerSession } from "../../lib/serverSession";
+import { requestRosterSheetRefresh } from "../../lib/rosterSheetSync";
 
 type Staff = { id: string; display_name: string; color_hex: string; employment_status: string };
 type Property = { id: string; property_name: string; client_code: string };
@@ -88,6 +89,7 @@ export async function POST(request: NextRequest) {
     const data = rows.length
       ? await supabaseAdmin<Entry[]>("nkh_roster_entries", { method: "POST", prefer: "return=representation", body: rows })
       : [];
+    void requestRosterSheetRefresh();
     return NextResponse.json({ success: true, first: data[0] || null, created: data.length, skipped: dates.length - data.length }, { status: 201 });
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to create shift." }, { status: 500 }); }
 }
@@ -102,7 +104,7 @@ export async function PATCH(request: NextRequest) {
     const anchor = dateValue(input.shift_date);
     const dates = monthDates(anchor, String(input.apply_mode || "single"), input.repeat_weekdays);
     const current = await supabaseAdmin<Entry[]>(`nkh_roster_entries?id=eq.${encodeURIComponent(String(input.id))}`, { method: "PATCH", prefer: "return=representation", body: entryBody(input, status, anchor) });
-    if (dates.length === 1) return NextResponse.json({ success: true, first: current[0] || null, updated: current.length, created: 0, skipped: 0 });
+    if (dates.length === 1) { void requestRosterSheetRefresh(); return NextResponse.json({ success: true, first: current[0] || null, updated: current.length, created: 0, skipped: 0 }); }
 
     const existing = await monthEntries(input.staff_id, dates);
     const originalStatus = String(input.original_status || status);
@@ -125,6 +127,7 @@ export async function PATCH(request: NextRequest) {
     const created = creates.length
       ? await supabaseAdmin<Entry[]>("nkh_roster_entries", { method: "POST", prefer: "return=representation", body: creates })
       : [];
+    void requestRosterSheetRefresh();
     return NextResponse.json({ success: true, first: current[0] || null, updated, created: created.length, skipped });
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to update shift." }, { status: 500 }); }
 }
@@ -135,6 +138,7 @@ export async function DELETE(request: NextRequest) {
     const id = request.nextUrl.searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Shift ID is required." }, { status: 400 });
     await supabaseAdmin(`nkh_roster_entries?id=eq.${encodeURIComponent(id)}`, { method: "DELETE", prefer: "return=minimal" });
+    void requestRosterSheetRefresh();
     return NextResponse.json({ success: true });
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to delete shift." }, { status: 500 }); }
 }
