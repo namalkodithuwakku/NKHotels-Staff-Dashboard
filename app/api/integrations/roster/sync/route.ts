@@ -14,7 +14,7 @@ const slots = [
 ] as const;
 
 function authorized(request: NextRequest) {
-  const secret = process.env.NKH_ROSTER_SYNC_SECRET;
+  const secret = process.env.NKH_ROSTER_SYNC_SECRET || process.env.NKH_CALENDAR_SYNC_SECRET;
   return Boolean(secret && request.headers.get("x-nkh-roster-secret") === secret);
 }
 function canonicalName(value: unknown) {
