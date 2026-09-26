@@ -1,6 +1,6 @@
 export async function requestRosterSheetRefresh() {
-  const url = process.env.GOOGLE_ROSTER_WEBAPP_URL;
-  const secret = process.env.NKH_ROSTER_SYNC_SECRET;
+  const url = process.env.GOOGLE_ROSTER_WEBAPP_URL || process.env.GOOGLE_WEBAPP_URL;
+  const secret = process.env.NKH_ROSTER_SYNC_SECRET || process.env.NKH_CALENDAR_SYNC_SECRET;
   if (!url || !secret) return;
   try {
     await fetch(url, {
