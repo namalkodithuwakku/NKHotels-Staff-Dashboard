@@ -62,8 +62,11 @@ export async function POST(request: NextRequest) {
     const minDate = dated.map(row => String(row.date)).sort()[0];
     const maxDate = dated.map(row => String(row.date)).sort().at(-1)!;
 
+    // Master Work is authoritative for scheduled roster coverage in the imported date range.
+    // Remove existing scheduled rows first so legacy "General coverage" records do not
+    // remain layered underneath the Master Work schedule. Leave/Off records are kept.
     await supabaseAdmin(
-      `nkh_roster_entries?shift_date=gte.${minDate}&shift_date=lte.${maxDate}&shift_label=in.(Reservations%20Management,Digital%20Marketing)`,
+      `nkh_roster_entries?shift_date=gte.${minDate}&shift_date=lte.${maxDate}&status=eq.Scheduled`,
       { method: "DELETE", prefer: "return=minimal" }
     );
 
