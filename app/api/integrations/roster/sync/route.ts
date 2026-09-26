@@ -20,7 +20,25 @@ function authorized(request: NextRequest) {
 function canonicalName(value: unknown) {
   const name = String(value || "").trim();
   if (/^hasitha$/i.test(name)) return "Hashitha";
+  if (/^visun$/i.test(name)) return "Dinuka";
   return name;
+}
+
+function buildStaffLookup(staff: Staff[]) {
+  const lookup = new Map(staff.map(item => [item.display_name.toLowerCase(), item.id]));
+  // Production may still physically store the historical name Visun. Master Work
+  // uses Dinuka. Treat them as one identity until/after the DB migration is applied.
+  const dinukaId = lookup.get("dinuka") || lookup.get("visun");
+  if (dinukaId) {
+    lookup.set("dinuka", dinukaId);
+    lookup.set("visun", dinukaId);
+  }
+  const hashithaId = lookup.get("hashitha") || lookup.get("hasitha");
+  if (hashithaId) {
+    lookup.set("hashitha", hashithaId);
+    lookup.set("hasitha", hashithaId);
+  }
+  return lookup;
 }
 function time5(value: string | null) { return String(value || "").slice(0, 5); }
 
@@ -58,7 +76,7 @@ export async function POST(request: NextRequest) {
     if (!dated.length) return NextResponse.json({ success: true, imported: 0 });
 
     const staff = await supabaseAdmin<Staff[]>("nkh_staff?select=id,display_name&employment_status=eq.Active");
-    const staffByName = new Map(staff.map(item => [item.display_name.toLowerCase(), item.id]));
+    const staffByName = buildStaffLookup(staff);
     const minDate = dated.map(row => String(row.date)).sort()[0];
     const maxDate = dated.map(row => String(row.date)).sort().at(-1)!;
 
@@ -71,12 +89,16 @@ export async function POST(request: NextRequest) {
     );
 
     const inserts: Record<string, unknown>[] = [];
+    const unknownNames = new Set<string>();
     for (const row of dated) {
       for (const slot of slots) {
         const name = canonicalName(row[slot.key]);
         if (!name) continue;
         const staffId = staffByName.get(name.toLowerCase());
-        if (!staffId) continue;
+        if (!staffId) {
+          unknownNames.add(name);
+          continue;
+        }
         inserts.push({
           staff_id: staffId, shift_date: String(row.date), start_time: slot.start, end_time: slot.end,
           status: "Scheduled", shift_label: slot.label, source: "Live Roster Sheet",
@@ -85,7 +107,12 @@ export async function POST(request: NextRequest) {
       }
     }
     if (inserts.length) await supabaseAdmin("nkh_roster_entries", { method: "POST", prefer: "return=minimal", body: inserts });
-    return NextResponse.json({ success: true, imported: inserts.length, dates: dated.length });
+    return NextResponse.json({
+      success: true,
+      imported: inserts.length,
+      dates: dated.length,
+      unknownStaff: Array.from(unknownNames),
+    });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Roster import failed." }, { status: 500 });
   }
