@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
-import { canManageProperties, readServerSession } from "../../lib/serverSession";
+import { authorizeNKH } from "../../lib/nkhAuthorization";
 
 type TaskRow = {
   id: string; status: string; intent: string | null; task_type: string; source: string;
@@ -14,8 +14,9 @@ const fields = "id,status,intent,task_type,source,property_name_snapshot,booking
 
 export async function GET(request: NextRequest) {
   try {
-    if (!canManageProperties(readServerSession(request))) {
-      return NextResponse.json({ success: false, error: "Please sign in again." }, { status: 401 });
+    const auth = await authorizeNKH(request,"operations.assigned");
+    if (!auth.ok) {
+      return NextResponse.json({ success: false, error: "Task access unavailable." }, { status: auth.status });
     }
     const rows = await supabaseAdmin<TaskRow[]>(`nkh_tasks?select=${fields}&archived_at=is.null&order=created_at.desc&limit=500`);
     const tasks = rows.map(row => ({
@@ -39,6 +40,6 @@ export async function GET(request: NextRequest) {
     }));
     return NextResponse.json({ success: true, tasks });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Failed to load tasks." }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Failed to load tasks." }, { status: 500 });
   }
 }

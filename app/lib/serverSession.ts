@@ -6,7 +6,7 @@ export const SESSION_COOKIE = "nkh_dashboard_session";
 type ServerSession = { name: string; access: string; exp: number };
 
 function secret() {
-  const value = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const value = process.env.NKH_SESSION_SIGNING_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!value) throw new Error("Server session secret is not configured.");
   return value;
 }
@@ -49,10 +49,11 @@ export async function hasChannelAccess(
   channel: "whatsapp" | "sms",
 ) {
   if (!session) return false;
-  if (isMasterSession(session)) return true;
   const field = channel === "whatsapp" ? "can_access_whatsapp" : "can_access_sms";
-  const rows = await supabaseAdmin<Array<Record<string, boolean>>>(
-    `nkh_staff?select=${field}&or=(display_name.eq.${encodeURIComponent(session.name)},google_staff_name.eq.${encodeURIComponent(session.name)})&employment_status=eq.Active&limit=1`,
+  const name = encodeURIComponent('"'+session.name.replace(/\\/g,"\\\\").replace(/"/g,'\\"')+'"');
+  const rows = await supabaseAdmin<Array<{access_level:string;login_enabled:boolean;can_access_whatsapp:boolean;can_access_sms:boolean}>>(
+    `nkh_staff?select=access_level,login_enabled,${field}&display_name=eq.${name}&employment_status=eq.Active&limit=2`
   );
-  return rows[0]?.[field] === true;
+  const row=rows[0];
+  return rows.length===1 && row.login_enabled===true && row.access_level.trim().toLowerCase()===session.access.trim().toLowerCase() && (isMasterSession(session)||row[field]===true);
 }

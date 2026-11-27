@@ -39,10 +39,11 @@ export async function updateTaskStatus(
   status: string,
   staffName: string
 ) {
-  const params = new URLSearchParams({ taskId, status, staffName });
-
-  const response = await fetch(`/api/tasks/update?${params.toString()}`, {
-    method: "GET",
+  void staffName; // Actor is derived from the verified server session.
+  const response = await fetch("/api/tasks/update", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({taskId,status}),
     cache: "no-store",
   });
 

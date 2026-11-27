@@ -25,9 +25,12 @@ function publicStaff(row: StaffRow) {
   };
 }
 
+// Best-effort per-instance throttle; distributed enforcement requires a shared limiter.
+const attempts = new Map<string,{count:number;until:number}>();
+function allowAttempt(key:string){const now=Date.now();for(const [k,v] of attempts)if(v.until<=now)attempts.delete(k);const old=attempts.get(key);if(old&&old.count>=8)return false;if(!old&&attempts.size>=5000)return false;attempts.set(key,{count:(old?.count||0)+1,until:old?.until||now+600000});return true;}
 async function legacyLogin(name: string, pin: string) {
   const url = `${GOOGLE_WEBAPP_URL}?action=staffLogin&name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}`;
-  const response = await fetch(url, { cache: "no-store" });
+  const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(15000) });
   const text = await response.text();
   try { return JSON.parse(text); } catch { return { success: false }; }
 }
@@ -41,6 +44,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Invalid username or PIN." }, { status: 401 });
     }
 
+    if (!allowAttempt(username)) return NextResponse.json({success:false,error:"Too many login attempts. Try again later."},{status:429,headers:{"Retry-After":"600"}});
     let rows = await supabaseAdmin<StaffRow[]>(`nkh_staff?select=id,display_name,access_level,employment_status,phone,whatsapp_number,login_username,pin_hash,login_enabled,google_staff_name,can_access_whatsapp,can_access_sms&login_username=eq.${encodeURIComponent(username)}&limit=1`);
     let staff = rows[0] || null;
 
@@ -49,6 +53,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: "Invalid username or PIN." }, { status: 401 });
       }
     } else {
+      if (staff && (!staff.login_enabled || staff.employment_status !== "Active")) return NextResponse.json({success:false,error:"Invalid username or PIN."},{status:401});
       const legacyName = staff?.google_staff_name || staff?.display_name || String(body.name || username).trim();
       const legacy = await legacyLogin(legacyName, pin);
       if (!legacy?.success || !legacy?.staff) {
@@ -67,6 +72,7 @@ export async function POST(request: Request) {
       staff = { ...staff, login_username: username, pin_hash: "migrated" };
     }
 
+    attempts.delete(username);
     const staffData = publicStaff(staff);
     await supabaseAdmin(`nkh_staff?id=eq.${staff.id}`, { method: "PATCH", prefer: "return=minimal", body: { last_login_at: new Date().toISOString() } });
     const result = NextResponse.json({ success: true, staff: staffData, authSource: staff.pin_hash === "migrated" ? "Supabase migrated" : "Supabase" });
