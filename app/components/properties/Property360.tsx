@@ -1,0 +1,18 @@
+"use client";
+import {useEffect,useState} from "react";
+type Summary={packageName:string|null;calendar:{mode:string|null;configured:boolean;syncAvailable:boolean;sync:{last_completed_at:string|null;last_status:string;rooms_synced:number;bookings_synced:number}|null};ota:{count:number;review:number;limited:boolean}|null;responsibilities:{name:string;openTasks:number}[]|null;openTasks:number|null;unassigned:number|null;taskLimited:boolean};
+export default function Property360({propertyId,onNavigate}:{propertyId:string;onNavigate:(tab:"overview"|"contacts"|"rooms"|"ota"|"rates")=>void}){
+ const [data,setData]=useState<Summary|null>(null),[error,setError]=useState("");
+ useEffect(()=>{const controller=new AbortController();fetch("/api/property-profiles/"+encodeURIComponent(propertyId)+"/summary",{cache:"no-store",signal:controller.signal}).then(async response=>{const payload=await response.json();if(!response.ok)throw new Error(payload.error||"Unavailable");return payload as Summary;}).then(value=>{if(!controller.signal.aborted)setData(value);}).catch(reason=>{if(!controller.signal.aborted)setError(reason instanceof Error?reason.message:"Unavailable");});return()=>controller.abort();},[propertyId]);
+ if(error)return <p className="workspace-error">{error}</p>;
+ if(!data)return <div className="workspace-empty">Loading property summary…</div>;
+ const c=data.calendar;
+ return <div className="profile-card-grid">
+ <article><small>SERVICE AGREEMENT</small><h3>{data.packageName||"Package not assigned"}</h3><p>Existing package only. Contract dates, fee rules and signed terms are not connected.</p><button onClick={()=>onNavigate("overview")}>Property overview</button></article>
+ <article><small>HOTEL CALENDAR</small><h3>{c.mode==="supabase"?"Dashboard calendar":c.mode==="google_sheet"?"Google Sheet calendar":"Mode not recorded"}</h3><p>{c.configured?"Source configured (not a connectivity test)":"Source not configured"}</p><p>{!c.syncAvailable?"Sync records unavailable":c.sync?("Last recorded sync: "+c.sync.last_status+(c.sync.last_completed_at?" · "+new Date(c.sync.last_completed_at).toLocaleString():"")):"No recorded sync"}</p><button onClick={()=>onNavigate("overview")}>Calendar configuration</button></article>
+ <article><small>OTA RATE PROFILES</small><h3>{data.ota?data.ota.count+(data.ota.limited?"+":"")+" profiles":"Unavailable"}</h3><p>{data.ota?data.ota.review+" flagged for review in returned records":"Rate data unavailable"}</p><p>Rate profiles are not verified OTA account connections.</p><button onClick={()=>onNavigate("ota")}>Manage OTA rates</button></article>
+ <article><small>STAFF RESPONSIBILITIES</small><h3>{data.openTasks===null?"Unavailable":data.openTasks+(data.taskLimited?"+":"")+" open tasks"}</h3><p>{data.unassigned===null?"":data.unassigned+" unassigned in returned records"}</p>{data.responsibilities===null?<p>Staff assignments unavailable</p>:data.responsibilities.length?data.responsibilities.map((item,index)=><p key={index}>{item.name} · {item.openTasks} tasks</p>):<p>No assigned open tasks found.</p>}<p>Current task assignments, not permanent account owners.</p></article>
+ <article><small>PROPERTY OPERATIONS</small><h3>Existing profile tools</h3><button onClick={()=>onNavigate("contacts")}>Contacts</button> <button onClick={()=>onNavigate("rooms")}>Room inventory</button> <button onClick={()=>onNavigate("rates")}>Rate calendar</button></article>
+ <article><small>FINANCIAL HISTORY</small><h3>Connection pending</h3><p>Service Fees and Monthly Accounts will be connected after secure setup and reconciliation.</p></article>
+ </div>;
+}
