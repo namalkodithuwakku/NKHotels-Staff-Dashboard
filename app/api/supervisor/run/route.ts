@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readServerSession } from "../../../lib/serverSession";
+import { authorizeNKH } from "../../../lib/nkhAuthorization";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -17,14 +17,8 @@ function backendOrigin(value: string) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = readServerSession(request);
-  if (!session) return NextResponse.json({ success: false, error: "Please sign in again." }, { status: 401 });
-
-  const access = String(session.access || "").trim().toLowerCase();
-  if (!["master", "supervisor"].includes(access)) {
-    return NextResponse.json({ success: false, error: "Only Master or Supervisor can run the AI Supervisor manually." }, { status: 403 });
-  }
-
+  const auth = await authorizeNKH(request, "operations.manage");
+  if (!auth.ok) return NextResponse.json({success:false,error:"Supervisor access unavailable."},{status:auth.status});
   const configuredBackendUrl = env("NKH_AI_BACKEND_URL");
   const backendUrl = backendOrigin(configuredBackendUrl);
   const supervisorKey = env("NKH_AI_SUPERVISOR_API_KEY");

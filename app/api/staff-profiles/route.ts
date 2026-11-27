@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
-import { isMasterSession, readServerSession } from "../../lib/serverSession";
+import { authorizeNKH } from "../../lib/nkhAuthorization";
 import { hashPin, normalizeUsername, validPin, validUsername } from "../../lib/staffCredentials";
 
 const fields = "id,display_name,email,phone,whatsapp_number,access_level,employment_status,timezone,color_hex,google_staff_name,login_username,login_enabled,can_access_whatsapp,can_access_sms,pin_hash,pin_updated_at,last_login_at,created_at,updated_at";
 const allowed = ["display_name", "email", "phone", "whatsapp_number", "access_level", "employment_status", "timezone", "color_hex", "google_staff_name", "login_username", "login_enabled", "can_access_whatsapp", "can_access_sms"];
 
-function master(request: NextRequest) { return isMasterSession(readServerSession(request)); }
+async function master(request: NextRequest) { const auth = await authorizeNKH(request, "administration.manage"); return auth.ok && auth.role === "master"; }
 
 export async function GET(request: NextRequest) {
   try {
-    if (!master(request)) return NextResponse.json({ error: "Master access is required." }, { status: 403 });
+    if (!(await master(request))) return NextResponse.json({ error: "Master access is required." }, { status: 403 });
     const rows = await supabaseAdmin<Array<Record<string, unknown>>>(`nkh_staff?select=${fields}&order=display_name.asc`);
     return NextResponse.json(rows.map(({ pin_hash, ...row }) => ({ ...row, has_pin: Boolean(pin_hash) })));
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load staff profiles." }, { status: 500 }); }
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!master(request)) return NextResponse.json({ error: "Master access is required." }, { status: 403 });
+    if (!(await master(request))) return NextResponse.json({ error: "Master access is required." }, { status: 403 });
     const input = await request.json();
     const displayName = String(input.display_name || "").trim();
     const username = normalizeUsername(input.login_username);
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    if (!master(request)) return NextResponse.json({ error: "Master access is required." }, { status: 403 });
+    if (!(await master(request))) return NextResponse.json({ error: "Master access is required." }, { status: 403 });
     const input = await request.json();
     if (!input.id) return NextResponse.json({ error: "Staff ID is required." }, { status: 400 });
     const update = Object.fromEntries(allowed.filter(name => Object.prototype.hasOwnProperty.call(input, name)).map(name => [name, input[name] === "" ? null : input[name]]));

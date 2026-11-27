@@ -32,12 +32,12 @@ export default function MobileWorkspaceMenu({
 
   return <>
     <nav className="staff-mobile-nav pwa-mobile-nav" aria-label="Mobile workspace">
-      {primary.map(item => <button key={item.key} className={activeKey === item.key ? "active" : ""} onClick={() => choose(item.key)}>
+      {primary.map(item => <button key={item.key} aria-current={activeKey === item.key ? "page" : undefined} className={activeKey === item.key ? "active" : ""} onClick={() => choose(item.key)}>
         <span className={`nav-mark nav-${item.key}`} />
         <small>{item.short || item.label.split(" ")[0]}</small>
         {Boolean(counts[item.key]) && <b>{counts[item.key]}</b>}
       </button>)}
-      <button className={moreActive || open ? "active" : ""} onClick={() => setOpen(true)}>
+      <button aria-expanded={open} className={moreActive || open ? "active" : ""} onClick={() => setOpen(true)}>
         <Grid2X2 className="pwa-more-icon" aria-hidden="true" />
         <small>More</small>
         {more.some(item => Boolean(counts[item.key])) && <b>•</b>}
@@ -46,7 +46,7 @@ export default function MobileWorkspaceMenu({
     {open && <div className="mobile-more-backdrop" onMouseDown={() => setOpen(false)}>
       <section className="mobile-more-sheet" onMouseDown={event => event.stopPropagation()}>
         <header><div><small>NKH DASHBOARD</small><h2>More tools</h2></div><button onClick={() => setOpen(false)} aria-label="Close menu"><X /></button></header>
-        <div className="mobile-more-grid">{more.map(item => <button key={item.key} className={activeKey === item.key ? "active" : ""} onClick={() => choose(item.key)}>
+        <div className="mobile-more-grid">{more.map(item => <button key={item.key} aria-current={activeKey === item.key ? "page" : undefined} className={activeKey === item.key ? "active" : ""} onClick={() => choose(item.key)}>
           <span className={`nav-mark nav-${item.key}`} />
           <strong>{item.label}</strong>
           {Boolean(counts[item.key]) && <b>{counts[item.key]}</b>}

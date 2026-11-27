@@ -24,12 +24,13 @@ export function readServerSession(request: NextRequest): ServerSession | null {
   try {
     const token = request.cookies.get(SESSION_COOKIE)?.value;
     if (!token) return null;
-    const [payload, supplied] = token.split(".");
+    const [payload, supplied, extra] = token.split(".");
+    if (extra !== undefined) return null;
     if (!payload || !supplied) return null;
     const expected = signature(payload), left = Buffer.from(supplied), right = Buffer.from(expected);
     if (left.length !== right.length || !timingSafeEqual(left, right)) return null;
     const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as ServerSession;
-    return session.exp > Date.now() && session.name ? session : null;
+    return typeof session.exp === "number" && Number.isFinite(session.exp) && session.exp > Date.now() && typeof session.name === "string" && session.name.trim() && typeof session.access === "string" ? session : null;
   } catch { return null; }
 }
 

@@ -64,3 +64,10 @@
 @import "./styles/components/occupancy-inventory.css";
 @import "./styles/pwa-mobile.css";
 @import "./styles/nkh-premium-ui.css";
+
+/* NKH OS executive responsive refinements */
+.master-os .nkh-executive .profile-card-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:12px; }
+.master-os .nkh-executive .profile-card-grid > article { min-width:0; overflow-wrap:anywhere; }
+.master-os .nkh-executive button { min-height:44px; }
+.master-os button:focus-visible { outline:2px solid currentColor; outline-offset:3px; }
+@media(max-width:600px){.master-os .nkh-executive .home-welcome {flex-wrap:wrap;}.master-os .nkh-executive .profile-card-grid {grid-template-columns:minmax(0,1fr);}}
